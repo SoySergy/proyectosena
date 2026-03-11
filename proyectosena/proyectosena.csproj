@@ -12,6 +12,10 @@
 
   <ItemGroup>
     <Folder Include="Controllers\" />
+    <Folder Include="wwwroot\css\" />
+    <Folder Include="wwwroot\js\" />
+    <Folder Include="wwwroot\iconos\" />
+    <Folder Include="wwwroot\paginas\" />
   </ItemGroup>
 
 </Project>
