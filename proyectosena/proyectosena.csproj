@@ -29,7 +29,6 @@
   <ItemGroup>
     <Folder Include="Controllers\" />
     <Folder Include="Interfaces\" />
-    <Folder Include="DTOs\" />
     <Folder Include="Repositorios\" />
     <Folder Include="wwwroot\css\" />
     <Folder Include="wwwroot\js\" />
