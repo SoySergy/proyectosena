@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace proyectosena.Modelos
+namespace proyectosena.Models
 {
     public class CollectionRequest
     {
@@ -27,7 +27,7 @@ namespace proyectosena.Modelos
         public string ContactPhone { get; set; } = string.Empty;
 
         [Required, MaxLength(20)]
-        public string CurrentStatus { get; set; } = "Pendiente";
+        public string CurrentStatus { get; set; } = "Pending";
 
         public DateTime RequestDate { get; set; } = DateTime.UtcNow;
 
@@ -43,15 +43,15 @@ namespace proyectosena.Modelos
         public virtual User? User { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<CollectionManagement>? CollectionManagements { get; set; }
+        public virtual ICollection<CollectionManagement>? CollectionManagement { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<Notification>? Notifications { get; set; }
+        public virtual ICollection<Notification>? Notification { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<History>? Histories { get; set; }
+        public virtual ICollection<History>? History { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<ChatHistory>? ChatHistories { get; set; }
+        public virtual ICollection<ChatHistory>? ChatHistory { get; set; }
     }
 }

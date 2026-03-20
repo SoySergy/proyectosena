@@ -2,32 +2,31 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace proyectosena.Modelos
+namespace proyectosena.Models
 {
-    public class CollectionManagement
+    public class History
     {
         [Key]
-        public Guid IdManagement { get; set; } = Guid.NewGuid();
+        public Guid IdHistory { get; set; } = Guid.NewGuid();
 
         // ── Foreign Keys ───────────────────────────
         [Required]
         public Guid IdRequest { get; set; }
 
         [Required]
-        public Guid IdManager { get; set; }
+        public Guid IdUser { get; set; }
 
         // ── Columns ────────────────────────────────
+        [MaxLength(20)]
+        public string? PreviousStatus { get; set; }
+
         [Required, MaxLength(20)]
-        public string Status { get; set; } = string.Empty;
+        public string NewStatus { get; set; } = string.Empty;
 
-        public DateTime? StatusChangeDate { get; set; }
+        public DateTime ChangeDate { get; set; } = DateTime.UtcNow;
 
-        public DateTime? ScheduledDate { get; set; }
-
-        public DateTime? CompletionDate { get; set; }
-
-        [MaxLength(200)]
-        public string? ManagerObservations { get; set; }
+        [MaxLength(500)]
+        public string? Comment { get; set; }
 
         // ── Navigation Properties ──────────────────
         [JsonIgnore]
@@ -35,7 +34,7 @@ namespace proyectosena.Modelos
         public virtual CollectionRequest? CollectionRequest { get; set; }
 
         [JsonIgnore]
-        [ForeignKey("IdManager")]
-        public virtual User? Manager { get; set; }
+        [ForeignKey("IdUser")]
+        public virtual User? User { get; set; }
     }
 }

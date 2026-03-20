@@ -2,31 +2,27 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace proyectosena.Modelos
+namespace proyectosena.Models
 {
-    public class History
+    public class ChatHistory
     {
         [Key]
-        public Guid IdHistory { get; set; } = Guid.NewGuid();
+        public Guid IdChatHistory { get; set; } = Guid.NewGuid();
 
         // ── Foreign Keys ───────────────────────────
         [Required]
         public Guid IdRequest { get; set; }
 
         [Required]
-        public Guid IdUser { get; set; }
+        public Guid IdSender { get; set; }
 
         // ── Columns ────────────────────────────────
-        [MaxLength(20)]
-        public string? PreviousStatus { get; set; }
+        [Required, MaxLength(1000)]
+        public string Message { get; set; } = string.Empty;
 
-        [Required, MaxLength(20)]
-        public string NewStatus { get; set; } = string.Empty;
+        public DateTime SendDate { get; set; } = DateTime.UtcNow;
 
-        public DateTime ChangeDate { get; set; } = DateTime.UtcNow;
-
-        [MaxLength(500)]
-        public string? Comment { get; set; }
+        public bool IsRead { get; set; } = false;
 
         // ── Navigation Properties ──────────────────
         [JsonIgnore]
@@ -34,7 +30,7 @@ namespace proyectosena.Modelos
         public virtual CollectionRequest? CollectionRequest { get; set; }
 
         [JsonIgnore]
-        [ForeignKey("IdUser")]
-        public virtual User? User { get; set; }
+        [ForeignKey("IdSender")]
+        public virtual User? Sender { get; set; }
     }
 }

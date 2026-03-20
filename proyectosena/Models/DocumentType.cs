@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace proyectosena.Modelos
+namespace proyectosena.Models
 {
     public class DocumentType
     {
@@ -16,6 +16,6 @@ namespace proyectosena.Modelos
 
         // ── Navigation Properties ──────────────────
         [JsonIgnore]
-        public virtual ICollection<User>? Users { get; set; }
+        public virtual ICollection<User>? User { get; set; }
     }
 }
