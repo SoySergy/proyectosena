@@ -10,6 +10,9 @@ namespace proyectosena.Interfaces
         // Obtiene un usuario por su ID
         Task<User> GetUser(Guid idUser);
 
+        // Obtiene todos los usuarios que tienen un rol específico por nombre
+        Task<List<User>> GetByRoleNameAsync(string roleName);
+
         // Crea un nuevo usuario
         Task<User> CreateUser(User user);
 

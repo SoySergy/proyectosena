@@ -13,6 +13,9 @@ namespace proyectosena.DTOs.Collection
         [MaxLength(20)]
         public string? Status { get; set; }
 
+        [Required]
+        public Guid IdManager { get; set; }
+
         public DateTime? ScheduledDate { get; set; }
 
         public DateTime? CompletionDate { get; set; }

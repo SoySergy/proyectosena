@@ -11,6 +11,7 @@ namespace proyectosena.DTOs.Communication
         public Guid IdRequest { get; set; }
         public Guid IdSender { get; set; }
         public string SenderName { get; set; } = string.Empty;
+        public string SenderLastName { get; set; } = string.Empty;
         public string SenderRole { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
         public DateTime SendDate { get; set; }

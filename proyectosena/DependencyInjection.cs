@@ -28,7 +28,9 @@ namespace proyectosena
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IHistoryRepository, HistoryRepository>();
             services.AddScoped<IChatHistoryRepository, ChatHistoryRepository>();
+
             services.AddScoped<ICollectionStatusService, CollectionStatusService>();
+            services.AddScoped<IAssignmentService, AssignmentService>();
 
             return services;
         }

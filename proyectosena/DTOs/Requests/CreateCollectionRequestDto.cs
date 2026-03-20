@@ -9,6 +9,9 @@ namespace proyectosena.DTOs.Requests
     public class CreateCollectionRequestDto
     {
         [Required]
+        public Guid IdUser { get; set; }
+
+        [Required]
         public DateTime CollectionDate { get; set; }
 
         [Required, MaxLength(20)]

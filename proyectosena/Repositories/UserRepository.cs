@@ -34,6 +34,16 @@ namespace proyectosena.Repositorios
                                  .FirstOrDefaultAsync(u => u.IdUser == idUser);
         }
 
+        // Obtiene todos los usuarios que pertenecen a un rol específico por nombre
+        // Útil para notificar a todos los gestores cuando llega una nueva solicitud
+        public async Task<List<User>> GetByRoleNameAsync(string roleName)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .Where(u => u.Role!.RoleName == roleName)
+                .ToListAsync();
+        }
+
         // Crea un nuevo usuario y guarda los cambios en la base de datos
         public async Task<User> CreateUser(User user)
         {

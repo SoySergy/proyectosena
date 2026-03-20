@@ -4,6 +4,8 @@ namespace proyectosena.Interfaces
 {
     public interface ICollectionRequestRepository
     {
+        // Obtiene todas las solicitudes en estado Pending disponibles para ser tomadas por un gestor
+        Task<List<CollectionRequest>> GetPendingRequests();
         // Obtiene todas las solicitudes de recolección
         Task<List<CollectionRequest>> GetCollectionRequests();
 

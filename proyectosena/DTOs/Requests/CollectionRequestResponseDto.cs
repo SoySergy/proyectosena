@@ -10,6 +10,7 @@ namespace proyectosena.DTOs.Requests
         public Guid IdRequest { get; set; }
         public Guid IdUser { get; set; }
         public string CitizenName { get; set; } = string.Empty;
+        public string CitizenLastName { get; set; } = string.Empty;
         public DateTime CollectionDate { get; set; }
         public string CollectionTime { get; set; } = string.Empty;
         public string CollectionAddress { get; set; } = string.Empty;

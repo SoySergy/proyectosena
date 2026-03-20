@@ -32,6 +32,17 @@ namespace proyectosena.Repositorios
                                  .FirstOrDefaultAsync(s => s.IdRequest == idRequest);
         }
 
+        // Obtiene todas las solicitudes en estado Pending ordenadas por fecha de solicitud
+        // Las más antiguas aparecen primero para priorizar las que llevan más tiempo esperando
+        public async Task<List<CollectionRequest>> GetPendingRequests()
+        {
+            return await _context.CollectionRequests
+                .Include(r => r.User)
+                .Where(r => r.CurrentStatus == CollectionRequestStatus.Pending)
+                .OrderBy(r => r.RequestDate)
+                .ToListAsync();
+        }
+
         // Crea una nueva solicitud de recolección y guarda los cambios en la base de datos
         public async Task<CollectionRequest> CreateCollectionRequest(CollectionRequest collectionRequest)
         {

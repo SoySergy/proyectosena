@@ -11,6 +11,9 @@ namespace proyectosena.DTOs.Communication
     public class SendMessageDto
     {
         [Required]
+        public Guid IdSender { get; set; }
+
+        [Required]
         public Guid IdRequest { get; set; }
 
         [Required, MinLength(1), MaxLength(1000)]

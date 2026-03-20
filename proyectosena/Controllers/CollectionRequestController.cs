@@ -16,12 +16,18 @@ namespace proyectosena.Controllers
         // Servicio que maneja el cambio de estado, historial y notificación
         private readonly ICollectionStatusService _collectionStatusService;
 
+        // Servicio que maneja la asignación de solicitudes entre gestores
+        private readonly IAssignmentService _assignmentService;
+
+        // Constructor único con los tres servicios inyectados
         public CollectionRequestController(
             ICollectionRequestRepository collectionRequestRepository,
-            ICollectionStatusService collectionStatusService)
+            ICollectionStatusService collectionStatusService,
+            IAssignmentService assignmentService)
         {
             _collectionRequestRepository = collectionRequestRepository;
             _collectionStatusService = collectionStatusService;
+            _assignmentService = assignmentService;
         }
 
         // -------------------- GET: api/collectionrequest/GetCollectionRequests --------------------
@@ -71,6 +77,7 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- POST: api/collectionrequest/CreateCollectionRequest --------------------
+        // Al crear una solicitud se notifica a todos los gestores disponibles
         [HttpPost("CreateCollectionRequest")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -86,7 +93,15 @@ namespace proyectosena.Controllers
                 if (collectionRequest.IdUser == Guid.Empty)
                     return BadRequest("The request must have a valid IdUser.");
 
+                // Crea la solicitud en la base de datos
                 var newRequest = await _collectionRequestRepository.CreateCollectionRequest(collectionRequest);
+
+                // Notifica a todos los gestores que hay una nueva solicitud disponible
+                // Replica el modelo Uber donde todos los conductores ven el viaje
+                await _assignmentService.NotifyAllManagersAsync(
+                    newRequest.IdRequest,
+                    newRequest.CollectionAddress);
+
                 return Ok(newRequest);
             }
             catch
@@ -180,6 +195,64 @@ namespace proyectosena.Controllers
             catch
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error updating the status.");
+            }
+        }
+
+        // -------------------- GET: api/collectionrequest/GetPendingRequests --------------------
+        // Endpoint que usan los gestores para ver todas las solicitudes disponibles
+        [HttpGet("GetPendingRequests")]
+        [Authorize(Policy = "AdminOrManager")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetPendingRequests()
+        {
+            try
+            {
+                var requests = await _collectionRequestRepository.GetPendingRequests();
+
+                // Si no hay solicitudes pendientes retorna 404 con mensaje descriptivo
+                if (requests == null || !requests.Any())
+                    return NotFound("No pending collection requests available.");
+
+                return Ok(requests);
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving pending requests.");
+            }
+        }
+
+        // -------------------- POST: api/collectionrequest/AcceptRequest --------------------
+        // Endpoint que usa el gestor para tomar una solicitud pendiente
+        // Usa transacción para garantizar que solo un gestor pueda aceptarla
+        [HttpPost("AcceptRequest")]
+        [Authorize(Policy = "AdminOrManager")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> AcceptRequest(Guid idRequest, Guid idManager)
+        {
+            try
+            {
+                // El servicio maneja la lógica de concurrencia, historial y notificación
+                var (success, message) = await _assignmentService.AcceptRequestAsync(idRequest, idManager);
+
+                if (!success)
+                    return BadRequest(message);
+
+                return Ok(new
+                {
+                    Message = message,
+                    IdRequest = idRequest,
+                    IdManager = idManager,
+                    AcceptedAt = DateTime.UtcNow
+                });
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error accepting the request.");
             }
         }
     }

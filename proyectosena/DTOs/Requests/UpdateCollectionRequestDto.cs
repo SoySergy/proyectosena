@@ -10,6 +10,9 @@ namespace proyectosena.DTOs.Requests
 {
     public class UpdateCollectionRequestDto
     {
+        [Required]
+        public Guid IdRequest { get; set; }
+
         public DateTime? CollectionDate { get; set; }
 
         [MaxLength(20)]
