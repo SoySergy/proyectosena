@@ -36,10 +36,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // ── 4. ROLE-BASED AUTHORIZATION ───────────────────────
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Administrador"));
-    options.AddPolicy("GestorOnly", policy => policy.RequireRole("Gestor"));
-    options.AddPolicy("CiudadanoOnly", policy => policy.RequireRole("Ciudadano"));
-    options.AddPolicy("AdminOrGestor", policy => policy.RequireRole("Administrador", "Gestor"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Administrator"));
+    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Manager"));
+    options.AddPolicy("CitizenOnly", policy => policy.RequireRole("Citizen"));
+    options.AddPolicy("AdminOrManager", policy => policy.RequireRole("Administrator", "Manager"));
 });
 
 // ── 5. CORS ───────────────────────────────────────────

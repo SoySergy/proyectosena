@@ -45,11 +45,17 @@ namespace proyectosena.Repositorios
         }
 
         // Crea un nuevo usuario y guarda los cambios en la base de datos
+        // Recarga el usuario con Role y DocumentType para que el token y el DTO funcionen correctamente
         public async Task<User> CreateUser(User user)
         {
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return user;
+
+            // Recarga el usuario con sus relaciones después de guardarlo
+            return await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.DocumentType)
+                .FirstOrDefaultAsync(u => u.IdUser == user.IdUser);
         }
 
         // Actualiza un usuario existente y guarda los cambios en la base de datos

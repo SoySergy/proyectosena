@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using proyectosena.Models;
+using proyectosena.DTOs.Requests;
 using proyectosena.Interfaces;
+using proyectosena.Models;
 
 namespace proyectosena.Controllers
 {
@@ -16,7 +17,7 @@ namespace proyectosena.Controllers
         // Servicio que maneja el cambio de estado, historial y notificación
         private readonly ICollectionStatusService _collectionStatusService;
 
-        // Servicio que maneja la asignación de solicitudes entre gestores
+        // Servicio que maneja la asignación de solicitudes entre gestores (modelo Uber)
         private readonly IAssignmentService _assignmentService;
 
         // Constructor único con los tres servicios inyectados
@@ -31,7 +32,9 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/collectionrequest/GetCollectionRequests --------------------
+        // Retorna todas las solicitudes — Admin y Manager pueden verlas todas
         [HttpGet("GetCollectionRequests")]
+        [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -45,7 +48,8 @@ namespace proyectosena.Controllers
                 if (requests == null || !requests.Any())
                     return NotFound("No registered collection requests were found.");
 
-                return Ok(requests);
+                // Mapea cada solicitud al DTO de respuesta para no exponer datos internos
+                return Ok(requests.Select(MapToResponseDto).ToList());
             }
             catch
             {
@@ -54,6 +58,7 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/collectionrequest/GetCollectionRequestById --------------------
+        // Cualquier usuario autenticado puede ver el detalle de una solicitud específica
         [HttpGet("GetCollectionRequestById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -68,7 +73,7 @@ namespace proyectosena.Controllers
                     return NotFound("The requested collection request was not found.");
 
                 // Incluye los datos del User gracias al Include() del repositorio
-                return Ok(request);
+                return Ok(MapToResponseDto(request));
             }
             catch
             {
@@ -77,23 +82,43 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- POST: api/collectionrequest/CreateCollectionRequest --------------------
-        // Al crear una solicitud se notifica a todos los gestores disponibles
+        // Solo el ciudadano puede crear solicitudes de recolección
         [HttpPost("CreateCollectionRequest")]
+        [Authorize(Policy = "CitizenOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CreateCollectionRequest([FromBody] CollectionRequest collectionRequest)
+        public async Task<IActionResult> CreateCollectionRequest([FromBody] CreateCollectionRequestDto dto)
         {
+            var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            var name = User.Identity?.Name;
+            // Retorna temporalmente para ver qué tiene el token
+            return Ok(new { role, name });
+
+            // 
             try
             {
-                if (collectionRequest == null)
+                if (dto == null)
                     return BadRequest("Collection request data cannot be null.");
 
-                // Validación simple de clave foránea
-                if (collectionRequest.IdUser == Guid.Empty)
+                if (dto.IdUser == Guid.Empty)
                     return BadRequest("The request must have a valid IdUser.");
 
-                // Crea la solicitud en la base de datos
+                // Construye el modelo CollectionRequest desde el DTO
+                var collectionRequest = new CollectionRequest
+                {
+                    IdUser = dto.IdUser,
+                    CollectionDate = dto.CollectionDate,
+                    CollectionTime = dto.CollectionTime,
+                    CollectionAddress = dto.CollectionAddress,
+                    ContactPhone = dto.ContactPhone,
+                    WasteTypes = dto.WasteTypes,
+                    CitizenObservations = dto.CitizenObservations,
+                    // El estado siempre inicia en Pending al crear una solicitud
+                    CurrentStatus = CollectionRequestStatus.Pending,
+                    RequestDate = DateTime.UtcNow
+                };
+
                 var newRequest = await _collectionRequestRepository.CreateCollectionRequest(collectionRequest);
 
                 // Notifica a todos los gestores que hay una nueva solicitud disponible
@@ -102,7 +127,7 @@ namespace proyectosena.Controllers
                     newRequest.IdRequest,
                     newRequest.CollectionAddress);
 
-                return Ok(newRequest);
+                return Ok(MapToResponseDto(newRequest));
             }
             catch
             {
@@ -111,23 +136,42 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- PUT: api/collectionrequest/UpdateCollectionRequest --------------------
+        // Solo el ciudadano puede editar su solicitud y solo si está en Pending
         [HttpPut("UpdateCollectionRequest")]
+        [Authorize(Policy = "CitizenOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateCollectionRequest([FromBody] CollectionRequest collectionRequest)
+        public async Task<IActionResult> UpdateCollectionRequest([FromBody] UpdateCollectionRequestDto dto)
         {
             try
             {
-                if (collectionRequest == null)
+                if (dto == null)
                     return BadRequest("Collection request data cannot be null.");
 
-                // El IdRequest es obligatorio para identificar el registro a actualizar
-                if (collectionRequest.IdRequest == Guid.Empty)
+                if (dto.IdRequest == Guid.Empty)
                     return BadRequest("IdRequest is required to update a record.");
 
-                var updated = await _collectionRequestRepository.UpdateCollectionRequest(collectionRequest);
-                return Ok(updated);
+                // Busca la solicitud existente en la base de datos
+                var existing = await _collectionRequestRepository.GetCollectionRequest(dto.IdRequest);
+                if (existing == null)
+                    return NotFound("Collection request not found.");
+
+                // Solo se puede editar si está en Pending — una vez asignada ya no se puede modificar
+                if (existing.CurrentStatus != CollectionRequestStatus.Pending)
+                    return BadRequest("Only pending requests can be modified.");
+
+                // Actualiza solo los campos que vienen en el DTO (campos opcionales)
+                if (dto.CollectionDate.HasValue) existing.CollectionDate = dto.CollectionDate.Value;
+                if (dto.CollectionTime != null) existing.CollectionTime = dto.CollectionTime;
+                if (dto.CollectionAddress != null) existing.CollectionAddress = dto.CollectionAddress;
+                if (dto.ContactPhone != null) existing.ContactPhone = dto.ContactPhone;
+                if (dto.WasteTypes != null) existing.WasteTypes = dto.WasteTypes;
+                if (dto.CitizenObservations != null) existing.CitizenObservations = dto.CitizenObservations;
+
+                var updated = await _collectionRequestRepository.UpdateCollectionRequest(existing);
+                return Ok(MapToResponseDto(updated));
             }
             catch
             {
@@ -136,7 +180,9 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- DELETE: api/collectionrequest/DeleteCollectionRequest --------------------
+        // Solo Admin puede eliminar solicitudes
         [HttpDelete("DeleteCollectionRequest")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -178,7 +224,7 @@ namespace proyectosena.Controllers
                 if (!CollectionRequestStatus.ValidStatuses.Contains(newStatus))
                     return BadRequest($"Invalid status. Valid values: {string.Join(", ", CollectionRequestStatus.ValidStatuses)}");
 
-                // El servicio se encarga de actualizar estado, historial y notificación
+                // El servicio se encarga de actualizar estado, historial y notificación automáticamente
                 var result = await _collectionStatusService.UpdateStatusAsync(
                     idRequest, newStatus, idManager, comment);
 
@@ -199,7 +245,7 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/collectionrequest/GetPendingRequests --------------------
-        // Endpoint que usan los gestores para ver todas las solicitudes disponibles
+        // Endpoint que usan los gestores para ver todas las solicitudes disponibles para tomar
         [HttpGet("GetPendingRequests")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -215,7 +261,7 @@ namespace proyectosena.Controllers
                 if (requests == null || !requests.Any())
                     return NotFound("No pending collection requests available.");
 
-                return Ok(requests);
+                return Ok(requests.Select(MapToResponseDto).ToList());
             }
             catch
             {
@@ -255,5 +301,25 @@ namespace proyectosena.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error accepting the request.");
             }
         }
+
+        // ── Métodos privados ────────────────────────────────────────────
+
+        // Mapea el modelo CollectionRequest al DTO de respuesta
+        // Evita exponer campos innecesarios y aplana las propiedades de navegación
+        private static CollectionRequestResponseDto MapToResponseDto(CollectionRequest r) => new()
+        {
+            IdRequest = r.IdRequest,
+            IdUser = r.IdUser,
+            CitizenName = r.User?.Name ?? string.Empty,
+            CitizenLastName = r.User?.LastName ?? string.Empty,
+            CollectionDate = r.CollectionDate,
+            CollectionTime = r.CollectionTime,
+            CollectionAddress = r.CollectionAddress,
+            ContactPhone = r.ContactPhone,
+            CurrentStatus = r.CurrentStatus,
+            RequestDate = r.RequestDate,
+            WasteTypes = r.WasteTypes,
+            CitizenObservations = r.CitizenObservations
+        };
     }
 }

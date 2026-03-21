@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using proyectosena.Models;
+using proyectosena.DTOs.User;
 using proyectosena.Interfaces;
+using proyectosena.Models;
 
 namespace proyectosena.Controllers
 {
@@ -19,7 +20,9 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/user/GetUsers --------------------
+        // Solo Admin puede ver todos los usuarios
         [HttpGet("GetUsers")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -29,11 +32,11 @@ namespace proyectosena.Controllers
             {
                 var users = await _userRepository.GetUsers();
 
-                // Verifica si la lista está vacía o nula
                 if (users == null || !users.Any())
                     return NotFound("No registered users were found.");
 
-                return Ok(users);
+                // Mapea a UserInfoDto para no exponer el campo Password
+                return Ok(users.Select(MapToUserInfoDto).ToList());
             }
             catch
             {
@@ -42,6 +45,7 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/user/GetUserById --------------------
+        // Cualquier usuario autenticado puede ver su propio perfil
         [HttpGet("GetUserById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -55,8 +59,8 @@ namespace proyectosena.Controllers
                 if (user == null)
                     return NotFound("The requested user was not found.");
 
-                // Incluye sus datos de Role y DocumentType gracias al Include() del repositorio
-                return Ok(user);
+                // Mapea a UserInfoDto para no exponer el campo Password
+                return Ok(MapToUserInfoDto(user));
             }
             catch
             {
@@ -64,49 +68,49 @@ namespace proyectosena.Controllers
             }
         }
 
-        // -------------------- POST: api/user/CreateUser --------------------
-        [HttpPost("CreateUser")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CreateUser([FromBody] User user)
-        {
-            try
-            {
-                if (user == null)
-                    return BadRequest("User data cannot be null.");
-
-                // Validación simple de claves foráneas
-                if (user.IdRole == Guid.Empty || user.IdDocumentType == Guid.Empty)
-                    return BadRequest("The user must have a valid IdRole and IdDocumentType.");
-
-                var newUser = await _userRepository.CreateUser(user);
-                return Ok(newUser);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error creating the user.");
-            }
-        }
-
         // -------------------- PUT: api/user/UpdateUser --------------------
+        // Permite actualizar datos del perfil y opcionalmente la contraseña
         [HttpPut("UpdateUser")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateUser([FromBody] User user)
+        public async Task<IActionResult> UpdateUser(Guid idUser, [FromBody] UpdateUserDto dto)
         {
             try
             {
-                if (user == null)
-                    return BadRequest("User data cannot be null.");
+                if (dto == null)
+                    return BadRequest("Update data cannot be null.");
 
-                // El IdUser es obligatorio para identificar el registro a actualizar
-                if (user.IdUser == Guid.Empty)
-                    return BadRequest("IdUser is required to update a record.");
+                // Busca el usuario existente para modificarlo
+                var user = await _userRepository.GetUser(idUser);
+                if (user == null)
+                    return NotFound("The requested user was not found.");
+
+                // Actualiza solo los campos que vienen en el DTO
+                if (dto.Name != null) user.Name = dto.Name;
+                if (dto.LastName != null) user.LastName = dto.LastName;
+                if (dto.PhoneNumber != null) user.PhoneNumber = dto.PhoneNumber;
+                if (dto.Address != null) user.Address = dto.Address;
+
+                // Si quiere cambiar contraseña verifica la actual con BCrypt
+                if (!string.IsNullOrEmpty(dto.NewPassword))
+                {
+                    if (string.IsNullOrEmpty(dto.CurrentPassword))
+                        return BadRequest("Current password is required to set a new password.");
+
+                    // Verifica que la contraseña actual sea correcta antes de cambiarla
+                    if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.Password))
+                        return BadRequest("Current password is incorrect.");
+
+                    // Hashea la nueva contraseña antes de guardarla
+                    user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+                }
 
                 var updated = await _userRepository.UpdateUser(user);
-                return Ok(updated);
+
+                // Retorna el perfil actualizado sin exponer Password
+                return Ok(MapToUserInfoDto(updated));
             }
             catch
             {
@@ -115,7 +119,9 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- DELETE: api/user/DeleteUser --------------------
+        // Solo Admin puede eliminar usuarios
         [HttpDelete("DeleteUser")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -136,5 +142,24 @@ namespace proyectosena.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error deleting the user.");
             }
         }
+
+        // ── Métodos privados ────────────────────────────────────────────
+
+        // Mapea el modelo User al DTO de respuesta sin exponer datos sensibles
+        private static UserInfoDto MapToUserInfoDto(User user) => new()
+        {
+            IdUser = user.IdUser,
+            IdRole = user.IdRole,
+            RoleName = user.Role?.RoleName ?? string.Empty,
+            IdDocumentType = user.IdDocumentType,
+            DocumentTypeName = user.DocumentType?.DocumentName ?? string.Empty,
+            DocumentNumber = user.DocumentNumber,
+            Name = user.Name,
+            LastName = user.LastName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            Address = user.Address,
+            RegistrationDate = user.RegistrationDate
+        };
     }
 }
