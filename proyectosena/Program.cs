@@ -71,14 +71,14 @@ builder.Services.AddSwaggerGen(options =>
                         Ejemplo: 'Bearer abc123xyz'",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
+        Type = SecuritySchemeType.Http,
         Scheme = "Bearer"
     });
 
-    options.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(doc =>new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecuritySchemeReference("Bearer"),
+            new OpenApiSecuritySchemeReference("Bearer", doc),
             new List<string>()
         }
     });

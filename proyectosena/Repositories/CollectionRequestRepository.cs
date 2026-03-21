@@ -48,6 +48,10 @@ namespace proyectosena.Repositorios
         {
             _context.CollectionRequests.Add(collectionRequest);
             await _context.SaveChangesAsync();
+
+            // ✅ Carga explícita de la referencia User después de guardar
+            await _context.Entry(collectionRequest).Reference(c => c.User).LoadAsync();
+
             return collectionRequest;
         }
 

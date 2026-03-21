@@ -90,13 +90,8 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateCollectionRequest([FromBody] CreateCollectionRequestDto dto)
         {
-            var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-            var name = User.Identity?.Name;
-            // Retorna temporalmente para ver qué tiene el token
-            return Ok(new { role, name });
-
-            // 
             try
+
             {
                 if (dto == null)
                     return BadRequest("Collection request data cannot be null.");
@@ -128,7 +123,7 @@ namespace proyectosena.Controllers
                     newRequest.CollectionAddress);
 
                 return Ok(MapToResponseDto(newRequest));
-            }
+            } 
             catch
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error creating the collection request.");
