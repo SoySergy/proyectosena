@@ -15,8 +15,5 @@ namespace proyectosena.Interfaces
 
         // Actualiza una notificación existente
         Task<Notification> UpdateNotification(Notification notification);
-
-        // Elimina una notificación por su ID
-        Task<bool> DeleteNotification(Guid idNotification);
     }
 }

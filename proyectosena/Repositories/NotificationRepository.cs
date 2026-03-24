@@ -67,20 +67,5 @@ namespace proyectosena.Repositorios
             await _context.SaveChangesAsync();
             return existing;
         }
-
-        // Elimina una notificación por su ID
-        // Retorna false si no existe
-        public async Task<bool> DeleteNotification(Guid idNotification)
-        {
-            var notification = await _context.Notifications
-                .FirstOrDefaultAsync(n => n.IdNotification == idNotification);
-
-            if (notification == null)
-                return false;
-
-            _context.Notifications.Remove(notification);
-            await _context.SaveChangesAsync();
-            return true;
-        }
     }
 }
