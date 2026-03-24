@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.Models;
 using proyectosena.Interfaces;
+using proyectosena.DTOs.Collection;
 
 namespace proyectosena.Controllers
 {
@@ -10,7 +11,6 @@ namespace proyectosena.Controllers
     [ApiController]
     public class CollectionManagementController : ControllerBase
     {
-        // Repositorio de gestiones de recolección inyectado por dependencias
         private readonly ICollectionManagementRepository _collectionManagementRepository;
 
         public CollectionManagementController(ICollectionManagementRepository collectionManagementRepository)
@@ -29,11 +29,11 @@ namespace proyectosena.Controllers
             {
                 var managements = await _collectionManagementRepository.GetCollectionManagements();
 
-                // Verifica si la lista está vacía o nula
                 if (managements == null || !managements.Any())
                     return NotFound("No registered collection managements were found.");
 
-                return Ok(managements);
+                // ✅ Mapea al DTO en lugar de retornar el modelo crudo
+                return Ok(managements.Select(MapToResponseDto).ToList());
             }
             catch
             {
@@ -55,8 +55,8 @@ namespace proyectosena.Controllers
                 if (management == null)
                     return NotFound("The requested collection management was not found.");
 
-                // Incluye los datos de CollectionRequest y Manager gracias al Include() del repositorio
-                return Ok(management);
+                // ✅ Mapea al DTO en lugar de retornar el modelo crudo
+                return Ok(MapToResponseDto(management));
             }
             catch
             {
@@ -64,52 +64,39 @@ namespace proyectosena.Controllers
             }
         }
 
-        // -------------------- POST: api/collectionmanagement/CreateCollectionManagement --------------------
-        [HttpPost("CreateCollectionManagement")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CreateCollectionManagement([FromBody] CollectionManagement collectionManagement)
-        {
-            try
-            {
-                if (collectionManagement == null)
-                    return BadRequest("Collection management data cannot be null.");
-
-                // Valida que las claves foráneas sean válidas
-                if (collectionManagement.IdRequest == Guid.Empty)
-                    return BadRequest("The management must have a valid IdRequest.");
-
-                if (collectionManagement.IdManager == Guid.Empty)
-                    return BadRequest("The management must have a valid IdManager.");
-
-                var newManagement = await _collectionManagementRepository.CreateCollectionManagement(collectionManagement);
-                return Ok(newManagement);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error creating the collection management.");
-            }
-        }
-
         // -------------------- PUT: api/collectionmanagement/UpdateCollectionManagement --------------------
         [HttpPut("UpdateCollectionManagement")]
+        [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateCollectionManagement([FromBody] CollectionManagement collectionManagement)
+        public async Task<IActionResult> UpdateCollectionManagement(Guid idManagement, [FromBody] UpdateCollectionManagementDto dto)
         {
             try
             {
-                if (collectionManagement == null)
-                    return BadRequest("Collection management data cannot be null.");
+                if (dto == null)
+                    return BadRequest("Management data cannot be null.");
 
-                // El IdManagement es obligatorio para identificar el registro a actualizar
-                if (collectionManagement.IdManagement == Guid.Empty)
+                if (idManagement == Guid.Empty)
                     return BadRequest("IdManagement is required to update a record.");
 
-                var updated = await _collectionManagementRepository.UpdateCollectionManagement(collectionManagement);
-                return Ok(updated);
+                // 1. Busca el registro existente en BD
+                var existing = await _collectionManagementRepository.GetCollectionManagement(idManagement);
+                if (existing == null)
+                    return NotFound("Collection management not found.");
+
+                // 2. Aplica solo los campos que el gestor puede modificar
+                if (dto.Status != null) existing.Status = dto.Status;
+                if (dto.ScheduledDate.HasValue) existing.ScheduledDate = dto.ScheduledDate;
+                if (dto.CompletionDate.HasValue) existing.CompletionDate = dto.CompletionDate;
+                if (dto.ManagerObservations != null) existing.ManagerObservations = dto.ManagerObservations;
+
+                // 3. Actualiza la fecha de cambio de estado automáticamente
+                existing.StatusChangeDate = DateTime.UtcNow;
+
+                var updated = await _collectionManagementRepository.UpdateCollectionManagement(existing);
+                return Ok(MapToResponseDto(updated));
             }
             catch
             {
@@ -117,27 +104,17 @@ namespace proyectosena.Controllers
             }
         }
 
-        // -------------------- DELETE: api/collectionmanagement/DeleteCollectionManagement --------------------
-        [HttpDelete("DeleteCollectionManagement")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteCollectionManagement(Guid idManagement)
+        // ── Método privado de mapeo ─────────────────────────────────────
+        private static CollectionManagementResponseDto MapToResponseDto(CollectionManagement m) => new()
         {
-            try
-            {
-                var deleted = await _collectionManagementRepository.DeleteCollectionManagement(idManagement);
-
-                // Retorna false si la gestión no existe en la base de datos
-                if (!deleted)
-                    return BadRequest("Could not delete the collection management. Please verify it exists.");
-
-                return Ok("Collection management deleted successfully.");
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error deleting the collection management.");
-            }
-        }
+            IdManagement = m.IdManagement,
+            IdRequest = m.IdRequest,
+            ManagerName = m.Manager != null ? $"{m.Manager.Name} {m.Manager.LastName}" : string.Empty,
+            Status = m.Status,
+            StatusChangeDate = m.StatusChangeDate,
+            ScheduledDate = m.ScheduledDate,
+            CompletionDate = m.CompletionDate,
+            ManagerObservations = m.ManagerObservations
+        };
     }
 }

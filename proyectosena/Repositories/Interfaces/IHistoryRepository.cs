@@ -19,12 +19,6 @@ namespace proyectosena.Interfaces
         // Crea un nuevo registro en el historial
         Task<History> Create(History history);
 
-        // Actualiza un registro existente del historial
-        Task<History?> Update(History history);
-
-        // Elimina un registro del historial por su ID
-        Task<bool> Delete(Guid idHistory);
-
         // Verifica si existe un registro del historial con el ID proporcionado
         Task<bool> Exists(Guid idHistory);
 

@@ -59,36 +59,14 @@ namespace proyectosena.Repositorios
                 .ToListAsync();
         }
 
-        // Crea un nuevo registro en el historial
-        // Establece automáticamente la fecha de cambio al momento actual
+        //Crea un nuevo registro en el historial
+        //Establece automáticamente la fecha de cambio al momento actual
         public async Task<History> Create(History history)
         {
             history.ChangeDate = DateTime.UtcNow;
             _context.Histories.Add(history);
             await _context.SaveChangesAsync();
             return history;
-        }
-
-        // Actualiza un registro existente del historial
-        public async Task<History?> Update(History history)
-        {
-            _context.Histories.Update(history);
-            await _context.SaveChangesAsync();
-            return history;
-        }
-
-        // Elimina un registro del historial por su ID
-        // Retorna true si se eliminó correctamente, false si no existe
-        public async Task<bool> Delete(Guid idHistory)
-        {
-            var history = await _context.Histories
-                .FirstOrDefaultAsync(h => h.IdHistory == idHistory);
-            if (history == null)
-                return false;
-
-            _context.Histories.Remove(history);
-            await _context.SaveChangesAsync();
-            return true;
         }
 
         // Verifica si existe un registro del historial con el ID proporcionado
