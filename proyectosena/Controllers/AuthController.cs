@@ -98,11 +98,20 @@ namespace proyectosena.Controllers
                 if (user == null)
                     return Unauthorized("Invalid credentials.");
 
+                if (user.Role == null)
+                {
+                    throw new Exception("Role is null");
+                }
+
                 // Verifica la contraseña usando BCrypt
                 // BCrypt.Verify compara el texto plano con el hash almacenado en la BD
                 // Nunca se desencripta — BCrypt hashea el intento y compara los hashes
                 if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
-                    return Unauthorized("Invalid credentials.");
+                    return Unauthorized(new
+                    {
+                        message = "Invalid crendetials"
+
+                    });
 
                 // Genera el token JWT con los datos del usuario autenticado
                 var token = GenerateToken(user);
@@ -116,9 +125,9 @@ namespace proyectosena.Controllers
                     User = MapToUserInfoDto(user)
                 });
             }
-            catch
+            catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error during login.");
+                return StatusCode(500, ex.Message);
             }
         }
 
@@ -146,7 +155,7 @@ namespace proyectosena.Controllers
                     // El email se usa como nombre de usuario en el token
                     new Claim(ClaimTypes.Name, user.Email),
                     // El rol permite aplicar políticas de autorización por rol
-                    new Claim(ClaimTypes.Role, user.Role!.RoleName)
+                    new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "Citizen")
                 },
                 expires: DateTime.UtcNow.AddMinutes(60),
                 signingCredentials: signinCredentials

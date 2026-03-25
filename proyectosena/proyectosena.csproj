@@ -27,10 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\css\" />
-    <Folder Include="wwwroot\js\" />
-    <Folder Include="wwwroot\iconos\" />
-    <Folder Include="wwwroot\paginas\" />
+    <Folder Include="wwwroot\assets\icons\" />
+    <Folder Include="wwwroot\pages\manager\" />
   </ItemGroup>
 
 </Project>

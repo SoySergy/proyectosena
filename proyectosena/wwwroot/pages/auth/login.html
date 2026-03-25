@@ -1,0 +1,31 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+
+    <link rel="stylesheet" href="../../css/base/styles.css">
+    <link rel="stylesheet" href="../../css/components/form.css">
+    <link rel="stylesheet" href="../../css/pages/login.css">
+</head>
+<body>
+
+    <div class="login-container">
+        <h2>Iniciar sesión</h2>
+
+        <form id="loginForm">
+
+            <input type="email" id="email" placeholder="Correo electrónico" required>
+            <input type="password" id="password" placeholder="Contraseña" required>
+
+            <button type="submit" id="submitBtn">Ingresar</button>
+
+            <p id="message"></p>
+
+        </form>
+    </div>
+
+    <script type="module" src="../../js/auth/login.js"></script>
+    <!--http://localhost:5031/pages/auth/login.html-->
+</body>
+</html>

@@ -1,0 +1,43 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro</title>
+    <link rel="stylesheet" href="../../css/base/styles.css">
+    <link rel="stylesheet" href="../../css/components/form.css">
+    <link rel="stylesheet" href="../../css/pages/register.css">
+</head>
+<body>
+
+    <div class="register-container">
+        <h2>Registro</h2>
+
+        <form id="registerForm">
+
+            <input type="text" id="name" placeholder="Nombre" required>
+            <input type="text" id="lastName" placeholder="Apellido" required>
+
+            <select id="documentType" required>
+                <option value="">Tipo de documento</option>
+                <option value="63D5F1A7-6C0C-4A05-ADF8-D65964D2B3B1">Cédula</option>
+                <option value="FCCCB874-75F3-4374-B8E5-A7A92B084D6C">Pasaporte</option>
+                <option value="5BCB367C-1F41-4C5A-B120-F01F35159DD8">Documento extranjero</option>
+            </select>
+
+            <input type="text" id="documentNumber" placeholder="Número de documento" required>
+            <input type="text" id="phoneNumber" placeholder="Teléfono" required>
+            <input type="text" id="address" placeholder="Dirección" required>
+            <input type="email" id="email" placeholder="Correo" required>
+            <input type="password" id="password" placeholder="Contraseña" required>
+
+            <button type="submit" id="submitBtn">Registrarse</button>
+
+            <p id="message"></p>
+
+        </form>
+    </div>
+
+    <script type="module" src="../../js/auth/register.js"></script>
+    <!--http://localhost:5031/pages/auth/register.html-->
+</body>
+</html>
