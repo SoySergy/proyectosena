@@ -27,5 +27,9 @@ namespace proyectosena.Interfaces
 
         // Elimina un usuario por su ID
         Task<bool> DeleteUser(Guid idUser);
+
+        // Obtiene un usuario por número de documento Y tipo de documento
+        // Ambos campos juntos determinan si el documento ya está registrado
+        Task<User?> GetUserByDocument(string documentNumber, Guid idDocumentType);
     }
 }
