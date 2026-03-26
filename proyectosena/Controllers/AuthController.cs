@@ -75,10 +75,19 @@ namespace proyectosena.Controllers
                     User = MapToUserInfoDto(newUser)
                 });
             }
+            // DESPUÉS ✅
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+                when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx
+                      && (sqlEx.Number == 2627 || sqlEx.Number == 2601))
+            {
+                // Viola la constraint UQ_User_Document — documento duplicado
+                return BadRequest("El número de identificación ya se encuentra registrado.");
+            }
             catch (Exception ex)
             {
-                var innerMessage = ex.InnerException?.Message ?? ex.Message;
-                return StatusCode(StatusCodes.Status500InternalServerError, innerMessage);
+                // Cualquier otro error inesperado — nunca se expone el detalle interno
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                                  "Ocurrió un error inesperado. Por favor intente más tarde.");
             }
         }
 

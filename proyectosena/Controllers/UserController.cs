@@ -68,6 +68,122 @@ namespace proyectosena.Controllers
             }
         }
 
+        // -------------------- GET: api/user/GetUsersByRole --------------------
+        // Solo Admin puede consultar usuarios por rol (útil para gestionar asignaciones)
+        [HttpGet("GetUsersByRole")]
+        [Authorize(Policy = "AdminOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetUsersByRole(string roleName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(roleName))
+                    return BadRequest("Role name cannot be empty.");
+
+                var users = await _userRepository.GetByRoleNameAsync(roleName);
+
+                if (users == null || !users.Any())
+                    return NotFound($"No users found with role '{roleName}'.");
+
+                return Ok(users.Select(MapToUserInfoDto).ToList());
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving users by role.");
+            }
+        }
+
+        // -------------------- GET: api/user/GetUserByEmail --------------------
+        // Solo Admin puede buscar usuarios por correo electrónico
+        [HttpGet("GetUserByEmail")]
+        [Authorize(Policy = "AdminOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetUserByEmail(string email)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(email))
+                    return BadRequest("Email cannot be empty.");
+
+                var user = await _userRepository.GetUserByEmail(email);
+
+                if (user == null)
+                    return NotFound("No user found with that email.");
+
+                return Ok(MapToUserInfoDto(user));
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the user by email.");
+            }
+        }
+
+        // -------------------- GET: api/user/GetUserByName --------------------
+        // Solo Admin puede buscar usuarios por nombre
+        [HttpGet("GetUserByName")]
+        [Authorize(Policy = "AdminOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetUserByName(string name)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                    return BadRequest("Name cannot be empty.");
+
+                var user = await _userRepository.GetUserByName(name);
+
+                if (user == null)
+                    return NotFound("No user found with that name.");
+
+                return Ok(MapToUserInfoDto(user));
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the user by name.");
+            }
+        }
+
+        // -------------------- GET: api/user/GetUserByDocument --------------------
+        // Solo Admin puede buscar un usuario por tipo y número de documento
+        // La combinación de ambos campos identifica unicamente al usuario
+        [HttpGet("GetUserByDocument")]
+        [Authorize(Policy = "AdminOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetUserByDocument(string documentNumber, Guid idDocumentType)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(documentNumber))
+                    return BadRequest("Document number cannot be empty.");
+
+                if (idDocumentType == Guid.Empty)
+                    return BadRequest("Document type is required.");
+
+                var user = await _userRepository.GetUserByDocument(documentNumber, idDocumentType);
+
+                if (user == null)
+                    return NotFound("No user found with that document number and type.");
+
+                return Ok(MapToUserInfoDto(user));
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the user by document.");
+            }
+        }
+
         // -------------------- PUT: api/user/UpdateUser --------------------
         // Permite actualizar datos del perfil y opcionalmente la contraseña
         [HttpPut("UpdateUser")]

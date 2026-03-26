@@ -84,6 +84,18 @@ namespace proyectosena.Repositorios
                                  .FirstOrDefaultAsync(u => u.Name == name);
         }
 
+        // Busca un usuario por la combinación de número de documento Y tipo de documento
+        // Un mismo número puede existir en diferentes tipos (cédula, pasaporte, etc.)
+        // Solo se considera duplicado si coinciden ambos campos a la vez
+        public async Task<User?> GetUserByDocument(string documentNumber, Guid idDocumentType)
+        {
+            return await _context.Users
+                                 .Include(u => u.Role)
+                                 .Include(u => u.DocumentType)
+                                 .FirstOrDefaultAsync(u => u.DocumentNumber == documentNumber
+                                                        && u.IdDocumentType == idDocumentType);
+        }
+
         // Elimina un usuario por su ID, retorna false si no existe
         public async Task<bool> DeleteUser(Guid idUser)
         {

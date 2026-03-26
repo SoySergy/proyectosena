@@ -103,7 +103,7 @@ namespace proyectosena.Context
                 entity.HasIndex(u => u.Email)
                     .IsUnique()
                     .HasDatabaseName("UQ_User_Email");
-                entity.HasIndex(u => u.DocumentNumber)
+                entity.HasIndex(u => new { u.IdDocumentType, u.DocumentNumber })
                     .IsUnique()
                     .HasDatabaseName("UQ_User_Document");
 
