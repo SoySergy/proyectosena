@@ -1,0 +1,230 @@
+﻿/* =============================
+   DASHBOARD CIUDADANO
+   ============================= */
+
+/* Área de usuario en el header (lado derecho) */
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm); /* Espacio entre icono, nombre y botón */
+}
+
+/* Icono de usuario en el header */
+.header-user__icon {
+    opacity: 0.85; /* Ligeramente transparente para no competir con el texto */
+}
+
+/* Nombre del usuario en el header - el JS escribe aquí */
+.header-user__name {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: white;
+}
+
+/* Botón de cerrar sesión */
+.btn-logout {
+    background-color: transparent;
+    color: white;
+    border: 1px solid white;
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+    .btn-logout:hover {
+        background-color: white;
+        color: var(--color-primary-dark);
+    }
+
+/* ===== NAVEGACIÓN DE SECCIONES ===== */
+.main-nav {
+    display: flex;
+    gap: var(--spacing-sm); /* Espacio entre botones de navegación */
+    padding: var(--spacing-md) var(--spacing-xl);
+    background-color: var(--color-surface);
+    border-bottom: 1.5px solid #E0E0E0;
+}
+
+/* Botón de navegación base */
+.nav-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs); /* Espacio entre icono y texto */
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--radius-md);
+    background-color: transparent;
+    color: var(--color-text-secondary);
+    font-family: var(--font-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+    .nav-btn:hover {
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+    }
+
+    /* Botón activo de navegación - el JS agrega esta clase */
+    .nav-btn.active {
+        background-color: var(--color-primary);
+        color: white;
+    }
+
+/* ===== CONTENIDO PRINCIPAL ===== */
+.dashboard-main {
+    padding: var(--spacing-xl); /* Espacio alrededor del contenido */
+    max-width: 860px; /* Ancho máximo del contenido */
+    margin: 0 auto; /* Centra el contenido horizontalmente */
+}
+
+/* Sección oculta por defecto - el JS controla cuál se muestra */
+.section {
+    display: none;
+}
+
+    /* Sección activa - el JS agrega esta clase */
+    .section.active {
+        display: block;
+    }
+
+/* ===== ENCABEZADO DE SECCIÓN (título + botón actualizar) ===== */
+.section-header {
+    display: flex;
+    justify-content: space-between; /* Título a la izquierda, botón a la derecha */
+    align-items: flex-start;
+    margin-bottom: var(--spacing-lg);
+}
+
+/* ===== BOTÓN SECUNDARIO (Actualizar, Cancelar) ===== */
+.btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background-color: transparent;
+    color: var(--color-text-secondary);
+    border: 1.5px solid #E0E0E0;
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-md);
+    font-family: var(--font-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+    .btn-secondary:hover {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+    }
+
+/* ===== BOTÓN PRIMARIO (Crear, Guardar) ===== */
+.btn-primary {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-primary);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    margin-top: var(--spacing-sm);
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+    .btn-primary:hover {
+        background-color: var(--color-primary-dark);
+        transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+
+/* ===== TEXTAREA (Observaciones) ===== */
+.form-textarea {
+    padding-left: 14px; /* Sin icono, sin espacio izquierdo extra */
+    resize: vertical; /* Solo puede redimensionarse verticalmente */
+    min-height: 80px;
+}
+
+/* ===== MENSAJE DE CARGA ===== */
+.loading-msg {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+}
+
+/* ===== MODAL ===== */
+.modal {
+    position: fixed; /* Se queda fijo en pantalla al hacer scroll */
+    inset: 0; /* Cubre toda la pantalla */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100; /* Encima de todo el contenido */
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 560px; /* Ancho máximo del modal */
+    max-height: 90vh; /* No ocupa más del 90% de la pantalla */
+    overflow-y: auto; /* Scroll si el contenido es muy largo */
+    z-index: 101;
+}
+
+/* Encabezado del modal con título y botón cerrar */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Botón icono (cerrar modal) */
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: var(--radius-md);
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+    .btn-icon:hover {
+        background-color: var(--color-background);
+    }
+
+/* Botones de acción del modal (Cancelar / Guardar) */
+.modal-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+    .modal-actions .btn-primary {
+        flex: 1; /* Ocupa el espacio disponible */
+    }
+
+    .modal-actions .btn-secondary {
+        flex: 1;
+        justify-content: center;
+    }
+
+/* Fondo oscuro detrás del modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5); /* Negro semitransparente */
+    z-index: 99;
+}

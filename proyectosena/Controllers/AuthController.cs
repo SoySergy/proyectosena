@@ -1,10 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using MailKit.Net.Smtp;
+using MailKit.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using MimeKit;
 using proyectosena.DTOs.Auth;
+using proyectosena.DTOs.Auth.Password;
 using proyectosena.DTOs.User;
 using proyectosena.Interfaces;
 using proyectosena.Models;
+using proyectosena.Repositories.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -22,10 +27,19 @@ namespace proyectosena.Controllers
         // Configuración para leer las claves JWT del appsettings.json
         private readonly IConfiguration _configuration;
 
-        public AuthController(IUserRepository userRepository, IConfiguration configuration)
+        // 
+        private readonly IEmailService _emailService;
+
+        //
+        private readonly IPasswordResetService _resetService;
+
+        public AuthController(IUserRepository userRepository, IConfiguration configuration, IEmailService emailService, IPasswordResetService resetService)
         {
             _userRepository = userRepository;
             _configuration = configuration;
+            _emailService = emailService;
+            _resetService = resetService;
+
         }
 
         // -------------------- POST: api/auth/Register --------------------
@@ -39,10 +53,17 @@ namespace proyectosena.Controllers
         {
             try
             {
-                // Verifica que el correo no esté ya registrado en la BD
+                // Verifica que el correo no esté ya registrado en la BD  sz
                 var existing = await _userRepository.GetUserByEmail(dto.Email);
                 if (existing != null)
-                    return BadRequest("A user with this email already exists.");
+                    return BadRequest("Ya existe un usuario con este correo.");
+
+                // ✅ Agrega esto justo aquí ↓
+                var existingDoc = await _userRepository.GetUserByDocument(dto.DocumentNumber, dto.IdDocumentType);
+                if (existingDoc != null)
+                    return BadRequest("El número de documento ya se encuentra registrado con este tipo de documento.");
+
+
 
                 // Construye el modelo User desde el DTO de registro
                 var user = new User
@@ -191,5 +212,110 @@ namespace proyectosena.Controllers
             Address = user.Address,
             RegistrationDate = user.RegistrationDate
         };
+
+        private static readonly Dictionary<string, (string Code, DateTime Expiry)> _resetCodes = new();
+        // ─────────────────────────────────────────────────────────────────
+        // POST: api/auth/forgot-password
+        // Genera el código OTP, lo guarda en memoria y envía el correo.
+        // ─────────────────────────────────────────────────────────────────
+        [AllowAnonymous]
+        [HttpPost("forgot-password")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.Email))
+                    return BadRequest("El correo es requerido.");
+
+                var email = dto.Email.Trim().ToLower();
+                var user = await _userRepository.GetUserByEmail(email);
+
+                // Respuesta idéntica exista o no el correo (evita enumerar emails)
+                if (user == null)
+                    return Ok(new { message = "Si el correo está registrado, recibirás un código." });
+
+                // Genera el código OTP (6 dígitos, 15 min de vida) y envía el correo
+                var code = _resetService.GenerateAndStoreCode(email);
+                await _emailService.SendPasswordResetCodeAsync(user.Email, code);
+
+                return Ok(new { message = "Si el correo está registrado, recibirás un código." });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ForgotPassword] {ex.Message}");
+                return StatusCode(500, "Error al enviar el código. Intenta de nuevo.");
+            }
+        }
+
+
+        // ─────────────────────────────────────────────────────────────────
+        // POST: api/auth/verify-reset-code
+        // Verifica que el código sea válido antes de mostrar el campo
+        // de nueva contraseña en el frontend.
+        // ─────────────────────────────────────────────────────────────────
+        [AllowAnonymous]
+        [HttpPost("verify-reset-code")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public IActionResult VerifyResetCode([FromBody] VerifyResetCodeDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Code))
+                return BadRequest("Correo y código son requeridos.");
+
+            var isValid = _resetService.ValidateCode(dto.Email.Trim().ToLower(), dto.Code.Trim());
+
+            if (!isValid)
+                return BadRequest("Código inválido o expirado.");
+
+            return Ok(new { message = "Código verificado correctamente." });
+        }
+
+
+        // ─────────────────────────────────────────────────────────────────
+        // POST: api/auth/reset-password
+        // Valida el código y actualiza la contraseña hasheada con BCrypt.
+        // ─────────────────────────────────────────────────────────────────
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.Email) ||
+                    string.IsNullOrWhiteSpace(dto.Code) ||
+                    string.IsNullOrWhiteSpace(dto.NewPassword))
+                    return BadRequest("Correo, código y nueva contraseña son requeridos.");
+
+                var email = dto.Email.Trim().ToLower();
+
+                // Valida el código ANTES de tocar la base de datos
+                if (!_resetService.ValidateCode(email, dto.Code.Trim()))
+                    return BadRequest("Código inválido o expirado.");
+
+                var user = await _userRepository.GetUserByEmail(email);
+                if (user == null)
+                    return NotFound("Usuario no encontrado.");
+
+                // Hashea la nueva contraseña con BCrypt (igual que en UpdateUser)
+                user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+                await _userRepository.UpdateUser(user);
+
+                // Invalida el código para que no pueda reutilizarse
+                _resetService.InvalidateCode(email);
+
+                return Ok(new { message = "Contraseña actualizada correctamente." });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ResetPassword] {ex.Message}");
+                return StatusCode(500, "Error al restablecer la contraseña. Intenta de nuevo.");
+            }
+        }
     }
 }

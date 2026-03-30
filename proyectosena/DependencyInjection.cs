@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
 using proyectosena.Interfaces;
+using proyectosena.Repositories.Interfaces;
 using proyectosena.Repositorios;
 using proyectosena.Services;
 
@@ -31,6 +32,8 @@ namespace proyectosena
 
             services.AddScoped<ICollectionStatusService, CollectionStatusService>();
             services.AddScoped<IAssignmentService, AssignmentService>();
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IPasswordResetService, PasswordResetService>();
 
             return services;
         }

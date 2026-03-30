@@ -21,10 +21,16 @@ export async function registerUser(data) {
         result = text;
     }
 
+    // maneja todos los formatos de error de ASP.NET
     if (!response.ok) {
-        throw new Error(result);
+        if (result?.message) throw new Error(result.message);
+        if (result?.errors) {
+            const firstError = Object.values(result.errors).flat()[0];
+            throw new Error(firstError || "Error de validación");
+        }
+        if (result?.title) throw new Error(result.title);
+        throw new Error(typeof result === "string" ? result : "Error en el registro");
     }
-
     return result;
 }
 
@@ -60,4 +66,55 @@ export async function loginUser(data) {
     }
 
     return result;
+}
+
+/**
+* Paso 1: Solicita el código OTP al backend.
+* POST /api/auth/forgot-password
+*/
+export async function forgotPassword(email) {
+    const res = await fetch(`${API_BASE}/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+    });
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Error al enviar el código.");
+    }
+}
+
+/**
+ * Paso 2: Verifica que el código ingresado sea válido.
+ * POST /api/auth/verify-reset-code
+ */
+export async function verifyResetCode(email, code) {
+    const res = await fetch(`${API_BASE}/verify-reset-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+    });
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Código inválido o expirado.");
+    }
+}
+
+/**
+ * Paso 3: Envía el código verificado + la nueva contraseña.
+ * POST /api/auth/reset-password
+ */
+export async function resetPassword(email, code, newPassword) {
+    const res = await fetch(`${API_BASE}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code, newPassword }),
+    });
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Error al restablecer la contraseña.");
+    }
 }

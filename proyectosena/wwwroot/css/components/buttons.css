@@ -1,0 +1,48 @@
+﻿/* =============================
+   BUTTONS - Componentes reutilizables
+   ============================= */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    border-radius: var(--radius-md); /* Redondeado moderno */
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    width: 100%; /* Para que ocupe el ancho del formulario */
+    font-family: var(--font-primary);
+    text-align: center;
+}
+
+/* Variación: Iniciar Sesión (#1A5C3A) */
+.btn-primary {
+    background-color: #1A5C3A; 
+    color: #FFFFFF;
+}
+
+    .btn-primary:hover:not(:disabled) {
+        background-color: #14462c;
+        transform: translateY(-1px);
+    }
+
+/* Variación: Registrarse (#E4EDE7) */
+.btn-secondary {
+    background-color: #E4EDE7;
+    color: #1A5C3A; /* Texto en verde oscuro para contraste */
+}
+
+    .btn-secondary:hover {
+        background-color: #d6e2da;
+    }
+
+/* Estado cuando el JS pone btn.disabled = true */
+.btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    filter: grayscale(0.2);
+}

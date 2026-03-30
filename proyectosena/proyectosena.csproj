@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+    <PackageReference Include="MailKit" Version="4.15.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.25" />
     <PackageReference Include="Microsoft.AspNetCore.Cors" Version="2.3.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.25" />
@@ -28,7 +29,6 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\assets\icons\" />
-    <Folder Include="wwwroot\pages\manager\" />
   </ItemGroup>
 
 </Project>

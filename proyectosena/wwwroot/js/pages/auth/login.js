@@ -1,5 +1,5 @@
-﻿import { loginUser } from "../services/authService.js";
-import { isEmailValid, isMinLength } from "../utils/validators.js";
+﻿import { loginUser } from "../../services/authService.js";
+import { isEmailValid, isMinLength } from "../../utils/validators.js";
 
 if (localStorage.getItem("token")) {
     window.location.href = "/pages/citizen/dashboard.html";

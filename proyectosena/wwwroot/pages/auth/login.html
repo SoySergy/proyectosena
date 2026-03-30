@@ -1,31 +1,77 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-
-    <link rel="stylesheet" href="../../css/base/styles.css">
-    <link rel="stylesheet" href="../../css/components/form.css">
-    <link rel="stylesheet" href="../../css/pages/login.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--http://localhost:5031/pages/auth/login.html-->
+    <title>Recyroute</title>
+    <!--Favicon-->
+    <!--<link rel="icon" href="../../assets/icons/recyroute.svg" />-->
+    <link rel="icon" href="/assets/icons/recyroute.svg" />
+    <!--Styles-->
+    <!--<link rel="stylesheet" href="../../css/base/styles.css">
+    <link rel="stylesheet" href="../../css/pages/auth/login.css">-->
+    <link rel="stylesheet" href="/css/base/styles.css">
+    <link rel="stylesheet" href="/css/pages/auth/login.css">
 </head>
 <body>
-
-    <div class="login-container">
-        <h2>Iniciar sesión</h2>
-
-        <form id="loginForm">
-
-            <input type="email" id="email" placeholder="Correo electrónico" required>
-            <input type="password" id="password" placeholder="Contraseña" required>
-
-            <button type="submit" id="submitBtn">Ingresar</button>
-
-            <p id="message"></p>
-
-        </form>
-    </div>
-
-    <script type="module" src="../../js/auth/login.js"></script>
-    <!--http://localhost:5031/pages/auth/login.html-->
+    <header class="header-secundario">
+        <h1 class="recyroute">recyroute</h1>
+    </header>
+    <!-- Contenedor principal que centra el card en la pantalla -->
+    <main class="auth-wrapper">
+        <div class="card">
+            <!-- Encabezado del card -->
+            <h1 class="card__title">Bienvenido</h1><br />
+            <!-- Formulario de login -->
+            <form id="loginForm">
+                <!-- Campo: Correo electrónico -->
+                <div class="form-group">
+                    <label class="form-label" for="email">Correo electrónico</label>
+                    <div class="form-input-wrapper">
+                        <!-- ICONO: Reemplaza la ruta por tu icono de correo -->
+                        <span class="form-input-icon icon-correo" aria-hidden="true"></span>
+                        <input type="email"
+                               id="email"
+                               class="form-input"
+                               placeholder=""
+                               required
+                               autocomplete="email" />
+                    </div>
+                </div>
+                <!-- Campo: Contraseña -->
+                <div class="form-group">
+                    <label class="form-label" for="password">Contraseña</label>
+                    <div class="form-input-wrapper">
+                        <!-- ICONO: Reemplaza la ruta por tu icono de candado -->
+                        <span class="form-input-icon icon-candado" aria-hidden="true"></span>
+                        <input type="password"
+                               id="password"
+                               class="form-input"
+                               placeholder=""
+                               required
+                               autocomplete="current-password" />
+                    </div>
+                    <!-- Link para recuperar contraseña -->
+                    <a href="/pages/auth/password/forgot-password.html" class="form-hint form-hint--link">
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
+                <!-- Mensaje de error o éxito (lo maneja el JS) -->
+                <p id="message" class="form-hint form-hint--error" role="alert"></p>
+                <!-- Botón de envío -->
+                <button type="submit" id="submitBtn" class="btn btn-primary btn-login-main">
+                    Iniciar sesión
+                </button>
+            </form>
+            <!-- Pie del card -->
+            <div class="card__footer">
+                <span>¿No tienes cuenta?</span> <a href="/pages/auth/register.html" class="btn btn-secondary btn-register-small">
+                    Regístrate
+                </a>
+            </div>
+        </div>
+    </main>
+    <script type="module" src="/js/pages/auth/login.js"></script>
 </body>
 </html>

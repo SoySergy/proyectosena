@@ -2,6 +2,8 @@
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using proyectosena;
+using proyectosena.Repositories.Interfaces;
+using proyectosena.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -91,6 +93,9 @@ builder.Services.AddSwaggerGen(options =>
 // builder.Services.AddScoped<ICollectionManagementService, CollectionManagementService>();
 // builder.Services.AddScoped<INotificationService, NotificationService>();
 // builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
+builder.Services.AddSingleton<IEmailService, EmailService>();
+builder.Services.AddSingleton<IPasswordResetService, PasswordResetService>();
+
 
 builder.Services.AddControllers();
 

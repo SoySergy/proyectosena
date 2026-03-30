@@ -1,2 +1,92 @@
-﻿body {
+﻿/* =============================
+   0. IMPORTACIÓN DE FUENTES Y COMPONENTES
+   ============================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700&display=swap');
+
+/* Componentes */
+@import url('../components/buttons.css');
+@import url('../components/form.css');
+@import url('../components/cards.css');
+@import url('../components/headers/headerprincipal.css');
+@import url('../components/headers/headersecundario.css');
+
+/* Estilos específicos de página */
+/*@import url('../pages/auth/login.css');
+@import url('../pages/auth/register.css');*/
+
+
+/* =============================
+   1. BROWSER RESET
+   ============================= */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* =============================
+   2. VARIABLES GLOBALES
+   ============================= */
+:root {
+    --color-primary: #3A9469;
+    --color-primary-light: #4CAF50;
+    --color-primary-dark: #1B5E20;
+    --color-secondary: #FFF9C4;
+    --color-background: #F0F4F1;
+    --color-surface: #FFFFFF;
+    --color-text-primary: #143526;
+    --color-text-secondary: #757575;
+    --color-text-light: #FFFFFF;
+    --color-danger: #D32F2F;
+    --color-warning: #F9A825;
+    --color-success: #388E3C;
+    --font-primary: 'Inter';
+    --font-logo: 'Unbounded';
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --font-regular: 400;
+    --font-medium: 500;
+    --font-bold: 700;
+    --radius-md: 8px;
+    --radius-lg: 16px;
+    --spacing-md: 16px;
+    --spacing-xl: 32px;
+    --icon-color: #1A5C3A; /* Color de iconos*/
+}
+
+/* =============================
+   3. ESTILOS BASE GLOBALES
+   ============================= */
+html {
+    background-color: var(--color-background);
+    height: 100%;
+}
+
+body {
+    background-color: var(--color-background);
+    font-family: var(--font-primary);
+    font-size: var(--text-base);
+    color: var(--color-text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+input, button, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.recyroute {
+    font-family: var(--font-logo);
+    font-weight: var(--font-bold);
+    letter-spacing: -0.03em;
 }

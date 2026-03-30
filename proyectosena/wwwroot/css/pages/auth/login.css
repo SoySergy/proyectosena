@@ -1,0 +1,70 @@
+﻿body {
+    overflow: hidden;
+}
+
+/* Centra el card vertical y horizontalmente en la pantalla */
+.auth-wrapper {
+    flex: 1;
+    width: 100%; /* ← AGREGA ESTA LÍNEA */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+    padding-bottom: 10px;
+}
+    .auth-wrapper .card {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 10px; /* ← Este sí lo sube, ajusta el valor */
+    }
+
+.card__title {
+    text-align: center;
+}
+
+#submitBtn {
+    width: 100%; /* El botón de login debe ser ancho completo para mejor UX */
+    margin-top: var(--spacing-md);
+}
+
+    /* ============================================================
+   NUEVA JERARQUÍA VISUAL (Botón Iniciar Sesión vs Registro)
+   ============================================================ */
+
+    /* Botón de inicio de sesión: Más imponente */
+    /* Usamos el ID + la clase para asegurar que estos estilos dominen */
+    #submitBtn.btn-login-main {
+        padding: 16px 32px !important;
+        font-size: 1.1rem !important;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 12px rgba(26, 92, 58, 0.2);
+        margin-bottom: 24px !important; /* <--- Esto separa el botón del texto inferior */
+        width: 100%;
+        display: block;
+    }
+
+.card__footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px; /* Espacio entre el texto "¿No tienes cuenta?" y el botón Regístrate */
+    margin-top: 10px; /* Espacio adicional de seguridad */
+}
+
+    .card__footer span {
+        display: block;
+        color: var(--color-text-secondary);
+        font-size: 0.85rem;
+    }
+
+/* Botón de registro: Más pequeño y discreto */
+.btn-register-small {
+    padding: 8px 16px !important;
+    font-size: 0.85rem !important;
+    width: auto !important; /* Rompe el width: 100% de la clase .btn base */
+    margin: 8px auto 0 !important;
+    display: inline-flex !important;
+    text-align: center;
+}
+

@@ -1,5 +1,5 @@
-﻿import { registerUser } from "../services/authService.js";
-import { isEmailValid, isMinLength } from "../utils/validators.js";
+﻿import { registerUser } from "../../services/authService.js";
+import { isEmailValid, isMinLength } from "../../utils/validators.js";
 
 const form = document.getElementById("registerForm");
 const message = document.getElementById("message");

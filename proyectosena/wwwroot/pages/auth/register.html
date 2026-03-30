@@ -1,43 +1,157 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Registro</title>
-    <link rel="stylesheet" href="../../css/base/styles.css">
-    <link rel="stylesheet" href="../../css/components/form.css">
-    <link rel="stylesheet" href="../../css/pages/register.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--http://localhost:5031/pages/auth/register.html-->
+    <title>RecyRoute</title>
+    <!--Favicon-->
+    <link rel="icon" href="/assets/icons/recyroute.svg" />
+    <!--Styles-->
+    <link rel="stylesheet" href="/css/base/styles.css">
+    <link rel="stylesheet" href="/css/pages/auth/register.css">
 </head>
 <body>
-
-    <div class="register-container">
-        <h2>Registro</h2>
-
-        <form id="registerForm">
-
-            <input type="text" id="name" placeholder="Nombre" required>
-            <input type="text" id="lastName" placeholder="Apellido" required>
-
-            <select id="documentType" required>
-                <option value="">Tipo de documento</option>
-                <option value="63D5F1A7-6C0C-4A05-ADF8-D65964D2B3B1">Cédula</option>
-                <option value="FCCCB874-75F3-4374-B8E5-A7A92B084D6C">Pasaporte</option>
-                <option value="5BCB367C-1F41-4C5A-B120-F01F35159DD8">Documento extranjero</option>
-            </select>
-
-            <input type="text" id="documentNumber" placeholder="Número de documento" required>
-            <input type="text" id="phoneNumber" placeholder="Teléfono" required>
-            <input type="text" id="address" placeholder="Dirección" required>
-            <input type="email" id="email" placeholder="Correo" required>
-            <input type="password" id="password" placeholder="Contraseña" required>
-
-            <button type="submit" id="submitBtn">Registrarse</button>
-
-            <p id="message"></p>
-
-        </form>
-    </div>
-
-    <script type="module" src="../../js/auth/register.js"></script>
-    <!--http://localhost:5031/pages/auth/register.html-->
+    <header class="header-secundario">
+        <h1 class="recyroute">
+            recyroute
+        </h1>
+    </header>
+    <!-- Contenedor principal que centra el card en la pantalla -->
+    <main class="auth-wrapper">
+        <div class="card">
+            <!-- Encabezado del card -->
+            <h1 class="card__title">Crear cuenta</h1>
+            <p class="card__subtitle">Completa tus datos para registrarte</p>
+            <!-- Formulario de registro -->
+            <form id="registerForm">
+                <!-- Fila: Nombre y Apellido lado a lado -->
+                <div class="form-row">
+                    <!-- Campo: Nombre -->
+                    <div class="form-group">
+                        <label class="form-label" for="name">Nombre</label>
+                        <div class="form-input-wrapper">
+                            <!-- ICONO: Reemplaza la ruta por tu icono de persona/usuario -->
+                            <input type="text" id="name" class="form-input form-input--no-icon" placeholder="Tu nombre" required autocomplete="given-name" />
+                            <!--<input type="text"
+                                   id="name"
+                                   class="form-input"
+                                   placeholder="Tu nombre"
+                                   required
+                                   autocomplete="given-name" />-->
+                        </div>
+                    </div>
+                    <!-- Campo: Apellido -->
+                    <div class="form-group">
+                        <label class="form-label" for="lastName">Apellido</label>
+                        <div class="form-input-wrapper">
+                            <!-- ICONO: Reemplaza la ruta por tu icono de persona/usuario -->
+                            <input type="text" id="lastName" class="form-input form-input--no-icon" placeholder="Tu apellido" required autocomplete="family-name" />
+                            <!--<input type="text"
+                                   id="lastName"
+                                   class="form-input"
+                                   placeholder="Tu apellido"
+                                   required
+                                   autocomplete="family-name" />-->
+                        </div>
+                    </div>
+                </div>
+                <!-- Fila: Tipo de documento y Número de documento -->
+                <div class="form-row">
+                    <!-- Campo: Tipo de documento -->
+                    <div class="form-group">
+                        <label class="form-label" for="documentType">Tipo de documento</label>
+                        <div class="form-input-wrapper">
+                            <!-- ICONO: Reemplaza la ruta por tu icono de documento/id -->
+                            <span class="form-input-icon icon-tipodocumento" aria-hidden="true"></span>
+                            <select id="documentType" class="form-input" required>
+                                <option value="">Selecciona...</option>
+                                <option value="63D5F1A7-6C0C-4A05-ADF8-D65964D2B3B1">Cédula</option>
+                                <option value="FCCCB874-75F3-4374-B8E5-A7A92B084D6C">Pasaporte</option>
+                                <option value="5BCB367C-1F41-4C5A-B120-F01F35159DD8">Documento extranjero</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Campo: Número de documento -->
+                    <div class="form-group">
+                        <label class="form-label" for="documentNumber">Número de documento</label>
+                        <div class="form-input-wrapper">
+                            <!-- ICONO: Reemplaza la ruta por tu icono de número/hashtag -->
+                            <input type="text" id="documentNumber" class="form-input form-input--no-icon" placeholder="Ej: 1234567890" required />
+                        </div>
+                    </div>
+                </div>
+                <!-- Campo: Teléfono -->
+                <div class="form-group">
+                    <label class="form-label" for="phoneNumber">Teléfono</label>
+                    <div class="form-input-wrapper">
+                        <!-- ICONO: Reemplaza la ruta por tu icono de teléfono -->
+                        <span class="form-input-icon icon-telefono" aria-hidden="true"></span>
+                        <input type="text"
+                               id="phoneNumber"
+                               class="form-input"
+                               placeholder="Ej: 3001234567"
+                               required
+                               autocomplete="tel" />
+                    </div>
+                </div>
+                <!-- Campo: Dirección -->
+                <div class="form-group">
+                    <label class="form-label" for="address">Dirección</label>
+                    <div class="form-input-wrapper">
+                        <!-- ICONO: Reemplaza la ruta por tu icono de ubicación/pin -->
+                        <span class="form-input-icon icon-direccion" aria-hidden="true"></span>
+                        <input type="text"
+                               id="address"
+                               class="form-input"
+                               placeholder="Calle, número, ciudad"
+                               required
+                               autocomplete="street-address" />
+                    </div>
+                </div>
+                <!-- Campo: Correo electrónico -->
+                <div class="form-group">
+                    <label class="form-label" for="email">Correo electrónico</label>
+                    <div class="form-input-wrapper">
+                        <!-- ICONO: Reemplaza la ruta por tu icono de correo -->
+                        <span class="form-input-icon icon-correo" aria-hidden="true"></span>
+                        <input type="email"
+                               id="email"
+                               class="form-input"
+                               placeholder="correo@ejemplo.com"
+                               required
+                               autocomplete="email" />
+                    </div>
+                </div>
+                <!-- Campo: Contraseña -->
+                <div class="form-group">
+                    <label class="form-label" for="password">Contraseña</label>
+                    <div class="form-input-wrapper">
+                        <!-- ICONO: Reemplaza la ruta por tu icono de candado -->
+                        <span class="form-input-icon icon-candado" aria-hidden="true"></span>
+                        <input type="password"
+                               id="password"
+                               class="form-input"
+                               placeholder="••••••••"
+                               required
+                               autocomplete="new-password" />
+                    </div>
+                    <span class="form-hint">Mínimo 8 caracteres</span>
+                </div>
+                <!-- Mensaje de error o éxito (lo maneja el JS) -->
+                <p id="message" class="form-hint form-hint--error" role="alert"></p>
+                <!-- Botón de envío -->
+                <button type="submit" id="submitBtn" class="btn btn-primary">
+                    Crear cuenta
+                </button>
+            </form>
+            <!-- Pie del card -->
+            <div class="card__footer">
+                ¿Ya tienes cuenta?
+                <a href="/pages/auth/login.html">Inicia sesión</a>
+            </div>
+        </div>
+    </main>
+    <script type="module" src="/js/pages/auth/register.js"></script>
 </body>
 </html>
