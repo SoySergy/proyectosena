@@ -297,6 +297,31 @@ namespace proyectosena.Controllers
             }
         }
 
+
+        // -------------------- GET: api/collectionrequest/GetRequestsByUser --------------------
+        // El ciudadano consulta sus propias solicitudes directamente
+        [HttpGet("GetRequestsByUser")]
+        [Authorize(Policy = "CitizenOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetRequestsByUser(Guid idUser)
+        {
+            try
+            {
+                var requests = await _collectionRequestRepository.GetRequestsByUser(idUser);
+
+                if (requests == null || !requests.Any())
+                    return NotFound("No collection requests found for this user.");
+
+                return Ok(requests.Select(MapToResponseDto).ToList());
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving user requests.");
+            }
+        }
+
         // ── Métodos privados ────────────────────────────────────────────
 
         // Mapea el modelo CollectionRequest al DTO de respuesta

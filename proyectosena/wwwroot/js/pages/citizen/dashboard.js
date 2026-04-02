@@ -1,4 +1,5 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
+import { requireRole } from "../../utils/roleGuard.js";
 import { API_BASE } from "../../services/api.js";
 
 // ============================================================
@@ -8,6 +9,9 @@ import { API_BASE } from "../../services/api.js";
 // 🔐 Proteger acceso — redirige a login si no hay token válido
 checkAuth();
 
+// 🛡️ Verificar que el usuario sea Citizen (redirige si es Manager)
+requireRole("Citizen");
+
 // 👤 Leer usuario desde localStorage (guardado en login)
 const user = JSON.parse(localStorage.getItem("user"));
 const token = localStorage.getItem("token");
@@ -16,6 +20,28 @@ const token = localStorage.getItem("token");
 if (user) {
     document.getElementById("welcomeMsg").textContent = `Hola, ${user.name} ${user.lastName}`;
 }
+
+// ============================================================
+// DROPDOWN DE USUARIO
+// ============================================================
+
+const trigger = document.getElementById("userMenuTrigger");
+const dropdown = document.getElementById("userDropdown");
+
+trigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.toggle("is-open");
+    trigger.setAttribute("aria-expanded", isOpen);
+});
+
+// Cerrar al hacer clic fuera
+document.addEventListener("click", () => {
+    dropdown.classList.remove("is-open");
+    trigger.setAttribute("aria-expanded", "false");
+});
+
+// Evitar que clics dentro del dropdown lo cierren
+dropdown.addEventListener("click", (e) => e.stopPropagation());
 
 // ============================================================
 // NAVEGACIÓN ENTRE SECCIONES
@@ -72,12 +98,30 @@ function authHeaders() {
  * @param {string} text - texto del mensaje
  * @param {"success"|"error"} type - tipo de mensaje
  */
+//function showMessage(elementId, text, type = "error") {
+//    const el = document.getElementById(elementId);
+//    el.textContent = text;
+//    el.className = `msg ${type}`;
+
+//    // Limpiar automáticamente después de 4 segundos
+//    setTimeout(() => {
+//        el.textContent = "";
+//        el.className = "";
+//    }, 4000);
+//}
+
 function showMessage(elementId, text, type = "error") {
     const el = document.getElementById(elementId);
+    if (!el) return;
+
+    if (!text) {
+        el.textContent = "";
+        el.className = "";
+        return;
+    }
+
     el.textContent = text;
     el.className = `msg ${type}`;
-
-    // Limpiar automáticamente después de 4 segundos
     setTimeout(() => {
         el.textContent = "";
         el.className = "";
@@ -174,6 +218,11 @@ createForm.addEventListener("submit", async (e) => {
 // ============================================================
 
 document.getElementById("refreshRequestsBtn").addEventListener("click", loadMyRequests);
+// ============================================================
+// SECCIÓN 2 — MIS SOLICITUDES ACTUALES
+// ============================================================
+
+document.getElementById("refreshRequestsBtn").addEventListener("click", loadMyRequests);
 
 async function loadMyRequests() {
     const listEl = document.getElementById("requests-list");
@@ -184,68 +233,123 @@ async function loadMyRequests() {
     showMessage("requests-message", "");
 
     try {
-        // El backend filtra por el idUser del token — traemos todas y filtramos en frontend
-        // ya que el endpoint GetCollectionRequests es solo para Admin/Manager.
-        // Usamos GetCollectionRequestById iterando los que conocemos, 
-        // pero la mejor práctica aquí es filtrar por usuario desde el historial.
-        // Dado que no hay endpoint GetByUser en CollectionRequest, obtenemos por historial
-        // y luego cargamos el detalle de cada solicitud única.
-        const historyResponse = await fetch(
-            `${API_BASE}/history/GetByUser?idUser=${user.idUser}`,
+        const res = await fetch(
+            `${API_BASE}/collectionrequest/GetRequestsByUser?idUser=${user.idUser}`,
             { headers: authHeaders() }
         );
 
-        let requestIds = [];
+        loadingEl.style.display = "none";
 
-        if (historyResponse.ok) {
-            const histories = await historyResponse.json();
-            // Extraer IDs únicos de solicitudes del historial del usuario
-            const unique = [...new Set(histories.map(h => h.idRequest))];
-            requestIds = unique;
-        }
-
-        // Si no hay historial, mostrar mensaje vacío
-        if (requestIds.length === 0) {
-            loadingEl.style.display = "none";
+        if (res.status === 404) {
             listEl.innerHTML = "<p class='empty-msg'>No tienes solicitudes registradas aún.</p>";
             return;
         }
 
-        // Cargar detalle de cada solicitud
-        const detailPromises = requestIds.map(id =>
-            fetch(`${API_BASE}/collectionrequest/GetCollectionRequestById?idRequest=${id}`, {
-                headers: authHeaders()
-            }).then(r => r.ok ? r.json() : null)
+        if (!res.ok) throw new Error("Error al obtener solicitudes");
+
+        const requests = await res.json();
+
+        /*        listEl.innerHTML = requests.map(req => renderRequestCard(req)).join("");*/
+        const activeRequests = requests.filter(r =>
+            r.currentStatus === "Pending" ||
+            r.currentStatus === "Assigned" ||
+            r.currentStatus === "InProgress"
         );
 
-        const requests = (await Promise.all(detailPromises)).filter(Boolean);
-
-        loadingEl.style.display = "none";
-
-        if (requests.length === 0) {
-            listEl.innerHTML = "<p class='empty-msg'>No se encontraron solicitudes.</p>";
+        if (!activeRequests.length) {
+            listEl.innerHTML = "<p class='empty-msg'>No tienes solicitudes activas en este momento.</p>";
             return;
         }
 
-        // Ordenar por fecha de solicitud más reciente primero
-        requests.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
+        listEl.innerHTML = activeRequests.map(req => renderRequestCard(req)).join("");
+        /////
 
-        listEl.innerHTML = requests.map(req => renderRequestCard(req)).join("");
 
-        // Adjuntar eventos de edición a los botones renderizados
         listEl.querySelectorAll(".edit-btn").forEach(btn => {
             btn.addEventListener("click", () => {
-                const idRequest = btn.dataset.id;
-                const req = requests.find(r => r.idRequest === idRequest);
+                //const req = requests.find(r => r.idRequest === btn.dataset.id);
+                //if (req) openEditModal(req);
+                const req = activeRequests.find(r => r.idRequest === btn.dataset.id);
                 if (req) openEditModal(req);
             });
         });
 
     } catch (error) {
         loadingEl.style.display = "none";
-        showMessage("requests-message", "Error al cargar tus solicitudes. Verifica tu conexión.", "error");
+        showMessage("requests-message", "Error al cargar tus solicitudes.", "error");
     }
 }
+//async function loadMyRequests() {
+//    const listEl = document.getElementById("requests-list");
+//    const loadingEl = document.getElementById("requests-loading");
+
+//    listEl.innerHTML = "";
+//    loadingEl.style.display = "block";
+//    showMessage("requests-message", "");
+
+//    try {
+//        // El backend filtra por el idUser del token — traemos todas y filtramos en frontend
+//        // ya que el endpoint GetCollectionRequests es solo para Admin/Manager.
+//        // Usamos GetCollectionRequestById iterando los que conocemos, 
+//        // pero la mejor práctica aquí es filtrar por usuario desde el historial.
+//        // Dado que no hay endpoint GetByUser en CollectionRequest, obtenemos por historial
+//        // y luego cargamos el detalle de cada solicitud única.
+//        const historyResponse = await fetch(
+//            `${API_BASE}/history/GetByUser?idUser=${user.idUser}`,
+//            { headers: authHeaders() }
+//        );
+
+//        let requestIds = [];
+
+//        if (historyResponse.ok) {
+//            const histories = await historyResponse.json();
+//            // Extraer IDs únicos de solicitudes del historial del usuario
+//            const unique = [...new Set(histories.map(h => h.idRequest))];
+//            requestIds = unique;
+//        }
+
+//        // Si no hay historial, mostrar mensaje vacío
+//        if (requestIds.length === 0) {
+//            loadingEl.style.display = "none";
+//            listEl.innerHTML = "<p class='empty-msg'>No tienes solicitudes registradas aún.</p>";
+//            return;
+//        }
+
+//        // Cargar detalle de cada solicitud
+//        const detailPromises = requestIds.map(id =>
+//            fetch(`${API_BASE}/collectionrequest/GetCollectionRequestById?idRequest=${id}`, {
+//                headers: authHeaders()
+//            }).then(r => r.ok ? r.json() : null)
+//        );
+
+//        const requests = (await Promise.all(detailPromises)).filter(Boolean);
+
+//        loadingEl.style.display = "none";
+
+//        if (requests.length === 0) {
+//            listEl.innerHTML = "<p class='empty-msg'>No se encontraron solicitudes.</p>";
+//            return;
+//        }
+
+//        // Ordenar por fecha de solicitud más reciente primero
+//        requests.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
+
+//        listEl.innerHTML = requests.map(req => renderRequestCard(req)).join("");
+
+//        // Adjuntar eventos de edición a los botones renderizados
+//        listEl.querySelectorAll(".edit-btn").forEach(btn => {
+//            btn.addEventListener("click", () => {
+//                const idRequest = btn.dataset.id;
+//                const req = requests.find(r => r.idRequest === idRequest);
+//                if (req) openEditModal(req);
+//            });
+//        });
+
+//    } catch (error) {
+//        loadingEl.style.display = "none";
+//        showMessage("requests-message", "Error al cargar tus solicitudes. Verifica tu conexión.", "error");
+//    }
+//}
 
 /**
  * Genera el HTML de una tarjeta de solicitud

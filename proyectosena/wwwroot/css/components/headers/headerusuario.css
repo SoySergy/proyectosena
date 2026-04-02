@@ -1,0 +1,187 @@
+﻿/* =============================================
+   HEADER USUARIO — con dropdown de perfil
+   Usado en: citizen/dashboard y manager/dashboard
+   Color principal: #1A5C3A
+   ============================================= */
+
+.header-usuario {
+    background-color: #1A5C3A;
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 50;
+}
+
+.header-usuario .recyroute {
+    font-family: var(--font-logo);
+    color: #FFFFFF;
+    margin: 0;
+}
+
+
+/* ── Logo ────────────────────────────────── */
+.header-usuario__logo {
+    font-family: var(--font-logo, 'Unbounded', sans-serif);
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.125rem;
+    letter-spacing: -0.03em;
+}
+
+    .header-usuario__logo a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .header-usuario__logo img {
+        flex-shrink: 0;
+    }
+
+/* ── Zona derecha: saludo + avatar ───────── */
+.header-usuario__right {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Botón disparador del dropdown */
+.header-usuario__trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    color: #ffffff;
+}
+
+    .header-usuario__trigger:hover {
+        background-color: rgba(255, 255, 255, 0.12);
+    }
+
+.header-usuario__greeting {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+.header-usuario__avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+    .header-usuario__avatar img {
+        width: 18px;
+        height: 18px;
+        filter: brightness(0) invert(1);
+    }
+
+/* ── Dropdown ────────────────────────────── */
+.header-usuario__dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 220px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+    z-index: 200;
+    /* Animación de entrada */
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+    /* Clase .open la agrega/quita el JS */
+    .header-usuario__dropdown.open {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+/* Email del usuario (encabezado del dropdown) */
+.dropdown-email {
+    padding: 0.85rem 1rem;
+    font-size: 0.8rem;
+    color: #757575;
+    border-bottom: 1px solid #f0f0f0;
+    background-color: #fafafa;
+    word-break: break-all;
+}
+
+/* Opciones del dropdown */
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #143526;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.15s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+}
+
+    .dropdown-item:hover {
+        background-color: #f0f7f3;
+        color: #1A5C3A;
+    }
+
+.dropdown-item__icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: #3A9469;
+}
+
+/* Separador entre opciones */
+.dropdown-separator {
+    height: 1px;
+    background-color: #f0f0f0;
+    margin: 0;
+}
+
+/* Opción de cerrar sesión en rojo */
+.dropdown-item--danger {
+    color: #D32F2F;
+}
+
+    .dropdown-item--danger:hover {
+        background-color: #fff5f5;
+        color: #D32F2F;
+    }
+
+    .dropdown-item--danger .dropdown-item__icon {
+        color: #D32F2F;
+    }

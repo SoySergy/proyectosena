@@ -24,12 +24,21 @@ namespace proyectosena.Repositorios
                                  .ToListAsync();
         }
 
-        // Obtiene una solicitud específica por ID incluyendo el usuario asociado
+        // El ciudadano consulta sus propias solicitudes directamente Obtiene una solicitud específica por ID incluyendo el usuario asociado
         public async Task<CollectionRequest> GetCollectionRequest(Guid idRequest)
         {
             return await _context.CollectionRequests
                                  .Include(s => s.User)
                                  .FirstOrDefaultAsync(s => s.IdRequest == idRequest);
+        }
+
+        public async Task<IEnumerable<CollectionRequest>> GetRequestsByUser(Guid idUser)
+        {
+            return await _context.CollectionRequests
+                .Include(r => r.User)
+                .Where(r => r.IdUser == idUser)
+                .OrderByDescending(r => r.RequestDate)
+                .ToListAsync();
         }
 
         // Obtiene todas las solicitudes en estado Pending ordenadas por fecha de solicitud

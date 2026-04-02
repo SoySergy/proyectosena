@@ -12,6 +12,9 @@ namespace proyectosena.Interfaces
         // Obtiene una solicitud de recolección por su ID
         Task<CollectionRequest> GetCollectionRequest(Guid idRequest);
 
+        // El ciudadano consulta sus propias solicitudes directamente
+        Task<IEnumerable<CollectionRequest>> GetRequestsByUser(Guid idUser);
+
         // Crea una nueva solicitud de recolección
         Task<CollectionRequest> CreateCollectionRequest(CollectionRequest collectionRequest);
 

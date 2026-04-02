@@ -73,7 +73,7 @@ export async function loginUser(data) {
 * POST /api/auth/forgot-password
 */
 export async function forgotPassword(email) {
-    const res = await fetch(`${API_BASE}/forgot-password`, {
+    const res = await fetch(`${API_BASE}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -90,7 +90,7 @@ export async function forgotPassword(email) {
  * POST /api/auth/verify-reset-code
  */
 export async function verifyResetCode(email, code) {
-    const res = await fetch(`${API_BASE}/verify-reset-code`, {
+    const res = await fetch(`${API_BASE}/auth/verify-reset-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
@@ -107,7 +107,7 @@ export async function verifyResetCode(email, code) {
  * POST /api/auth/reset-password
  */
 export async function resetPassword(email, code, newPassword) {
-    const res = await fetch(`${API_BASE}/reset-password`, {
+    const res = await fetch(`${API_BASE}/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code, newPassword }),
