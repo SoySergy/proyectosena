@@ -1,7 +1,7 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole } from "../../utils/roleGuard.js";
 import { API_BASE } from "../../services/api.js";
-
+//js/pages / manager / dashboard.js
 // ============================================================
 // INICIALIZACIÓN
 // ============================================================

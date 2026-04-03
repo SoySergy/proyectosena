@@ -274,11 +274,21 @@
     color: #9ca3af;
 }
 
-.card-body p {
-    margin: 0.25rem 0;
-    font-size: 0.9rem;
-    color: #374151;
+.card-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem 1.5rem;
+    margin-bottom: 0.85rem;
 }
+
+    .card-body p {
+        font-size: 0.875rem;
+        color: var(--color-text-primary);
+        margin: 0;
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+    }
 
 .card-actions {
     margin-top: 0.9rem;
@@ -563,6 +573,11 @@
 @media (max-width: 640px) {
     .card {
         padding: 1.25rem;
+
+    }
+
+    .card-body {
+        grid-template-columns: 1fr;
     }
 
     .history-row {
@@ -582,4 +597,23 @@
     .btn-primary {
         margin-top: 0.25rem;
     }
+}
+
+/* AGREGA al final del archivo: */
+.card-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    background-color: var(--icon-color);
+    mask-repeat: no-repeat;
+    mask-size: contain;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    -webkit-mask-position: center;
+    vertical-align: middle;
+    flex-shrink: 0;
+    margin-right: 5px;
+    position: relative;
+    top: -1px;
 }
