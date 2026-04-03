@@ -1,0 +1,287 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecyRoute Ciudadano</title>
+    <!-- Favicon -->
+    <link rel="icon" href="/assets/icons/recyroute.svg" />
+    <!-- Base -->
+    <link rel="stylesheet" href="/css/base/styles.css">
+    <!-- Components -->
+    <link rel="stylesheet" href="/css/components/headers/headerusuario.css">
+    <link rel="stylesheet" href="/css/components/cards.css">
+    <link rel="stylesheet" href="/css/components/form.css">
+    <!-- Page -->
+    <link rel="stylesheet" href="/css/pages/citizen/dashboard.css">
+</head>
+<body>
+    <!-- ===== HEADER PRINCIPAL ===== -->
+    <header class="header-usuario">
+        <h1 class="recyroute">
+            recyroute
+        </h1>
+        <div class="header-user">
+            <span id="welcomeMsg" class="header-user__name"></span>
+            <div class="header-user__menu">
+                <button class="header-user__trigger"
+                        id="userMenuTrigger"
+                        type="button"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                    <span class="header-user__avatar" aria-hidden="true">
+                        <img src="/assets/icons/usuario.svg" alt="" />
+                    </span>
+                </button>
+                <div class="header-user__dropdown" id="userDropdown" role="menu">
+                    <div class="dropdown-email" id="userEmail">cargando...</div>
+                    <a href="/pages/general/settings/profile.html" class="dropdown-item" role="menuitem">
+                        <img src="/assets/icons/configuracion.svg" alt="" class="dropdown-item__icon" />
+                        Configuración
+                    </a>
+                    <div class="dropdown-separator"></div>
+                    <button class="dropdown-item dropdown-item--danger" id="logoutBtn" type="button" role="menuitem">
+                        <img src="/assets/icons/salir.svg" alt="" class="dropdown-item__icon" />
+                        Cerrar sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+
+
+
+
+
+
+
+
+
+    <nav class="main-nav">
+        <button class="nav-btn active" data-section="nueva-solicitud">
+            <!--<span class="form-input-icon icon-lapiz" aria-hidden="true"></span>-->
+            Nueva Solicitud
+        </button>
+        <button class="nav-btn" data-section="mis-solicitudes">
+            <!--<span class="form-input-icon icon-caja" aria-hidden="true"></span>-->
+            Mis Solicitudes
+        </button>
+        <button class="nav-btn" data-section="historial">
+            <!--<span class="form-input-icon icon-calendario" aria-hidden="true"></span>-->
+            Historial
+        </button>
+    </nav>
+
+
+
+
+    <main class="dashboard-main">
+        <section id="nueva-solicitud" class="section active">
+
+            <div class="card">
+                <h2 class="card__title">Crear Solicitud de Recolección</h2>
+                <p class="card__subtitle">Completa el formulario para solicitar la recolección de tus residuos.</p>
+                <div id="form-message" class="form-hint form-hint--error" role="alert"></div>
+
+                <form id="createRequestForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="collectionDate">Fecha de recolección *</label>
+                            <div class="form-input-wrapper">
+                                <span class="form-input-icon icon-calendario" aria-hidden="true"></span>
+                                <input type="date"
+                                       id="collectionDate"
+                                       class="form-input"
+                                       required />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="collectionTime">Hora de recolección *</label>
+                            <div class="form-input-wrapper">
+                                <span class="form-input-icon icon-reloj" aria-hidden="true"></span>
+                                <input type="time"
+                                       id="collectionTime"
+                                       class="form-input"
+                                       required />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="collectionAddress">Dirección de recolección *</label>
+                        <div class="form-input-wrapper">
+                            <span class="form-input-icon icon-direccion" aria-hidden="true"></span>
+                            <input type="text"
+                                   id="collectionAddress"
+                                   class="form-input"
+                                   placeholder="Ej: Calle 123 # 45-67, Bogotá"
+                                   required
+                                   minlength="5"
+                                   maxlength="200" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="contactPhone">Teléfono de contacto *</label>
+                        <div class="form-input-wrapper">
+                            <span class="form-input-icon icon-telefono" aria-hidden="true"></span>
+                            <input type="tel"
+                                   id="contactPhone"
+                                   class="form-input"
+                                   placeholder="Ej: 3001234567"
+                                   required
+                                   minlength="7"
+                                   maxlength="20" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="wasteTypes">Tipos de residuos *</label>
+                        <div class="form-input-wrapper">
+                            <span class="form-input-icon icon-caja" aria-hidden="true"></span>
+                            <input type="text"
+                                   id="wasteTypes"
+                                   class="form-input"
+                                   placeholder="Ej: Plástico, vidrio, cartón"
+                                   required
+                                   minlength="3"
+                                   maxlength="200" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="citizenObservations">Observaciones (opcional)</label>
+                        <textarea id="citizenObservations"
+                                  class="form-input form-textarea"
+                                  placeholder="Información adicional para el recolector..."
+                                  maxlength="500"
+                                  rows="3"></textarea>
+                    </div>
+                    <button type="submit" id="submitRequestBtn" class="btn btn-primary">
+                        Crear Solicitud
+                    </button>
+                </form>
+            </div>
+        </section>
+
+
+        <section id="mis-solicitudes" class="section">
+
+            <div class="card">
+                <div class="section-header">
+                    <div>
+                        <h2 class="card__title">Mis Solicitudes Actuales</h2>
+                        <p class="card__subtitle">
+                            Solo puedes editar las que están en estado <strong>Pendiente</strong>.
+                        </p>
+                    </div>
+                    <button id="refreshRequestsBtn" class="btn btn-secondary">
+                        <!--<img src="../../assets/icons/refresh.svg" alt="" width="16" height="16" aria-hidden="true" />-->
+                        Actualizar
+                    </button>
+                </div>
+                <div id="requests-message" class="form-hint form-hint--error" role="alert"></div>
+                <div id="requests-loading" class="loading-msg" style="display:none">
+                    Cargando solicitudes...
+                </div>
+                <div id="requests-list"></div>
+            </div>
+        </section>
+
+
+        <section id="historial" class="section">
+            <div class="card">
+                <div class="section-header">
+                    <div>
+                        <h2 class="card__title">Historial de Recolecciones</h2>
+                        <p class="card__subtitle">
+                            Registro completo de todos los cambios de estado de tus solicitudes.
+                        </p>
+                    </div>
+                    <button id="refreshHistoryBtn" class="btn btn-secondary">
+                        <!--<img src="../../assets/icons/refresh.svg" alt="" width="16" height="16" aria-hidden="true" />-->
+                        Actualizar
+                    </button>
+                </div>
+                <div id="history-message" class="form-hint form-hint--error" role="alert"></div>
+                <div id="history-loading" class="loading-msg" style="display:none">
+                    Cargando historial...
+                </div>
+                <div id="history-list"></div>
+            </div>
+        </section>
+
+    </main>
+    <div id="editModal" class="modal" style="display:none">
+        <div class="modal-content card">
+
+            <div class="modal-header">
+                <h3 class="card__title">Editar Solicitud</h3>
+                <button id="closeModalBtn" class="btn-icon">
+                    <span class="form-input-icon icon-salir" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div id="edit-message" class="form-hint form-hint--error" role="alert"></div>
+
+            <form id="editRequestForm">
+                <input type="hidden" id="editIdRequest">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="editCollectionDate">Fecha de recolección</label>
+                        <div class="form-input-wrapper">
+                            <span class="form-input-icon icon-calendario" aria-hidden="true"></span>
+                            <input type="date" id="editCollectionDate" class="form-input" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="editCollectionTime">Hora de recolección</label>
+                        <div class="form-input-wrapper">
+                            <span class="form-input-icon icon-reloj" aria-hidden="true"></span>
+                            <input type="time" id="editCollectionTime" class="form-input" />
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editCollectionAddress">Dirección</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon icon-direccion" aria-hidden="true"></span>
+                        <input type="text" id="editCollectionAddress" class="form-input" minlength="5" maxlength="200" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editContactPhone">Teléfono</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon icon-telefono" aria-hidden="true"></span>
+                        <input type="tel" id="editContactPhone" class="form-input" minlength="7" maxlength="20" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editWasteTypes">Tipos de residuos</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon icon-reciclaje" aria-hidden="true"></span>
+                        <input type="text" id="editWasteTypes" class="form-input" minlength="3" maxlength="200" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editCitizenObservations">Observaciones</label>
+                    <textarea id="editCitizenObservations"
+                              class="form-input form-textarea"
+                              maxlength="500"
+                              rows="3"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="cancelEditBtn" class="btn btn-secondary">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="saveEditBtn" class="btn btn-primary">
+                        Guardar cambios
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay" style="display:none"></div>
+    <script type="module" src="/js/pages/citizen/dashboard.js"></script>
+    <!--http://localhost:5031/pages/citizen/dashboard.html-->
+</body>
+</html>

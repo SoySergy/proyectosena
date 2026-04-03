@@ -1,0 +1,76 @@
+﻿/* =============================
+   CARD - Contenedor reutilizable
+   Úsalo en: login, register, 
+   settings, formularios, etc.
+   ============================= */
+
+.card {
+    background: var(--color-surface); /* Fondo blanco del cuadro */
+    border-radius: var(--radius-lg); /* Bordes redondeados grandes */
+    padding: var(--spacing-xl); /* Espaciado interno generoso */
+    width: 100%;
+    max-width: 420px; /* Ancho máximo del cuadro */
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18); /* Sombra para efecto de profundidad */
+}
+
+/* Logo dentro del card */
+.card__logo {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.card__logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--color-primary);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card__logo-text {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--color-primary-dark);
+}
+
+/* Título principal del card */
+.card__title {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    color: var(--color-text-primary);
+    margin-bottom: 4px;
+}
+
+/* Subtítulo descriptivo del card */
+.card__subtitle {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    font-weight: var(--font-regular);
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Texto al pie del card - para links como "¿Ya tienes cuenta?" */
+.card__footer {
+    text-align: center;
+    margin-top: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+}
+
+.card__footer a {
+    color: var(--color-primary);
+    font-weight: var(--font-medium);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.card__footer a:hover {
+    color: var(--color-primary-dark);
+}

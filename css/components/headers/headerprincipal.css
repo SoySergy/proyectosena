@@ -1,0 +1,55 @@
+﻿/* Header principal usado en index.html */
+
+.header-principal {
+    background-color: #1A5C3A;
+    display: flex;
+    width: 100%;
+    z-index: 10;
+    justify-content: space-between; /* Centra el contenido horizontalmente */
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Línea divisoria casi invisible */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* Sombra sutil para dar profundidad */
+    flex-shrink: 0;
+}
+
+.header-principal .recyroute {
+    font-family: var(--font-logo);
+    color: #FFFFFF;
+    margin: 0;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 2rem;
+}
+
+.btn {
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.btn-login {
+    background-color: transparent;
+    color: white;
+    border: 1px solid white;
+}
+
+.btn-login:hover {
+    background-color: white;
+    color: #2c3e50;
+}
+
+.btn-register {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+}
+
+.btn-register:hover {
+    background-color: #2ecc71;
+}

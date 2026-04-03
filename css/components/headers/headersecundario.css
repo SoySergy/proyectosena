@@ -1,0 +1,19 @@
+﻿/* Header secundario usado para toda la seccion de auth */
+.header-secundario {
+    background-color: #1A5C3A;
+    display: flex;
+    width: 100%;
+    z-index: 10;
+    justify-content: center; /* Centra el contenido horizontalmente */
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Línea divisoria casi invisible */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* Sombra sutil para dar profundidad */
+    flex-shrink: 0;
+}
+
+.header-secundario .recyroute {
+    font-family: var(--font-logo);
+    color: #FFFFFF;
+    margin: 0;
+}

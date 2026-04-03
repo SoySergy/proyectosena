@@ -1,0 +1,132 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecyRoute Security.html</title>
+    <!-- Favicon -->
+    <link rel="icon" href="/assets/icons/recyroute.svg" />
+    <!-- Base -->
+    <link rel="stylesheet" href="/css/base/styles.css">
+    <!-- Components -->
+    <link rel="stylesheet" href="/css/components/headers/headerusuario.css">
+    <link rel="stylesheet" href="/css/components/cards.css">
+    <link rel="stylesheet" href="/css/components/form.css">
+    <!-- Page -->
+    <link rel="stylesheet" href="/css/pages/citizen/dashboard.css">
+    <link rel="stylesheet" href="/css/pages/general/settings.css">
+</head>
+<body>
+    <!-- ===== HEADER PRINCIPAL ===== -->
+    <header class="header-usuario">
+        <h1 class="recyroute">
+            recyroute
+        </h1>
+        <div class="header-user">
+            <span id="welcomeMsg" class="header-user__name"></span>
+            <div class="header-user__menu">
+                <button class="header-user__trigger"
+                        id="userMenuTrigger"
+                        type="button"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                    <span class="header-user__avatar" aria-hidden="true">
+                        <img src="/assets/icons/usuario.svg" alt="" />
+                    </span>
+                </button>
+                <div class="header-user__dropdown" id="userDropdown" role="menu">
+                    <div class="dropdown-email" id="userEmail">cargando...</div>
+                    <a href="/pages/general/settings/profile.html" class="dropdown-item" role="menuitem">
+                        <img src="/assets/icons/configuracion.svg" alt="" class="dropdown-item__icon" />
+                        Configuración
+                    </a>
+                    <div class="dropdown-separator"></div>
+                    <button class="dropdown-item dropdown-item--danger" id="logoutBtn" type="button" role="menuitem">
+                        <img src="/assets/icons/salir.svg" alt="" class="dropdown-item__icon" />
+                        Cerrar sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- LAYOUT SETTINGS -->
+    <div class="settings-layout">
+
+        <!-- Sidebar -->
+        <nav class="settings-sidebar">
+            <p class="settings-sidebar__title">Configuración</p>
+            <a href="/pages/general/settings/profile.html" class="settings-nav-link">
+                <!--<img src="../../../assets/icons/usuario.svg" alt="" />-->
+                Mi Perfil
+            </a>
+            <a href="/pages/general/settings/security.html" class="settings-nav-link active">
+                <!--<img src="../../../assets/icons/candado.svg" alt="" />-->
+                Seguridad
+            </a>
+        </nav>
+
+        <!-- Contenido -->
+        <div class="settings-content">
+            <h2 class="settings-section-title">Cambiar Contraseña</h2>
+            <p class="settings-section-subtitle">Por tu seguridad, usa una contraseña de mínimo 8 caracteres.</p>
+
+            <div id="security-message" class="settings-message" role="alert"></div>
+
+            <form id="securityForm" class="settings-form">
+
+                <div class="form-group">
+                    <label class="form-label" for="currentPassword">Contraseña actual</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon icon-candado" aria-hidden="true"></span>
+                        <input type="password" id="currentPassword" class="form-input"
+                               placeholder="Tu contraseña actual" minlength="8" required />
+                        <button type="button" class="toggle-pwd" data-target="currentPassword" title="Mostrar/ocultar">
+                            <span class="form-input-icon icon-ojocerrado" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-divider"></div>
+
+                <div class="form-group">
+                    <label class="form-label" for="newPassword">Nueva contraseña</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon icon-candado" aria-hidden="true"></span>
+                        <input type="password" id="newPassword" class="form-input"
+                               placeholder="Mínimo 8 caracteres" minlength="8" maxlength="128" required />
+                        <button type="button" class="toggle-pwd" data-target="newPassword" title="Mostrar/ocultar">
+                            <span class="form-input-icon icon-ojocerrado" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="confirmPassword">Confirmar nueva contraseña</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon icon-candado" aria-hidden="true"></span>
+                        <input type="password" id="confirmPassword" class="form-input"
+                               placeholder="Repite la nueva contraseña" minlength="8" maxlength="128" required />
+                        <button type="button" class="toggle-pwd" data-target="confirmPassword" title="Mostrar/ocultar">
+                            <span class="form-input-icon icon-ojocerrado" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <span id="pwd-match-hint" class="form-hint"></span>
+                </div>
+
+                <button type="submit" id="securitySubmitBtn" class="settings-submit">
+                    Cambiar contraseña
+                </button>
+            </form>
+        </div>
+    </div>
+
+
+
+
+
+
+
+    <script type="module" src="/js/pages/general/settings/security.js"></script>
+</body>
+</html>

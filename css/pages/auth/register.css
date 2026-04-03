@@ -1,0 +1,40 @@
+﻿/* Centra el card vertical y horizontalmente en la pantalla */
+/*.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+}*/
+
+body {
+    overflow: auto;
+}
+/* Centra el card vertical y horizontalmente en la pantalla */
+.auth-wrapper {
+    flex: 1;
+    width: 100%; /* ← AGREGA ESTA LÍNEA */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+    padding-bottom: 10px;
+}
+    .auth-wrapper .card {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 10px; /* ← Este sí lo sube, ajusta el valor */
+    }
+
+.card__title {
+    text-align: center;
+}
+
+.card__subtitle {
+    text-align: center;
+}
+
+#submitBtn {
+    display: block;
+    margin: 0 auto;
+}

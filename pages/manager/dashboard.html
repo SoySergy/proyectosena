@@ -1,0 +1,170 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecyRoute Gestor</title>
+    <!-- Favicon -->
+    <link rel="icon" href="/assets/icons/recyroute.svg" />
+    <!-- Base -->
+    <link rel="stylesheet" href="/css/base/styles.css">
+    <!-- Components -->
+    <link rel="stylesheet" href="/css/components/headers/headerusuario.css">
+    <link rel="stylesheet" href="/css/components/cards.css">
+    <link rel="stylesheet" href="/css/components/form.css">
+    <!-- Page -->
+    <link rel="stylesheet" href="/css/pages/citizen/dashboard.css">
+    <link rel="stylesheet" href="/css/pages/manager/dashboard.css">
+</head>
+<body>
+
+    <!--===== HEADER PRINCIPAL =====-->
+    <header class="header-usuario">
+        <h1 class="recyroute">
+            recyroute
+        </h1>
+        <div class="header-user">
+            <span id="welcomeMsg" class="header-user__name"></span>
+            <div class="header-user__menu">
+                <button class="header-user__trigger"
+                        id="userMenuTrigger"
+                        type="button"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                    <span class="header-user__avatar" aria-hidden="true">
+                        <img src="/assets/icons/usuario.svg" alt="" />
+                    </span>
+                </button>
+                <div class="header-user__dropdown" id="userDropdown" role="menu">
+                    <div class="dropdown-email" id="userEmail">cargando...</div>
+                    <a href="/pages/general/settings/profile.html" class="dropdown-item" role="menuitem">
+                        <img src="/assets/icons/configuracion.svg" alt="" class="dropdown-item__icon" />
+                        Configuración
+                    </a>
+                    <div class="dropdown-separator"></div>
+                    <button class="dropdown-item dropdown-item--danger" id="logoutBtn" type="button" role="menuitem">
+                        <img src="/assets/icons/salir.svg" alt="" class="dropdown-item__icon" />
+                        Cerrar sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+
+    <nav class="main-nav">
+        <button class="nav-btn active" data-section="solicitudes-disponibles">
+            <!--<img src="../../assets/icons/inicio.svg" alt="" width="16" height="16" aria-hidden="true" />-->
+            Disponibles
+        </button>
+        <button class="nav-btn" data-section="mis-asignaciones">
+            <!--<img src="../../assets/icons/reloj.svg" alt="" width="16" height="16" aria-hidden="true" />-->
+            Mis Asignaciones
+        </button>
+        <button class="nav-btn" data-section="todas-solicitudes">
+            <!--<img src="../../assets/icons/busqueda.svg" alt="" width="16" height="16" aria-hidden="true" />-->
+            Todas
+        </button>
+    </nav>
+
+    <main class="dashboard-main">
+
+        <!-- SECCIÓN 1: DISPONIBLES -->
+        <section id="solicitudes-disponibles" class="section active">
+            <div class="card">
+                <div class="section-header">
+                    <div>
+                        <h2 class="card__title">Solicitudes Disponibles</h2>
+                        <p class="card__subtitle">Solicitudes pendientes que puedes tomar. Sé el primero en aceptar.</p>
+                    </div>
+                    <button id="refreshPendingBtn" class="btn btn-secondary">Actualizar</button>
+                </div>
+                <div id="pending-message" class="form-hint" role="alert"></div>
+                <div id="pending-loading" class="loading-msg" style="display:none">Cargando...</div>
+                <div id="pending-list"></div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: MIS ASIGNACIONES -->
+        <section id="mis-asignaciones" class="section">
+            <div class="card">
+                <div class="section-header">
+                    <div>
+                        <h2 class="card__title">Mis Asignaciones</h2>
+                        <p class="card__subtitle">Solicitudes a tu cargo. Avanza su estado o márcalas como completadas.</p>
+                    </div>
+                    <button id="refreshAssignedBtn" class="btn btn-secondary">Actualizar</button>
+                </div>
+                <div id="assigned-message" class="form-hint" role="alert"></div>
+                <div id="assigned-loading" class="loading-msg" style="display:none">Cargando...</div>
+                <div id="assigned-list"></div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: TODAS -->
+        <section id="todas-solicitudes" class="section">
+            <div class="card">
+                <div class="section-header">
+                    <div>
+                        <h2 class="card__title">Todas las Solicitudes</h2>
+                        <p class="card__subtitle">Vista completa de todas las solicitudes del sistema.</p>
+                    </div>
+                    <button id="refreshAllBtn" class="btn btn-secondary">Actualizar</button>
+                </div>
+                <div class="filter-bar">
+                    <label class="filter-label" for="statusFilter">Filtrar por estado:</label>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">Todos</option>
+                        <option value="Pending">Pendiente</option>
+                        <option value="Assigned">Asignado</option>
+                        <option value="InProgress">En progreso</option>
+                        <option value="Completed">Completado</option>
+                        <option value="Rejected">Rechazado</option>
+                    </select>
+                </div>
+                <div id="all-message" class="form-hint" role="alert"></div>
+                <div id="all-loading" class="loading-msg" style="display:none">Cargando...</div>
+                <div id="all-list"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL CAMBIAR ESTADO -->
+    <div id="statusModal" class="modal" style="display:none">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <h3 class="card__title">Actualizar Estado</h3>
+                <button id="closeStatusModalBtn" class="btn-icon" title="Cerrar">✕</button>
+            </div>
+            <div id="status-modal-message" class="form-hint" role="alert"></div>
+            <input type="hidden" id="modalRequestId" />
+            <div class="form-group" style="margin-bottom:1rem">
+                <label class="form-label" for="newStatusSelect">Nuevo estado</label>
+                <select id="newStatusSelect" class="form-input" style="padding-left:14px">
+                    <option value="Assigned">Asignado</option>
+                    <option value="InProgress">En progreso</option>
+                    <option value="Completed">Completado</option>
+                    <option value="Rejected">Rechazado</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:1.5rem">
+                <label class="form-label" for="statusComment">Comentario (opcional)</label>
+                <textarea id="statusComment" class="form-input" rows="3" maxlength="300"
+                          placeholder="Ej: El ciudadano no estaba en casa..."
+                          style="padding-left:14px; resize:vertical; min-height:70px"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelStatusBtn" class="btn btn-secondary">Cancelar</button>
+                <button type="button" id="saveStatusBtn" class="btn btn-primary" style="width:auto;flex:1">Guardar</button>
+            </div>
+        </div>
+    </div>
+    <div id="statusModalOverlay" class="modal-overlay" style="display:none"></div>
+
+    <div id="modalOverlay" class="modal-overlay" style="display:none"></div>
+
+    <script type="module" src="/js/pages/manager/dashboard.js"></script>
+    <!--http://localhost:5031/pages/manager/dashboard.html-->
+</body>
+</html>
