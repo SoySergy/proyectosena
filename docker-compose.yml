@@ -1,0 +1,53 @@
+version: '3.9'
+
+services:
+
+  # ── BASE DE DATOS: SQL Server ──────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: recyroute_db
+    environment:
+      SA_PASSWORD: "RecyRoute@2024"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'RecyRoute@2024' -Q 'SELECT 1' -No -C || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── APLICACIÓN: API ASP.NET Core ──────────────────────
+  api:
+    build:
+      context: ./proyectosena   # ← apunta a la carpeta donde está el Dockerfile
+      dockerfile: Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+    container_name: recyroute_api
+    ports:
+      - "8080:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=RecyRoute;User Id=sa;Password=RecyRoute@2024;TrustServerCertificate=True;MultipleActiveResultSets=True"
+      Jwt__Key: "TuClaveSecretaSuperSeguraDeAlMenos32Caracteres!"
+      Jwt__Issuer: "RecyRouteAPI"
+      Jwt__Audience: "RecyRouteClients"
+      Jwt__TokenExpirationMinutes: "120"
+      EmailSettings__Host: "smtp.gmail.com"
+      EmailSettings__Port: "587"
+      EmailSettings__SenderEmail: "therecyroute@gmail.com"
+      EmailSettings__SenderName: "RecyRoute"
+      EmailSettings__Password: "qvfpjcoxvjtiodfr"
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
