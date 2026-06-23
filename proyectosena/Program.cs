@@ -103,6 +103,7 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // ── 8. MIDDLEWARE PIPELINE ────────────────────────────
+// Swagger disponible en /swagger en cualquier entorno (incluido Docker/Production)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -113,7 +114,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+// Solo redirige a HTTPS si NO estamos en Producción (Docker corre solo HTTP)
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseCors("RecyRoutePolicy");
 app.UseAuthentication();
 app.UseAuthorization();

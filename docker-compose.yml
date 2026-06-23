@@ -49,5 +49,17 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+ # ── FRONTEND: archivos estáticos servidos con Nginx ────
+  frontend:
+    image: nginx:alpine
+    container_name: recyroute_frontend
+    ports:
+      - "8081:80"
+    volumes:
+      - ./proyectosena/wwwroot:/usr/share/nginx/html:ro   # ← Bind Mount: lee directo del host, sin rebuild
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   sqlserver_data:
