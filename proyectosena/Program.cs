@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using proyectosena;
+using proyectosena.Context;
 using proyectosena.Repositories.Interfaces;
 using proyectosena.Services;
 using System.Text;
@@ -101,6 +103,15 @@ builder.Services.AddControllers();
 
 // ── BUILD ─────────────────────────────────────────────
 var app = builder.Build();
+
+// ── APLICA LAS MIGRACIONES DE EF CORE AL INICIAR ──────
+// Necesario en Docker: crea la base de datos y las tablas
+// si aún no existen, o aplica las migraciones pendientes.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<RecyRouteDbContext>();
+    dbContext.Database.Migrate();
+}
 
 // ── 8. MIDDLEWARE PIPELINE ────────────────────────────
 // Swagger disponible en /swagger en cualquier entorno (incluido Docker/Production)
