@@ -68,3 +68,43 @@
     text-align: center;
 }
 
+/* ============================================================
+   BOTÓN "MANTENER PRESIONADO PARA VER CONTRASEÑA"
+   ============================================================ */
+#password {
+    padding-right: 2.75rem; /* espacio para el botón del ojo */
+}
+
+.toggle-pwd {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+    .toggle-pwd:hover {
+        opacity: 1;
+    }
+
+    .toggle-pwd:focus-visible {
+        outline: 2px solid #1A5C3A;
+        border-radius: 4px;
+    }
+
+    .toggle-pwd .form-input-icon {
+        position: static;
+        display: inline-flex;
+        width: 18px;
+        height: 18px;
+        pointer-events: none;
+    }
+
