@@ -32,6 +32,12 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
     window.location.href = "/pages/auth/login.html";
 });
 
+// ── Botón volver ───────────────────────────────────────────────
+document.getElementById("settingsBackLink").addEventListener("click", (e) => {
+    e.preventDefault();
+    history.back();
+});
+
 // Toggle mostrar/ocultar contraseña
 document.querySelectorAll('.toggle-pwd').forEach(btn => {
     btn.addEventListener('click', () => {

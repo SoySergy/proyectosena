@@ -32,6 +32,12 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
     window.location.href = "/pages/auth/login.html";
 });
 
+// ── Botón volver ───────────────────────────────────────────────
+document.getElementById("settingsBackLink").addEventListener("click", (e) => {
+    e.preventDefault();
+    history.back();
+});
+
 // ── Pre-rellenar formulario con datos del usuario ─────────────
 document.getElementById("profileName").value = user?.name ?? "";
 document.getElementById("profileLastName").value = user?.lastName ?? "";
