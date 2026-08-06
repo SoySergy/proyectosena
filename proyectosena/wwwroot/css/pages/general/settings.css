@@ -70,6 +70,12 @@
     max-width: 620px;
 }
 
+/* ── Enlace volver ────────────────────────── */
+.settings-back-link {
+    display: inline-block;
+    margin: 0 0 1rem 0;
+}
+
 .settings-section-title {
     font-size: 1.25rem;
     font-weight: 700;

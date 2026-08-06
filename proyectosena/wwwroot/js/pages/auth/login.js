@@ -60,3 +60,40 @@ function showError(msg) {
     btn.disabled = false;
     btn.textContent = "Ingresar";
 }
+
+// ── Ver contraseña mientras se mantiene presionado el botón ──
+const togglePasswordBtn = document.getElementById("togglePassword");
+const passwordInput = document.getElementById("password");
+const togglePasswordIcon = togglePasswordBtn.querySelector(".form-input-icon");
+
+function revealPassword() {
+    passwordInput.type = "text";
+    togglePasswordIcon.classList.replace("icon-ojocerrado", "icon-ojo");
+}
+
+function hidePassword() {
+    passwordInput.type = "password";
+    togglePasswordIcon.classList.replace("icon-ojo", "icon-ojocerrado");
+}
+
+togglePasswordBtn.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    revealPassword();
+});
+togglePasswordBtn.addEventListener("mouseup", hidePassword);
+togglePasswordBtn.addEventListener("mouseleave", hidePassword);
+togglePasswordBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    revealPassword();
+});
+togglePasswordBtn.addEventListener("touchend", hidePassword);
+togglePasswordBtn.addEventListener("touchcancel", hidePassword);
+togglePasswordBtn.addEventListener("keydown", (e) => {
+    if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        revealPassword();
+    }
+});
+togglePasswordBtn.addEventListener("keyup", (e) => {
+    if (e.key === " " || e.key === "Enter") hidePassword();
+});
