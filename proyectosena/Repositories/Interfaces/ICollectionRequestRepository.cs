@@ -12,6 +12,9 @@ namespace proyectosena.Interfaces
         // Obtiene una solicitud de recolección por su ID
         Task<CollectionRequest> GetCollectionRequest(Guid idRequest);
 
+        // Solicitudes que un gestor específico tomó
+        Task<IEnumerable<CollectionRequest>> GetRequestsByManager(Guid idManager);
+
         // El ciudadano consulta sus propias solicitudes directamente
         Task<IEnumerable<CollectionRequest>> GetRequestsByUser(Guid idUser);
 
@@ -23,5 +26,8 @@ namespace proyectosena.Interfaces
 
         // Elimina una solicitud de recolección por su ID
         Task<bool> DeleteCollectionRequest(Guid idRequest);
+
+        // Obtiene todas las solicitudes asignadas a un gestor específico
+        //Task<IEnumerable<CollectionRequest>> GetMyAssignments(Guid idManager);
     }
 }

@@ -32,6 +32,16 @@ namespace proyectosena.Repositorios
                                  .FirstOrDefaultAsync(s => s.IdRequest == idRequest);
         }
 
+        public async Task<IEnumerable<CollectionRequest>> GetRequestsByManager(Guid idManager)
+        {
+            return await _context.CollectionRequests
+              .Include(r => r.User)
+              .Where(r => r.CollectionManagement!.Any(m => m.IdManager == idManager))
+              .OrderByDescending(r => r.RequestDate)
+              .ToListAsync();
+               
+        }
+
         public async Task<IEnumerable<CollectionRequest>> GetRequestsByUser(Guid idUser)
         {
             return await _context.CollectionRequests
