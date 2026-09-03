@@ -230,7 +230,7 @@ async function loadMyAssignments() {
     showMessage("assigned-message", "");
 
     try {
-        const res = await fetch(`${API_BASE}/collectionrequest/GetCollectionRequests`, {
+        const res = await fetch(`${API_BASE}/collectionrequest/GetMyAssignments?idManager=${user.idUser}`, {
             headers: authHeaders()
         });
 

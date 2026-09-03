@@ -529,7 +529,7 @@ async function loadHistory() {
     try {
         // GET api/history/GetByUser?idUser={idUser}
         const response = await fetch(
-            `${API_BASE}/history/GetByUser?idUser=${user.idUser}`,
+            `${API_BASE}/history/GetMyHistory?idUser=${user.idUser}`,
             { headers: authHeaders() }
         );
 
