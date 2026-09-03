@@ -10,6 +10,9 @@ namespace proyectosena.Interfaces
         // Obtiene un registro del historial por su ID
         Task<History?> GetById(Guid idHistory);
 
+        // todo el historial de las solicitudes que pertenecen a este ciudadano
+        Task<IEnumerable<History>> GetByRequestOwner(Guid idUser);
+
         // Obtiene el historial de cambios de una solicitud específica
         Task<IEnumerable<History>> GetByRequest(Guid idRequest);
 

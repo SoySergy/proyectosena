@@ -68,6 +68,15 @@ namespace proyectosena.Repositorios
             await _context.SaveChangesAsync();
             return history;
         }
+        public async Task<IEnumerable<History>> GetByRequestOwner(Guid idUser)
+        {
+            return await _context.Histories
+                .Include(h => h.CollectionRequest)
+                .Include(h => h.User)
+                .Where(h => h.CollectionRequest!.IdUser == idUser)
+                .OrderByDescending(h => h.ChangeDate)
+                .ToListAsync();
+        }
 
         // Verifica si existe un registro del historial con el ID proporcionado
         public async Task<bool> Exists(Guid idHistory)

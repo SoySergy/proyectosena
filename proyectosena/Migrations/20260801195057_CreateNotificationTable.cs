@@ -24,6 +24,9 @@ namespace proyectosena.Migrations
                     CreationDate = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     IsRead = table.Column<bool>(type: "bit", nullable: false, defaultValue: false)
                 },
+                
+
+                 
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Notification", x => x.IdNotification);

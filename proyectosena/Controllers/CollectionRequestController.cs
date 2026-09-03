@@ -300,6 +300,33 @@ namespace proyectosena.Controllers
 
         // -------------------- GET: api/collectionrequest/GetRequestsByUser --------------------
         // El ciudadano consulta sus propias solicitudes directamente
+        [HttpGet("GetMyAssignments")]
+        //[Authorize(Policy = "CitizenOnly")]
+        [Authorize(Policy = "AdminOrManager")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+
+
+        // Solicitudes que un gestor específico tomó
+        public async Task<IActionResult> GetMyAssignments (Guid idManager)
+        {
+            try
+                {
+                var requests = await _collectionRequestRepository.GetRequestsByManager(idManager);
+
+                if (requests == null || !requests.Any())
+                    return NotFound("No assignments found for this manager.");
+
+                return Ok(requests.Select(MapToResponseDto).ToList());
+             }
+              catch
+                {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the manager's assignments.");
+                }
+
+
+        }
         [HttpGet("GetRequestsByUser")]
         [Authorize(Policy = "CitizenOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -321,6 +348,8 @@ namespace proyectosena.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving user requests.");
             }
         }
+
+
 
         // ── Métodos privados ────────────────────────────────────────────
 

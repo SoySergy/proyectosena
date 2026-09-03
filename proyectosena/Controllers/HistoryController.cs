@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.Models;
 using proyectosena.Interfaces;
+using proyectosena.DTOs.Requests;
 
 namespace proyectosena.Controllers
 {
@@ -109,6 +110,31 @@ namespace proyectosena.Controllers
             }
         }
 
+        [HttpGet("GetMyHistory")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetMyHistory(Guid idUser)
+        {
+            try
+            {
+                var histories = await _historyRepository.GetByRequestOwner(idUser);
+
+                // Útil para auditoría y seguimiento de acciones de un usuario
+                if (histories == null || !histories.Any())
+                    return NotFound("No changes found for this user's requests.");
+
+                return Ok(histories.Select(MapToResponseDto).ToList());
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the history.");
+            }
+        }
+
+
+
+
         // -------------------- GET: api/history/GetByNewStatus --------------------
         [HttpGet("GetByNewStatus")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -178,5 +204,18 @@ namespace proyectosena.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error checking history existence.");
             }
         }
+
+        private static HistoryResponseDto MapToResponseDto(History h) => new()
+        {
+            IdHistory = h.IdHistory,
+            IdRequest = h.IdRequest,
+            IdUser = h.IdUser,
+            UserName = h.User != null ? $"{h.User.Name} {h.User.LastName}" : string.Empty,
+            PreviousStatus = h.PreviousStatus,
+            NewStatus = h.NewStatus,
+            ChangeDate = h.ChangeDate,
+            Comment = h.Comment
+        };
+
     }
 }
