@@ -1,5 +1,8 @@
 ﻿using proyectosena.Interfaces;
 using proyectosena.Models;
+using proyectosena.Repositories.Interfaces;
+using proyectosena.Repositories;
+
 
 namespace proyectosena.Services
 {
@@ -20,7 +23,7 @@ namespace proyectosena.Services
             _notificationRepository = notificationRepository;
         }
 
-        public async Task<bool> UpdateStatusAsync(
+        public async Task<StatusUpdateResult> UpdateStatusAsync(
             Guid idRequest,
             string newStatus,
             Guid idManager,
@@ -29,10 +32,13 @@ namespace proyectosena.Services
             // 1. Verifica que la solicitud exista
             var request = await _requestRepository.GetCollectionRequest(idRequest);
             if (request == null)
-                return false;
+                return StatusUpdateResult.RequestNotFound;
 
             // 2. Guarda el estado anterior antes de cambiarlo
             var previousStatus = request.CurrentStatus;
+
+            if (!CollectionRequestStatus.CanTransition(previousStatus, newStatus))
+                return StatusUpdateResult.InvalidTransition;
 
             // 3. Actualiza el estado de la solicitud
             request.CurrentStatus = newStatus;
@@ -63,7 +69,7 @@ namespace proyectosena.Services
             };
             await _notificationRepository.CreateNotification(notification);
 
-            return true;
+            return StatusUpdateResult.Success;
         }
 
         // Retorna el título de la notificación según el nuevo estado
