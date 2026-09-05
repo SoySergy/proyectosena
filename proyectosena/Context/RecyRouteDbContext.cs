@@ -152,6 +152,9 @@ namespace proyectosena.Context
                     .HasForeignKey(u => u.IdDocumentType)
                     .OnDelete(DeleteBehavior.NoAction)
                     .HasConstraintName("FK_User_DocType");
+                entity.Property(u => u.IsActive)
+                     .IsRequired()
+                     .HasDefaultValue(true);
             });
 
             // ══════════════════════════════════════

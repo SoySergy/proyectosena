@@ -15,5 +15,18 @@ namespace proyectosena.Interfaces
 
         // Actualiza una notificación existente
         Task<Notification> UpdateNotification(Notification notification);
+
+        //Creates several notifications in a single database round trip 
+        Task CreateNotifications(IEnumerable<Notification> notifications);
+
+        // Gets every notification for a user, newest first
+        Task<List<Notification>> GetByUser(Guid idUser);
+
+        // Counts the user's unread notifications
+        Task<int> CountUnread(Guid idUser);
+
+        // Marks all the user's unread notifications as read, returns how many changed
+        Task<int> MarkAllAsRead(Guid idUser);
+
     }
 }

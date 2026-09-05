@@ -48,6 +48,13 @@ namespace proyectosena.Repositorios
             return notification;
         }
 
+        // Adds all notifications at once and saves them in a single operation
+        public async Task CreateNotifications(IEnumerable<Notification> notifications)
+        {
+            await _context.Notifications.AddRangeAsync(notifications);
+            await _context.SaveChangesAsync();
+        }
+
         // Actualiza solo los campos modificables de una notificación existente
         // Lanza excepción si la notificación no existe
         public async Task<Notification> UpdateNotification(Notification notification)
@@ -66,6 +73,29 @@ namespace proyectosena.Repositorios
 
             await _context.SaveChangesAsync();
             return existing;
+        }
+        // Gets every notification for a user, newest first
+        public async Task<List<Notification>> GetByUser(Guid idUser)
+        {
+            return await _context.Notifications
+                .Where(n => n.IdUser == idUser)
+                .OrderByDescending(n => n.CreationDate)
+                .ToListAsync();
+        }
+
+        // Counts the user's unread notifications without loading them
+        public async Task<int> CountUnread(Guid idUser)
+        {
+            return await _context.Notifications
+                .CountAsync(n => n.IdUser == idUser && !n.IsRead);
+        }
+
+        // Marks all the user's unread notifications as read in a single UPDATE
+        public async Task<int> MarkAllAsRead(Guid idUser)
+        {
+            return await _context.Notifications
+                .Where(n => n.IdUser == idUser && !n.IsRead)
+                .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true));
         }
     }
 }

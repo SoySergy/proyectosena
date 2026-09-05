@@ -20,8 +20,9 @@ namespace proyectosena.Repositorios
         public async Task<List<User>> GetUsers()
         {
             return await _context.Users
-                                 .Include(u => u.Role)
+                                  .Include(u => u.Role)
                                  .Include(u => u.DocumentType)
+                                 .Where(u => u.IsActive)
                                  .ToListAsync();
         }
 
@@ -40,8 +41,16 @@ namespace proyectosena.Repositorios
         {
             return await _context.Users
                 .Include(u => u.Role)
-                .Where(u => u.Role!.RoleName == roleName)
+                .Where(u => u.Role!.RoleName == roleName && u.IsActive)
                 .ToListAsync();
+        }
+
+        // Counts active users of a role. Asks the database for the number,
+        // instead of loading every user just to count them.
+        public async Task<int> CountByRole(string roleName)
+        {
+            return await _context.Users
+                .CountAsync(u => u.Role!.RoleName == roleName && u.IsActive);
         }
 
         // Crea un nuevo usuario y guarda los cambios en la base de datos
@@ -96,14 +105,15 @@ namespace proyectosena.Repositorios
                                                         && u.IdDocumentType == idDocumentType);
         }
 
-        // Elimina un usuario por su ID, retorna false si no existe
+        // Inactiva un usuario por su ID, retorna false si no existe
+        // Soft delete: the row stays for audit purposes, the user just stops being active
         public async Task<bool> DeleteUser(Guid idUser)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.IdUser == idUser);
             if (user == null)
                 return false;
 
-            _context.Users.Remove(user);
+            user.IsActive = false;
             await _context.SaveChangesAsync();
             return true;
         }

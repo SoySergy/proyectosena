@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.Models;
 using proyectosena.Interfaces;
+using proyectosena.DTOs.Communication;
 
 namespace proyectosena.Controllers
 {
@@ -87,5 +88,70 @@ namespace proyectosena.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error marking the notification as read.");
             }
         }
+
+        // -------------------- GET: api/notification/GetMyNotifications --------------------
+        [HttpGet("GetMyNotifications")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetMyNotifications(Guid idUser)
+        {
+            try
+            {
+                var notifications = await _notificationRepository.GetByUser(idUser);
+                return Ok(notifications.Select(MapToResponseDto).ToList());
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving notifications.");
+            }
+        }
+
+        // -------------------- GET: api/notification/GetUnreadCount --------------------
+        [HttpGet("GetUnreadCount")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetUnreadCount(Guid idUser)
+        {
+            try
+            {
+                var count = await _notificationRepository.CountUnread(idUser);
+                return Ok(new { UnreadCount = count });
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error counting unread notifications.");
+            }
+        }
+
+        // -------------------- PATCH: api/notification/MarkAllAsRead --------------------
+        [HttpPatch("MarkAllAsRead")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> MarkAllAsRead(Guid idUser)
+        {
+            try
+            {
+                var updated = await _notificationRepository.MarkAllAsRead(idUser);
+                return Ok(new { MarkedAsRead = updated });
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error marking notifications as read.");
+            }
+        }
+
+        // ── Private mapping ─────────────────────────────────────────────
+        private static NotificationResponseDto MapToResponseDto(Notification n) => new()
+        {
+            IdNotification = n.IdNotification,
+            IdUser = n.IdUser,
+            IdRequest = n.IdRequest,
+            Title = n.Title,
+            Message = n.Message,
+            Type = n.Type,
+            CreationDate = n.CreationDate,
+            IsRead = n.IsRead
+        };
+
     }
 }

@@ -13,6 +13,9 @@ namespace proyectosena.Interfaces
         // Obtiene todos los usuarios que tienen un rol específico por nombre
         Task<List<User>> GetByRoleNameAsync(string roleName);
 
+        // Counts active users of a role without loading any of them
+        Task<int> CountByRole(string roleName);
+
         // Crea un nuevo usuario
         Task<User> CreateUser(User user);
 

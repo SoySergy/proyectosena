@@ -33,6 +33,7 @@ namespace proyectosena.Repositorios
         {
             return await _context.ChatHistories
                 .Include(h => h.Sender)
+                    .ThenInclude(s => s!.Role)
                 .Where(h => h.IdRequest == idRequest)
                 .OrderBy(h => h.SendDate)
                 .ToListAsync();
@@ -44,6 +45,7 @@ namespace proyectosena.Repositorios
             return await _context.ChatHistories
                 .Include(h => h.CollectionRequest)
                 .Include(h => h.Sender)
+                    .ThenInclude(s => s!.Role)
                 .FirstOrDefaultAsync(h => h.IdChatHistory == idChatHistory);
         }
 
