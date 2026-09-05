@@ -14,11 +14,11 @@ namespace proyectosena.Services
 
         private const int ExpiryMinutes = 15;
 
-        public string GenerateAndStoreCode(string email)
+        public string GenerateAndStoreCode(string email, int expiryMinutes = ExpiryMinutes)
         {
             // Número aleatorio de 6 dígitos (100000 – 999999)
             var code = new Random().Next(100_000, 1_000_000).ToString("D6");
-            _store[email.ToLowerInvariant()] = (code, DateTime.UtcNow.AddMinutes(ExpiryMinutes));
+            _store[email.ToLowerInvariant()] = (code, DateTime.UtcNow.AddMinutes(expiryMinutes));
             return code;
         }
 

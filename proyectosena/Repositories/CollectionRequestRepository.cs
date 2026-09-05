@@ -32,6 +32,33 @@ namespace proyectosena.Repositorios
                                  .FirstOrDefaultAsync(s => s.IdRequest == idRequest);
         }
 
+        // Number of requests per current status. One GROUP BY in SQL,
+        // not one query per status.
+        public async Task<Dictionary<string, int>> GetStatusCounts()
+        {
+            return await _context.CollectionRequests
+                .GroupBy(r => r.CurrentStatus)
+                .Select(g => new { Status = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Status, x => x.Count);
+        }
+
+        // Number of requests created on or after a given date
+        public async Task<int> CountSince(DateTime since)
+        {
+            return await _context.CollectionRequests
+                .CountAsync(r => r.RequestDate >= since);
+        }
+
+        // Checks whether a user takes part in a request: either its owner or an assigned manager.
+        // Runs as a single EXISTS query — no rows are loaded.
+        public async Task<bool> IsParticipant(Guid idRequest, Guid idUser)
+        {
+            return await _context.CollectionRequests
+                .AnyAsync(r => r.IdRequest == idRequest &&
+                               (r.IdUser == idUser ||
+                                r.CollectionManagement!.Any(m => m.IdManager == idUser)));
+        }
+
         public async Task<IEnumerable<CollectionRequest>> GetRequestsByManager(Guid idManager)
         {
             return await _context.CollectionRequests

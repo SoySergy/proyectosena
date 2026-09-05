@@ -70,10 +70,7 @@ namespace proyectosena.Services
                 // 6. Guarda los cambios dentro de la transacción
                 await _context.SaveChangesAsync();
 
-                // 7. Confirma la transacción — en este punto la solicitud está asignada
-                await transaction.CommitAsync();
-
-                // 8. Registra el cambio en el historial
+                // 7. Registra el cambio en el historial
                 var history = new History
                 {
                     IdRequest = idRequest,
@@ -85,7 +82,7 @@ namespace proyectosena.Services
                 };
                 await _historyRepository.Create(history);
 
-                // 9. Notifica al ciudadano que su solicitud fue aceptada
+                // 8. Notifica al ciudadano que su solicitud fue aceptada
                 var notification = new Notification
                 {
                     IdUser = request.IdUser,
@@ -98,6 +95,9 @@ namespace proyectosena.Services
                 };
                 await _notificationRepository.CreateNotification(notification);
 
+                // 9. Confirma la transacción — en este punto la solicitud está asignada
+                await transaction.CommitAsync();
+
                 return (true, "Request accepted successfully.");
             }
             catch (Exception ex)
@@ -109,26 +109,104 @@ namespace proyectosena.Services
             }
         }
 
-        public async Task NotifyAllManagersAsync(Guid idRequest, string collectionAddress)
+        // Moves an active request from its current manager to another one.
+        // CollectionManagement holds who has it now; History records that it moved.
+        public async Task<(bool Success, string Message)> ReassignRequestAsync(
+            Guid idRequest, Guid idNewManager, Guid idAdmin)
         {
-            // Obtiene todos los usuarios con rol Manager para notificarlos
-            var managers = await _userRepository.GetByRoleNameAsync("Manager");
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            // Crea una notificación para cada gestor informando que hay una nueva solicitud
-            foreach (var manager in managers)
+            try
             {
+                var request = await _context.CollectionRequests
+                    .FirstOrDefaultAsync(r => r.IdRequest == idRequest);
+
+                if (request == null)
+                    return (false, "Collection request not found.");
+
+                // A finished or unassigned request has nothing to move
+                if (request.CurrentStatus != CollectionRequestStatus.Assigned &&
+                    request.CurrentStatus != CollectionRequestStatus.InProgress)
+                    return (false, "Only assigned or in-progress requests can be reassigned.");
+
+                // The target must be a manager, and still active
+                var newManager = await _context.Users
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u => u.IdUser == idNewManager);
+
+                if (newManager == null || !newManager.IsActive || newManager.Role?.RoleName != "Manager")
+                    return (false, "The target user is not an active manager.");
+
+                // Current assignment row for this request
+                var management = await _context.CollectionManagements
+                    .Where(m => m.IdRequest == idRequest)
+                    .OrderByDescending(m => m.StatusChangeDate)
+                    .FirstOrDefaultAsync();
+
+                if (management == null)
+                    return (false, "This request has no assignment to move.");
+
+                if (management.IdManager == idNewManager)
+                    return (false, "The request is already assigned to that manager.");
+
+                management.IdManager = idNewManager;
+                management.StatusChangeDate = DateTime.UtcNow;
+
+                // The status does not change — what changed is who is responsible
+                var history = new History
+                {
+                    IdRequest = idRequest,
+                    IdUser = idAdmin,
+                    PreviousStatus = request.CurrentStatus,
+                    NewStatus = request.CurrentStatus,
+                    ChangeDate = DateTime.UtcNow,
+                    Comment = $"Request reassigned to {newManager.Name} {newManager.LastName}."
+                };
+                await _context.Histories.AddAsync(history);
+
                 var notification = new Notification
                 {
-                    IdUser = manager.IdUser,
+                    IdUser = idNewManager,
                     IdRequest = idRequest,
-                    Title = "New Collection Request Available",
-                    Message = $"A new collection request is available at: {collectionAddress}. Be the first to accept it!",
+                    Title = "Request Assigned To You",
+                    Message = $"An administrator assigned you a collection request at: {request.CollectionAddress}.",
                     Type = "Info",
                     IsRead = false,
                     CreationDate = DateTime.UtcNow
                 };
-                await _notificationRepository.CreateNotification(notification);
+                await _context.Notifications.AddAsync(notification);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return (true, "Request reassigned successfully.");
             }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return (false, $"Error reassigning the request: {ex.Message}");
+            }
+        }
+
+        public async Task NotifyAllManagersAsync(Guid idRequest, string collectionAddress)
+        {
+            // Get every user with the Manager role
+            var managers = await _userRepository.GetByRoleNameAsync("Manager");
+
+            // Build one notification per manager, without touching the database yet
+            var notifications = managers.Select(manager => new Notification
+            {
+                IdUser = manager.IdUser,
+                IdRequest = idRequest,
+                Title = "New Collection Request Available",
+                Message = $"A new collection request is available at: {collectionAddress}. Be the first to accept it!",
+                Type = "Info",
+                IsRead = false,
+                CreationDate = DateTime.UtcNow
+            }).ToList();
+
+            // Save them all in a single round trip
+            await _notificationRepository.CreateNotifications(notifications);
         }
     }
 }

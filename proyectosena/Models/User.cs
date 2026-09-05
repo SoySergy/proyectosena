@@ -32,6 +32,9 @@ namespace proyectosena.Models
         public string Address { get; set; } = string.Empty;
         public DateTime RegistrationDate { get; set; } = DateTime.UtcNow;
 
+        // Soft delete flag: inactive users cannot log in and are hidden from listings
+        public bool IsActive { get; set; } = true;
+
         // ── Navigation Properties ──────────────────
         [JsonIgnore]
         [ForeignKey("IdRole")]

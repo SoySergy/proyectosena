@@ -223,8 +223,11 @@ namespace proyectosena.Controllers
                 var result = await _collectionStatusService.UpdateStatusAsync(
                     idRequest, newStatus, idManager, comment);
 
-                if (!result)
+                if (result == StatusUpdateResult.RequestNotFound)
                     return NotFound("Collection request not found.");
+
+                if (result == StatusUpdateResult.InvalidTransition)
+                    return Conflict($"Cannot change status to '{newStatus}' from the current state.");
 
                 return Ok(new
                 {

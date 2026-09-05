@@ -8,5 +8,9 @@
 
         // Notifica a todos los gestores que hay una nueva solicitud disponible
         Task NotifyAllManagersAsync(Guid idRequest, string collectionAddress);
+
+        // Moves an active request from its current manager to another one.
+        // idAdmin is recorded as the author of the change in the history.
+        Task<(bool Success, string Message)> ReassignRequestAsync(Guid idRequest, Guid idNewManager, Guid idAdmin);
     }
 }

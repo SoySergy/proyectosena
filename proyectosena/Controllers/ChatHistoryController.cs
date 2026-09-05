@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.Models;
 using proyectosena.Interfaces;
+using proyectosena.DTOs.Communication;
 
 namespace proyectosena.Controllers
 {
@@ -13,9 +14,15 @@ namespace proyectosena.Controllers
         // Repositorio de historial de chat inyectado por dependencias
         private readonly IChatHistoryRepository _chatHistoryRepository;
 
-        public ChatHistoryController(IChatHistoryRepository chatHistoryRepository)
+        // Needed to check whether the user takes part in the conversation
+        private readonly ICollectionRequestRepository _collectionRequestRepository;
+
+        public ChatHistoryController(
+            IChatHistoryRepository chatHistoryRepository,
+            ICollectionRequestRepository collectionRequestRepository)
         {
             _chatHistoryRepository = chatHistoryRepository;
+            _collectionRequestRepository = collectionRequestRepository;
         }
 
         // -------------------- GET: api/chathistory/GetMessagesByRequest --------------------
@@ -23,17 +30,20 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetMessagesByRequest(Guid idRequest)
+        public async Task<IActionResult> GetMessagesByRequest(Guid idRequest, Guid idUser)
         {
             try
             {
+                // Only the request owner or an assigned manager may read this conversation
+                var allowed = await _collectionRequestRepository.IsParticipant(idRequest, idUser);
+                if (!allowed)
+                    return StatusCode(StatusCodes.Status403Forbidden,
+                        "You are not a participant of this collection request.");
+
                 var messages = await _chatHistoryRepository.GetMessagesByRequest(idRequest);
 
-                // Verifica si hay mensajes para esta solicitud
-                if (messages == null || !messages.Any())
-                    return NotFound("No messages found for this request.");
-
-                return Ok(messages);
+                // An empty conversation is not an error
+                return Ok(messages.Select(MapToResponseDto).ToList());
             }
             catch
             {
@@ -68,22 +78,39 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> SendMessage([FromBody] ChatHistory chatHistory)
+        public async Task<IActionResult> SendMessage([FromBody] SendMessageDto dto)
         {
             try
             {
-                if (chatHistory == null)
+                if (dto == null)
                     return BadRequest("Message data cannot be null.");
 
-                // Valida que las claves foráneas sean válidas
-                if (chatHistory.IdRequest == Guid.Empty || chatHistory.IdSender == Guid.Empty)
+                if (dto.IdRequest == Guid.Empty || dto.IdSender == Guid.Empty)
                     return BadRequest("The message must have a valid IdRequest and IdSender.");
 
-                if (string.IsNullOrWhiteSpace(chatHistory.Message))
+                if (string.IsNullOrWhiteSpace(dto.Message))
                     return BadRequest("Message content cannot be empty.");
 
-                var newMessage = await _chatHistoryRepository.CreateMessage(chatHistory);
-                return Ok(newMessage);
+                // Only the request owner or an assigned manager may write here
+                var allowed = await _collectionRequestRepository.IsParticipant(dto.IdRequest, dto.IdSender);
+                if (!allowed)
+                    return StatusCode(StatusCodes.Status403Forbidden,
+                        "You are not a participant of this collection request.");
+
+                var message = new ChatHistory
+                {
+                    IdRequest = dto.IdRequest,
+                    IdSender = dto.IdSender,
+                    Message = dto.Message,
+                    SendDate = DateTime.UtcNow,
+                    IsRead = false
+                };
+
+                var created = await _chatHistoryRepository.CreateMessage(message);
+
+                // Reload with sender and role so the response carries the display name
+                var full = await _chatHistoryRepository.GetMessage(created.IdChatHistory);
+                return Ok(MapToResponseDto(full));
             }
             catch
             {
@@ -160,5 +187,21 @@ namespace proyectosena.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error deleting the message.");
             }
         }
+
+        // ── Private mapping ─────────────────────────────────────────────
+
+        // Flattens the sender relationship so the client never sees the User entity
+        private static ChatMessageResponseDto MapToResponseDto(ChatHistory c) => new()
+        {
+            IdChatHistory = c.IdChatHistory,
+            IdRequest = c.IdRequest,
+            IdSender = c.IdSender,
+            SenderName = c.Sender?.Name ?? string.Empty,
+            SenderLastName = c.Sender?.LastName ?? string.Empty,
+            SenderRole = c.Sender?.Role?.RoleName ?? string.Empty,
+            Message = c.Message,
+            SendDate = c.SendDate,
+            IsRead = c.IsRead
+        };
     }
 }

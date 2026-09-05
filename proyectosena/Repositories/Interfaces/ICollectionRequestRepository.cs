@@ -27,7 +27,13 @@ namespace proyectosena.Interfaces
         // Elimina una solicitud de recolección por su ID
         Task<bool> DeleteCollectionRequest(Guid idRequest);
 
-        // Obtiene todas las solicitudes asignadas a un gestor específico
-        //Task<IEnumerable<CollectionRequest>> GetMyAssignments(Guid idManager);
+        // Checks whether a user takes part in a request: either its owner or an assigned manager
+        Task<bool> IsParticipant(Guid idRequest, Guid idUser);
+
+        // Number of requests per current status, resolved in one grouped query
+        Task<Dictionary<string, int>> GetStatusCounts();
+
+        // Number of requests created on or after a given date
+        Task<int> CountSince(DateTime since);
     }
 }

@@ -132,6 +132,8 @@ namespace proyectosena.Controllers
                 {
                     throw new Exception("Role is null");
                 }
+                if (!user.IsActive)
+                    return Unauthorized("Invalid credentials.");
 
                 // Verifica la contraseña usando BCrypt
                 // BCrypt.Verify compara el texto plano con el hash almacenado en la BD

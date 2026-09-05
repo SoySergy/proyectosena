@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using proyectosena.Context;
 
@@ -11,9 +12,11 @@ using proyectosena.Context;
 namespace proyectosena.Migrations
 {
     [DbContext(typeof(RecyRouteDbContext))]
-    partial class RecyRouteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260905210447_AddIsActiveToUser")]
+    partial class AddIsActiveToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
