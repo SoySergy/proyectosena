@@ -21,15 +21,19 @@ namespace proyectosena.Models
         // Solicitud rechazada por el gestor
         public const string Rejected = "Rejected";
 
+        // Solicitud cancelada por el ciudadano antes de que un gestor la tomara
+        public const string Cancelled = "Cancelled";
+
         // Define a qué estados puede pasar cada estado.
         // Lo que no esté aquí, no se permite.
         public static readonly Dictionary<string, List<string>> AllowedTransitions = new()
           {
-           { Pending,    new List<string> { Assigned } },
+           { Pending,    new List<string> { Assigned, Cancelled } },
            { Assigned,   new List<string> { InProgress, Rejected } },
            { InProgress, new List<string> { Completed, Rejected } },
            { Completed,  new List<string>() },
-           { Rejected,   new List<string>() }
+           { Rejected,   new List<string>() },
+           { Cancelled,  new List<string>() }
           };
          public static readonly List<string> ValidStatuses = 
             AllowedTransitions.Keys.ToList();

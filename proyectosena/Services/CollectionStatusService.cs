@@ -79,6 +79,7 @@ namespace proyectosena.Services
             CollectionRequestStatus.InProgress => "Collection In Progress",
             CollectionRequestStatus.Completed => "Collection Completed",
             CollectionRequestStatus.Rejected => "Request Rejected",
+            CollectionRequestStatus.Cancelled => "Request Cancelled",
             _ => "Status Updated"
         };
 
@@ -89,6 +90,7 @@ namespace proyectosena.Services
             CollectionRequestStatus.InProgress => "The manager is on the way to collect your waste.",
             CollectionRequestStatus.Completed => "Your waste has been successfully collected. Thank you!",
             CollectionRequestStatus.Rejected => "Unfortunately your request could not be processed. Please create a new one.",
+            CollectionRequestStatus.Cancelled => "Your collection request was cancelled.",
             _ => "The status of your request has been updated."
         };
 
@@ -99,6 +101,7 @@ namespace proyectosena.Services
             CollectionRequestStatus.InProgress => "Info",
             CollectionRequestStatus.Completed => "Success",
             CollectionRequestStatus.Rejected => "Warning",
+            CollectionRequestStatus.Cancelled => "Warning",
             _ => "Info"
         };
     }

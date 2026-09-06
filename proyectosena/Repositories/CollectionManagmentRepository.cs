@@ -34,6 +34,17 @@ namespace proyectosena.Repositorios
                 .FirstOrDefaultAsync(g => g.IdManagement == idManagement);
         }
 
+        // Gestión vigente de una solicitud. Si fue reasignada hay varias filas
+        // históricas, así que se toma la más reciente.
+        public async Task<CollectionManagement?> GetByRequest(Guid idRequest)
+        {
+            return await _context.CollectionManagements
+                .Include(g => g.Manager)
+                .Where(g => g.IdRequest == idRequest)
+                .OrderByDescending(g => g.StatusChangeDate)
+                .FirstOrDefaultAsync();
+        }
+
         // Actualiza una gestión existente y guarda los cambios en la base de datos
         public async Task<CollectionManagement> UpdateCollectionManagement(CollectionManagement collectionManagement)
         {
