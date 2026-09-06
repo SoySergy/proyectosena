@@ -64,6 +64,31 @@ namespace proyectosena.Controllers
             }
         }
 
+        // -------------------- GET: api/collectionmanagement/GetByRequest --------------------
+        // Quién gestiona una solicitud y desde cuándo. La usa la vista de detalle.
+        [HttpGet("GetByRequest")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetByRequest(Guid idRequest)
+        {
+            try
+            {
+                var management = await _collectionManagementRepository.GetByRequest(idRequest);
+
+                // A pending request has no manager yet — that is a real answer,
+                // not an error, but the caller needs to tell it apart.
+                if (management == null)
+                    return NotFound("This request has not been taken by a manager yet.");
+
+                return Ok(MapToResponseDto(management));
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the collection management.");
+            }
+        }
+
         // -------------------- PUT: api/collectionmanagement/UpdateCollectionManagement --------------------
         [HttpPut("UpdateCollectionManagement")]
         [Authorize(Policy = "AdminOrManager")]

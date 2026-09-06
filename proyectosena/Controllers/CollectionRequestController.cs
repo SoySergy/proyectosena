@@ -300,6 +300,45 @@ namespace proyectosena.Controllers
             }
         }
 
+        // -------------------- PATCH: api/collectionrequest/CancelRequest --------------------
+        // El ciudadano cancela su propia solicitud, solo mientras nadie la haya tomado.
+        [HttpPatch("CancelRequest")]
+        [Authorize(Policy = "CitizenOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> CancelRequest(Guid idRequest, Guid idUser, string? reason = null)
+        {
+            var request = await _collectionRequestRepository.GetCollectionRequest(idRequest);
+            if (request == null)
+                return NotFound("Collection request not found.");
+
+            // Only the owner may cancel. Once SEC-03 lands, idUser comes from the
+            // token instead of the query string and this check becomes enforceable.
+            if (request.IdUser != idUser)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only cancel your own collection requests.");
+
+            // The state machine decides: Cancelled is only reachable from Pending
+            var result = await _collectionStatusService.UpdateStatusAsync(
+                idRequest, CollectionRequestStatus.Cancelled, idUser, reason);
+
+            if (result == StatusUpdateResult.RequestNotFound)
+                return NotFound("Collection request not found.");
+
+            if (result == StatusUpdateResult.InvalidTransition)
+                return Conflict("Only pending requests can be cancelled.");
+
+            return Ok(new
+            {
+                Message = "Collection request cancelled.",
+                IdRequest = idRequest,
+                CancelledAt = DateTime.UtcNow
+            });
+        }
+
 
         // -------------------- GET: api/collectionrequest/GetRequestsByUser --------------------
         // El ciudadano consulta sus propias solicitudes directamente
