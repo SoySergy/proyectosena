@@ -1,10 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
 using proyectosena.Extensions;
-using proyectosena.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
     public class CollectionRequestRepository : ICollectionRequestRepository
     {

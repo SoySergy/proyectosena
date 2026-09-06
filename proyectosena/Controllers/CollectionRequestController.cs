@@ -2,7 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.Common;
 using proyectosena.DTOs.Requests;
-using proyectosena.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
 namespace proyectosena.Controllers

@@ -1,4 +1,4 @@
-﻿namespace proyectosena.Repositories.Interfaces
+﻿namespace proyectosena.Interfaces.Services
 {
     public interface IPasswordResetService
     {

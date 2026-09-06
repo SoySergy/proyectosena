@@ -1,6 +1,6 @@
 ﻿using proyectosena.Models;
 
-namespace proyectosena.Interfaces
+namespace proyectosena.Interfaces.Repositories
 {
     public interface IDocumentTypeRepository
     {

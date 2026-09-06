@@ -1,12 +1,9 @@
 ﻿using proyectosena.Models;
 
-namespace proyectosena.Interfaces
+namespace proyectosena.Interfaces.Repositories
 {
     public interface IChatHistoryRepository
     {
-        // Obtiene todos los mensajes del chat
-        Task<List<ChatHistory>> GetMessages();
-
         // Obtiene todos los mensajes de una solicitud específica
         Task<List<ChatHistory>> GetMessagesByRequest(Guid idRequest);
 
@@ -15,9 +12,6 @@ namespace proyectosena.Interfaces
 
         // Crea un nuevo mensaje en el chat
         Task<ChatHistory> CreateMessage(ChatHistory chatHistory);
-
-        // Actualiza un mensaje existente
-        Task<ChatHistory> UpdateMessage(ChatHistory chatHistory);
 
         // Elimina un mensaje por su ID
         Task<bool> DeleteMessage(Guid idChatHistory);

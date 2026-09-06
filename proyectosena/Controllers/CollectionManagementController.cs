@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.Models;
-using proyectosena.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 using proyectosena.DTOs.Collection;
 
 namespace proyectosena.Controllers

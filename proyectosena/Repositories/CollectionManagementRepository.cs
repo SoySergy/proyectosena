@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
 using proyectosena.Models;
-using proyectosena.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
     public class CollectionManagementRepository : ICollectionManagementRepository
     {
