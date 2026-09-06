@@ -82,25 +82,6 @@ namespace proyectosena.Controllers
             return Ok(user);
         }
 
-        // -------------------- GET: api/user/GetUserByName --------------------
-        [HttpGet("GetUserByName")]
-        [Authorize(Policy = "AdminOnly")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetUserByName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return BadRequest("Name cannot be empty.");
-
-            var user = await _userService.GetByName(name);
-
-            if (user == null)
-                return NotFound("No user found with that name.");
-
-            return Ok(user);
-        }
-
         // -------------------- GET: api/user/GetUserByDocument --------------------
         // La combinación de tipo y número identifica únicamente al usuario
         [HttpGet("GetUserByDocument")]

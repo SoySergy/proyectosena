@@ -45,18 +45,6 @@ namespace proyectosena.Services
             return MapToDto(updated);
         }
 
-        public async Task<NotificationResponseDto?> GetById(Guid idNotification)
-        {
-            var notification = await _notificationRepository.GetNotification(idNotification);
-            return notification == null ? null : MapToDto(notification);
-        }
-
-        public async Task<List<NotificationResponseDto>> GetAll()
-        {
-            var notifications = await _notificationRepository.GetNotifications();
-            return notifications.Select(MapToDto).ToList();
-        }
-
         // ── Mapeo privado ───────────────────────────────────────────────
         private static NotificationResponseDto MapToDto(Notification n) => new()
         {

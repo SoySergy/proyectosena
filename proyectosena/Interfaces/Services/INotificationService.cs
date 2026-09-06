@@ -20,11 +20,5 @@ namespace proyectosena.Interfaces.Services
 
         // Marca una sola. Devuelve null si esa notificación no existe.
         Task<NotificationResponseDto?> MarkAsRead(Guid idNotification);
-
-        // Una notificación por su id. Devuelve null si no existe.
-        Task<NotificationResponseDto?> GetById(Guid idNotification);
-
-        // Todas las notificaciones del sistema. Solo para administración.
-        Task<List<NotificationResponseDto>> GetAll();
     }
 }

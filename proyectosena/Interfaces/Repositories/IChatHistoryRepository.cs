@@ -13,8 +13,6 @@ namespace proyectosena.Interfaces.Repositories
         // Crea un nuevo mensaje en el chat
         Task<ChatHistory> CreateMessage(ChatHistory chatHistory);
 
-        // Elimina un mensaje por su ID
-        Task<bool> DeleteMessage(Guid idChatHistory);
 
         // Marca un mensaje como leído
         Task<bool> MarkAsRead(Guid idChatHistory);

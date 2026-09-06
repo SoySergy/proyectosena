@@ -17,7 +17,6 @@ namespace proyectosena.Interfaces.Services
         // Búsquedas puntuales. Devuelven null si no hay coincidencia.
         Task<UserInfoDto?> GetById(Guid idUser);
         Task<UserInfoDto?> GetByEmail(string email);
-        Task<UserInfoDto?> GetByName(string name);
         Task<UserInfoDto?> GetByDocument(string documentNumber, Guid idDocumentType);
 
         // Usuarios activos de un rol

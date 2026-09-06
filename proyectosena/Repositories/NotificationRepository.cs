@@ -19,13 +19,6 @@ namespace proyectosena.Repositories
         }
 
         // Obtiene todas las notificaciones incluyendo usuario y solicitud asociada
-        public async Task<List<Notification>> GetNotifications()
-        {
-            return await _context.Notifications
-                .Include(n => n.User)
-                .Include(n => n.CollectionRequest)
-                .ToListAsync();
-        }
 
         // Obtiene una notificación específica por ID, o null si no existe.
         // "No encontrado" no es una excepción: es una respuesta posible, y quien

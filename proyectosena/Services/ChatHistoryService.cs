@@ -58,12 +58,6 @@ namespace proyectosena.Services
             return (ChatAccessResult.Success, messages.Select(MapToDto).ToList());
         }
 
-        public async Task<ChatMessageResponseDto?> GetMessage(Guid idChatHistory)
-        {
-            var message = await _chatHistoryRepository.GetMessage(idChatHistory);
-            return message == null ? null : MapToDto(message);
-        }
-
         public async Task<List<ChatMessageResponseDto>> GetUnreadMessages(Guid idUser, Guid idRequest)
         {
             var messages = await _chatHistoryRepository.GetUnreadMessages(idUser, idRequest);
@@ -72,9 +66,6 @@ namespace proyectosena.Services
 
         public Task<bool> MarkAsRead(Guid idChatHistory)
             => _chatHistoryRepository.MarkAsRead(idChatHistory);
-
-        public Task<bool> DeleteMessage(Guid idChatHistory)
-            => _chatHistoryRepository.DeleteMessage(idChatHistory);
 
         // ── Mapeo privado ───────────────────────────────────────────────
         // Aplana el remitente: el cliente recibe nombre y rol, nunca la entidad User

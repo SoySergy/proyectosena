@@ -19,16 +19,10 @@ namespace proyectosena.Interfaces.Services
         Task<(ChatAccessResult Result, List<ChatMessageResponseDto> Messages)> GetMessagesByRequest(
             Guid idRequest, Guid idUser);
 
-        // Un mensaje por su id. Devuelve null si no existe.
-        Task<ChatMessageResponseDto?> GetMessage(Guid idChatHistory);
-
         // Mensajes de una solicitud que este usuario no ha leído
         Task<List<ChatMessageResponseDto>> GetUnreadMessages(Guid idUser, Guid idRequest);
 
         // Marca un mensaje como leído. False si no existe.
         Task<bool> MarkAsRead(Guid idChatHistory);
-
-        // Elimina un mensaje. False si no existe.
-        Task<bool> DeleteMessage(Guid idChatHistory);
     }
 }

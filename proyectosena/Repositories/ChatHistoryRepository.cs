@@ -50,17 +50,6 @@ namespace proyectosena.Repositories
 
         // Elimina un mensaje por su ID
         // Retorna false si no existe
-        public async Task<bool> DeleteMessage(Guid idChatHistory)
-        {
-            var message = await _context.ChatHistories
-                .FirstOrDefaultAsync(h => h.IdChatHistory == idChatHistory);
-            if (message == null)
-                return false;
-
-            _context.ChatHistories.Remove(message);
-            await _context.SaveChangesAsync();
-            return true;
-        }
 
         // Marca un mensaje como leído
         // Retorna false si el mensaje no existe

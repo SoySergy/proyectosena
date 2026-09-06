@@ -17,29 +17,6 @@ namespace proyectosena.Controllers
             _notificationService = notificationService;
         }
 
-        // -------------------- GET: api/notification/GetNotifications --------------------
-        // Todas las notificaciones del sistema
-        [HttpGet("GetNotifications")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetNotifications()
-        {
-            return Ok(await _notificationService.GetAll());
-        }
-
-        // -------------------- GET: api/notification/GetNotificationById --------------------
-        [HttpGet("GetNotificationById")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetNotificationById(Guid idNotification)
-        {
-            var notification = await _notificationService.GetById(idNotification);
-
-            if (notification == null)
-                return NotFound("The requested notification was not found.");
-
-            return Ok(notification);
-        }
-
         // -------------------- PATCH: api/notification/MarkAsRead --------------------
         [HttpPatch("MarkAsRead")]
         [ProducesResponseType(StatusCodes.Status200OK)]

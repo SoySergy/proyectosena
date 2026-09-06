@@ -37,12 +37,6 @@ namespace proyectosena.Services
             return user == null ? null : MapToDto(user);
         }
 
-        public async Task<UserInfoDto?> GetByName(string name)
-        {
-            var user = await _userRepository.GetUserByName(name);
-            return user == null ? null : MapToDto(user);
-        }
-
         public async Task<UserInfoDto?> GetByDocument(string documentNumber, Guid idDocumentType)
         {
             var user = await _userRepository.GetUserByDocument(documentNumber, idDocumentType);

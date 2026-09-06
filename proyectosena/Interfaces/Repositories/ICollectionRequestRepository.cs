@@ -25,8 +25,6 @@ namespace proyectosena.Interfaces.Repositories
         // Actualiza una solicitud de recolección existente
         Task<CollectionRequest> UpdateCollectionRequest(CollectionRequest collectionRequest);
 
-        // Elimina una solicitud de recolección por su ID
-        Task<bool> DeleteCollectionRequest(Guid idRequest);
 
         // Checks whether a user takes part in a request: either its owner or an assigned manager
         Task<bool> IsParticipant(Guid idRequest, Guid idUser);

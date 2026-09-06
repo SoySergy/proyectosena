@@ -36,6 +36,7 @@ namespace proyectosena
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IChatHistoryService, ChatHistoryService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<ICollectionRequestService, CollectionRequestService>();
 
             // Singleton on purpose: PasswordResetService keeps the OTP codes in an
             // in-memory dictionary. As Scoped, every request would get an empty one

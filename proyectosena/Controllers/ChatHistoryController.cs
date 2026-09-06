@@ -34,20 +34,6 @@ namespace proyectosena.Controllers
             return Ok(messages);
         }
 
-        // -------------------- GET: api/chathistory/GetMessage --------------------
-        [HttpGet("GetMessage")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetMessage(Guid idChatHistory)
-        {
-            var message = await _chatHistoryService.GetMessage(idChatHistory);
-
-            if (message == null)
-                return NotFound("The requested message was not found.");
-
-            return Ok(message);
-        }
-
         // -------------------- POST: api/chathistory/SendMessage --------------------
         [HttpPost("SendMessage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -95,18 +81,5 @@ namespace proyectosena.Controllers
             return Ok(await _chatHistoryService.GetUnreadMessages(idUser, idRequest));
         }
 
-        // -------------------- DELETE: api/chathistory/DeleteMessage --------------------
-        [HttpDelete("DeleteMessage")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteMessage(Guid idChatHistory)
-        {
-            var deleted = await _chatHistoryService.DeleteMessage(idChatHistory);
-
-            if (!deleted)
-                return NotFound("The requested message was not found.");
-
-            return Ok("Message deleted successfully.");
-        }
     }
 }
