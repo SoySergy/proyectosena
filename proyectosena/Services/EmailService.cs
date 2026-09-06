@@ -1,8 +1,9 @@
 ﻿using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
-using proyectosena.Interfaces;
-using proyectosena.Repositories.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
+using proyectosena.Interfaces.Repositories;
 
 namespace proyectosena.Services
 {

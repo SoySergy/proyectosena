@@ -5,7 +5,7 @@ using Microsoft.OpenApi;
 using proyectosena;
 using proyectosena.Context;
 using proyectosena.Middleware;
-using proyectosena.Repositories.Interfaces;
+using proyectosena.Interfaces.Repositories;
 using proyectosena.Services;
 using System.Text;
 
@@ -89,15 +89,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ── 7. SERVICES (uncomment when created) ─────────────
-// builder.Services.AddScoped<IAuthService, AuthService>();
-// builder.Services.AddScoped<IUserService, UserService>();
-// builder.Services.AddScoped<ICollectionRequestService, CollectionRequestService>();
-// builder.Services.AddScoped<ICollectionManagementService, CollectionManagementService>();
-// builder.Services.AddScoped<INotificationService, NotificationService>();
-// builder.Services.AddScoped<IChatHistoryService, ChatHistoryService>();
-builder.Services.AddSingleton<IEmailService, EmailService>();
-builder.Services.AddSingleton<IPasswordResetService, PasswordResetService>();
+// ── 7. SERVICES ───────────────────────────────────────
+// Todos los registros viven en DependencyInjection.cs (paso 2), en un solo lugar.
+// Pendiente por crear (BE-13): IAuthService, IUserService, ICollectionRequestService,
+// INotificationService, IChatHistoryService.
 
 
 // ── 8. GLOBAL ERROR HANDLING ──────────────────────────

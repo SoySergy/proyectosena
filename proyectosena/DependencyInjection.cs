@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
-using proyectosena.Interfaces;
-using proyectosena.Repositories.Interfaces;
-using proyectosena.Repositorios;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
+using proyectosena.Repositories;
 using proyectosena.Services;
 
 namespace proyectosena
@@ -30,10 +30,16 @@ namespace proyectosena
             services.AddScoped<IHistoryRepository, HistoryRepository>();
             services.AddScoped<IChatHistoryRepository, ChatHistoryRepository>();
 
+            // ── Services ───────────────────────────────
             services.AddScoped<ICollectionStatusService, CollectionStatusService>();
             services.AddScoped<IAssignmentService, AssignmentService>();
-            services.AddScoped<IEmailService, EmailService>();
-            services.AddScoped<IPasswordResetService, PasswordResetService>();
+
+            // Singleton on purpose: PasswordResetService keeps the OTP codes in an
+            // in-memory dictionary. As Scoped, every request would get an empty one
+            // and no code would ever validate. EmailService is stateless, so a single
+            // instance is enough.
+            services.AddSingleton<IEmailService, EmailService>();
+            services.AddSingleton<IPasswordResetService, PasswordResetService>();
 
             return services;
         }

@@ -1,4 +1,4 @@
-﻿namespace proyectosena.Interfaces
+﻿namespace proyectosena.Interfaces.Services
 {
     public interface IAssignmentService
     {

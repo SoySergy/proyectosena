@@ -1,6 +1,7 @@
-﻿using proyectosena.Interfaces;
+﻿using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
-using proyectosena.Repositories.Interfaces;
+using proyectosena.Interfaces.Repositories;
 using proyectosena.Repositories;
 
 

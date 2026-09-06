@@ -1,11 +1,12 @@
 ﻿using System.Collections.Concurrent;
-using proyectosena.Repositories.Interfaces;
+using proyectosena.Interfaces.Services;
 
 namespace proyectosena.Services
 {
     /// <summary>
     /// Almacena los códigos OTP en memoria.
-    /// Se registra como Singleton en Program.cs para que el diccionario persista entre peticiones.
+    /// Se registra como Singleton en DependencyInjection.cs para que el diccionario
+    /// persista entre peticiones. Como Scoped, cada petición recibiría uno vacío.
     /// </summary>
     public class PasswordResetService : IPasswordResetService
     {

@@ -2,9 +2,10 @@
 using proyectosena.Context;
 using proyectosena.Extensions;
 using proyectosena.Models;
-using proyectosena.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
     public class HistoryRepository : IHistoryRepository
     {

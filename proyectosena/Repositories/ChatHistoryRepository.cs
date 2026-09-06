@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
 using proyectosena.Models;
-using proyectosena.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
     public class ChatHistoryRepository : IChatHistoryRepository
     {
@@ -14,17 +15,6 @@ namespace proyectosena.Repositorios
         public ChatHistoryRepository(RecyRouteDbContext context)
         {
             _context = context;
-        }
-
-        // Obtiene todos los mensajes incluyendo solicitud y emisor
-        // Ordena por fecha de envío ascendente (cronológico)
-        public async Task<List<ChatHistory>> GetMessages()
-        {
-            return await _context.ChatHistories
-                .Include(h => h.CollectionRequest)
-                .Include(h => h.Sender)
-                .OrderBy(h => h.SendDate)
-                .ToListAsync();
         }
 
         // Obtiene todos los mensajes de una solicitud específica
@@ -57,13 +47,6 @@ namespace proyectosena.Repositorios
             return chatHistory;
         }
 
-        // Actualiza un mensaje existente y guarda los cambios en la base de datos
-        public async Task<ChatHistory> UpdateMessage(ChatHistory chatHistory)
-        {
-            _context.ChatHistories.Update(chatHistory);
-            await _context.SaveChangesAsync();
-            return chatHistory;
-        }
 
         // Elimina un mensaje por su ID
         // Retorna false si no existe

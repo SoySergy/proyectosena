@@ -1,4 +1,4 @@
-﻿namespace proyectosena.Interfaces
+﻿namespace proyectosena.Interfaces.Services
 {
     using proyectosena.Models;
     public interface ICollectionStatusService
