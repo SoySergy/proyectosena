@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
+using proyectosena.Extensions;
 using proyectosena.Models;
 using proyectosena.Interfaces;
 
@@ -75,12 +76,12 @@ namespace proyectosena.Repositorios
             return existing;
         }
         // Gets every notification for a user, newest first
-        public async Task<List<Notification>> GetByUser(Guid idUser)
+        public async Task<(List<Notification> Items, int Total)> GetByUser(Guid idUser, int page, int pageSize)
         {
             return await _context.Notifications
                 .Where(n => n.IdUser == idUser)
                 .OrderByDescending(n => n.CreationDate)
-                .ToListAsync();
+                .ToPagedAsync(page, pageSize);
         }
 
         // Counts the user's unread notifications without loading them

@@ -4,19 +4,20 @@ namespace proyectosena.Interfaces
 {
     public interface ICollectionRequestRepository
     {
-        // Obtiene todas las solicitudes en estado Pending disponibles para ser tomadas por un gestor
-        Task<List<CollectionRequest>> GetPendingRequests();
-        // Obtiene todas las solicitudes de recolección
-        Task<List<CollectionRequest>> GetCollectionRequests();
+        // Página de solicitudes en estado Pending, disponibles para que un gestor las tome
+        Task<(List<CollectionRequest> Items, int Total)> GetPendingRequests(int page, int pageSize);
+
+        // Página de todas las solicitudes de recolección
+        Task<(List<CollectionRequest> Items, int Total)> GetCollectionRequests(int page, int pageSize);
 
         // Obtiene una solicitud de recolección por su ID
         Task<CollectionRequest> GetCollectionRequest(Guid idRequest);
 
         // Solicitudes que un gestor específico tomó
-        Task<IEnumerable<CollectionRequest>> GetRequestsByManager(Guid idManager);
+        Task<(List<CollectionRequest> Items, int Total)> GetRequestsByManager(Guid idManager, int page, int pageSize);
 
         // El ciudadano consulta sus propias solicitudes directamente
-        Task<IEnumerable<CollectionRequest>> GetRequestsByUser(Guid idUser);
+        Task<(List<CollectionRequest> Items, int Total)> GetRequestsByUser(Guid idUser, int page, int pageSize);
 
         // Crea una nueva solicitud de recolección
         Task<CollectionRequest> CreateCollectionRequest(CollectionRequest collectionRequest);

@@ -4,14 +4,14 @@ namespace proyectosena.Interfaces
 {
     public interface IHistoryRepository
     {
-        // Obtiene todos los registros del historial
-        Task<IEnumerable<History>> GetAll();
+        // Obtiene una página del historial completo
+        Task<(List<History> Items, int Total)> GetAll(int page, int pageSize);
 
         // Obtiene un registro del historial por su ID
         Task<History?> GetById(Guid idHistory);
 
         // todo el historial de las solicitudes que pertenecen a este ciudadano
-        Task<IEnumerable<History>> GetByRequestOwner(Guid idUser);
+        Task<(List<History> Items, int Total)> GetByRequestOwner(Guid idUser, int page, int pageSize);
 
         // Obtiene el historial de cambios de una solicitud específica
         Task<IEnumerable<History>> GetByRequest(Guid idRequest);

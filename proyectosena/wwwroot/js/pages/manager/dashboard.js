@@ -142,14 +142,10 @@ async function loadPendingRequests() {
 
         loading.style.display = "none";
 
-        if (res.status === 404) {
-            list.innerHTML = "<p class='empty-msg'>No hay solicitudes pendientes en este momento.</p>";
-            return;
-        }
-
         if (!res.ok) throw new Error("Error al obtener solicitudes pendientes");
 
-        const requests = await res.json();
+        // La API responde { items, page, pageSize, totalItems, totalPages }
+        const { items: requests } = await res.json();
 
         if (!requests?.length) {
             list.innerHTML = "<p class='empty-msg'>No hay solicitudes pendientes.</p>";
@@ -236,14 +232,10 @@ async function loadMyAssignments() {
 
         loading.style.display = "none";
 
-        if (res.status === 404) {
-            list.innerHTML = "<p class='empty-msg'>No tienes asignaciones activas.</p>";
-            return;
-        }
-
         if (!res.ok) throw new Error("Error al obtener asignaciones");
 
-        const all = await res.json();
+        // La API responde { items, page, pageSize, totalItems, totalPages }
+        const { items: all } = await res.json();
         const mine = all.filter(r =>
             r.currentStatus === "Assigned" || r.currentStatus === "InProgress"
         );
@@ -314,14 +306,11 @@ async function loadAllRequests() {
 
         loading.style.display = "none";
 
-        if (res.status === 404) {
-            list.innerHTML = "<p class='empty-msg'>No hay solicitudes registradas.</p>";
-            return;
-        }
-
         if (!res.ok) throw new Error("Error al obtener todas las solicitudes");
 
-        allRequests = await res.json();
+        // La API responde { items, page, pageSize, totalItems, totalPages }
+        const { items } = await res.json();
+        allRequests = items;
         allRequests.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
         renderFilteredList();
 

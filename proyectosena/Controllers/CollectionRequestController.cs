@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using proyectosena.DTOs.Common;
 using proyectosena.DTOs.Requests;
 using proyectosena.Interfaces;
 using proyectosena.Models;
@@ -36,20 +37,18 @@ namespace proyectosena.Controllers
         [HttpGet("GetCollectionRequests")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetCollectionRequests()
+        public async Task<IActionResult> GetCollectionRequests(int page = 1, int pageSize = 20)
         {
             try
             {
-                var requests = await _collectionRequestRepository.GetCollectionRequests();
+                (page, pageSize) = PagedResult<CollectionRequestResponseDto>.Normalize(page, pageSize);
 
-                // Verifica si la lista está vacía o nula
-                if (requests == null || !requests.Any())
-                    return NotFound("No registered collection requests were found.");
+                var (items, total) = await _collectionRequestRepository.GetCollectionRequests(page, pageSize);
 
-                // Mapea cada solicitud al DTO de respuesta para no exponer datos internos
-                return Ok(requests.Select(MapToResponseDto).ToList());
+                // Una lista vacía no es un error: es una lista vacía.
+                return Ok(PagedResult<CollectionRequestResponseDto>.Create(
+                    items.Select(MapToResponseDto).ToList(), page, pageSize, total));
             }
             catch
             {
@@ -247,19 +246,17 @@ namespace proyectosena.Controllers
         [HttpGet("GetPendingRequests")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetPendingRequests()
+        public async Task<IActionResult> GetPendingRequests(int page = 1, int pageSize = 20)
         {
             try
             {
-                var requests = await _collectionRequestRepository.GetPendingRequests();
+                (page, pageSize) = PagedResult<CollectionRequestResponseDto>.Normalize(page, pageSize);
 
-                // Si no hay solicitudes pendientes retorna 404 con mensaje descriptivo
-                if (requests == null || !requests.Any())
-                    return NotFound("No pending collection requests available.");
+                var (items, total) = await _collectionRequestRepository.GetPendingRequests(page, pageSize);
 
-                return Ok(requests.Select(MapToResponseDto).ToList());
+                return Ok(PagedResult<CollectionRequestResponseDto>.Create(
+                    items.Select(MapToResponseDto).ToList(), page, pageSize, total));
             }
             catch
             {
@@ -342,48 +339,41 @@ namespace proyectosena.Controllers
 
         // -------------------- GET: api/collectionrequest/GetRequestsByUser --------------------
         // El ciudadano consulta sus propias solicitudes directamente
+        // Solicitudes que un gestor específico tomó
         [HttpGet("GetMyAssignments")]
-        //[Authorize(Policy = "CitizenOnly")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-
-
-        // Solicitudes que un gestor específico tomó
-        public async Task<IActionResult> GetMyAssignments (Guid idManager)
+        public async Task<IActionResult> GetMyAssignments(Guid idManager, int page = 1, int pageSize = 20)
         {
             try
-                {
-                var requests = await _collectionRequestRepository.GetRequestsByManager(idManager);
+            {
+                (page, pageSize) = PagedResult<CollectionRequestResponseDto>.Normalize(page, pageSize);
 
-                if (requests == null || !requests.Any())
-                    return NotFound("No assignments found for this manager.");
+                var (items, total) = await _collectionRequestRepository.GetRequestsByManager(idManager, page, pageSize);
 
-                return Ok(requests.Select(MapToResponseDto).ToList());
-             }
-              catch
-                {
+                return Ok(PagedResult<CollectionRequestResponseDto>.Create(
+                    items.Select(MapToResponseDto).ToList(), page, pageSize, total));
+            }
+            catch
+            {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the manager's assignments.");
-                }
-
-
+            }
         }
         [HttpGet("GetRequestsByUser")]
         [Authorize(Policy = "CitizenOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetRequestsByUser(Guid idUser)
+        public async Task<IActionResult> GetRequestsByUser(Guid idUser, int page = 1, int pageSize = 20)
         {
             try
             {
-                var requests = await _collectionRequestRepository.GetRequestsByUser(idUser);
+                (page, pageSize) = PagedResult<CollectionRequestResponseDto>.Normalize(page, pageSize);
 
-                if (requests == null || !requests.Any())
-                    return NotFound("No collection requests found for this user.");
+                var (items, total) = await _collectionRequestRepository.GetRequestsByUser(idUser, page, pageSize);
 
-                return Ok(requests.Select(MapToResponseDto).ToList());
+                return Ok(PagedResult<CollectionRequestResponseDto>.Create(
+                    items.Select(MapToResponseDto).ToList(), page, pageSize, total));
             }
             catch
             {

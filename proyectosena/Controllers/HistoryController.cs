@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.Models;
 using proyectosena.Interfaces;
+using proyectosena.DTOs.Common;
 using proyectosena.DTOs.Requests;
 
 namespace proyectosena.Controllers
@@ -22,19 +23,17 @@ namespace proyectosena.Controllers
         // -------------------- GET: api/history/GetAll --------------------
         [HttpGet("GetAll")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(int page = 1, int pageSize = 20)
         {
             try
             {
-                var histories = await _historyRepository.GetAll();
+                (page, pageSize) = PagedResult<HistoryResponseDto>.Normalize(page, pageSize);
 
-                // Verifica si la lista está vacía o nula
-                if (histories == null || !histories.Any())
-                    return NotFound("No history records were found.");
+                var (items, total) = await _historyRepository.GetAll(page, pageSize);
 
-                return Ok(histories);
+                return Ok(PagedResult<HistoryResponseDto>.Create(
+                    items.Select(MapToResponseDto).ToList(), page, pageSize, total));
             }
             catch
             {
@@ -112,19 +111,17 @@ namespace proyectosena.Controllers
 
         [HttpGet("GetMyHistory")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetMyHistory(Guid idUser)
+        public async Task<IActionResult> GetMyHistory(Guid idUser, int page = 1, int pageSize = 20)
         {
             try
             {
-                var histories = await _historyRepository.GetByRequestOwner(idUser);
+                (page, pageSize) = PagedResult<HistoryResponseDto>.Normalize(page, pageSize);
 
-                // Útil para auditoría y seguimiento de acciones de un usuario
-                if (histories == null || !histories.Any())
-                    return NotFound("No changes found for this user's requests.");
+                var (items, total) = await _historyRepository.GetByRequestOwner(idUser, page, pageSize);
 
-                return Ok(histories.Select(MapToResponseDto).ToList());
+                return Ok(PagedResult<HistoryResponseDto>.Create(
+                    items.Select(MapToResponseDto).ToList(), page, pageSize, total));
             }
             catch
             {

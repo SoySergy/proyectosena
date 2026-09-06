@@ -20,7 +20,7 @@ namespace proyectosena.Interfaces
         Task CreateNotifications(IEnumerable<Notification> notifications);
 
         // Gets every notification for a user, newest first
-        Task<List<Notification>> GetByUser(Guid idUser);
+        Task<(List<Notification> Items, int Total)> GetByUser(Guid idUser, int page, int pageSize);
 
         // Counts the user's unread notifications
         Task<int> CountUnread(Guid idUser);
