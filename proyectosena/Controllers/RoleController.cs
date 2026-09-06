@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using proyectosena.Models;
+using proyectosena.DTOs.User;
 using proyectosena.Interfaces.Repositories;
-using proyectosena.Interfaces.Services;
+using proyectosena.Models;
 
 namespace proyectosena.Controllers
 {
@@ -20,26 +20,20 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/role/GetRoles --------------------
+        // Lista los roles para el panel de administración
         [HttpGet("GetRoles")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetRoles()
         {
-            try
-            {
-                var roles = await _roleRepository.GetRoles();
+            var roles = await _roleRepository.GetRoles();
 
-                // Verifica si la lista está vacía o nula
-                if (roles == null || !roles.Any())
-                    return NotFound("No registered roles were found.");
-
-                return Ok(roles);
-            }
-            catch
+            return Ok(roles.Select(r => new RoleDto
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving roles.");
-            }
+                IdRole = r.IdRole,
+                RoleName = r.RoleName,
+                RoleDescription = r.RoleDescription
+            }).ToList());
         }
 
         // -------------------- GET: api/role/GetRoleById --------------------

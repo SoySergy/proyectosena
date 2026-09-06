@@ -1,11 +1,16 @@
-﻿namespace proyectosena.Models
+namespace proyectosena.Models
 {
+    // Resultados posibles al intentar cambiar el estado de una solicitud
     public enum StatusUpdateResult
     {
-        // Represents the result of attempting to update the status of a collection request.
-       
-            Success,
-            RequestNotFound,
-            InvalidTransition        
+        Success,
+
+        RequestNotFound,
+
+        // El estado pedido no está entre los valores válidos
+        InvalidStatus,
+
+        // El estado existe, pero no se puede llegar a él desde el actual
+        InvalidTransition
     }
 }

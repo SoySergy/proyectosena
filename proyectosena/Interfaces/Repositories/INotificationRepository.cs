@@ -4,11 +4,8 @@ namespace proyectosena.Interfaces.Repositories
 {
     public interface INotificationRepository
     {
-        // Obtiene todas las notificaciones
-        Task<List<Notification>> GetNotifications();
-
-        // Obtiene una notificación por su ID
-        Task<Notification> GetNotification(Guid idNotification);
+        // Obtiene una notificación por su ID, o null si no existe
+        Task<Notification?> GetNotification(Guid idNotification);
 
         // Crea una nueva notificación
         Task<Notification> CreateNotification(Notification notification);

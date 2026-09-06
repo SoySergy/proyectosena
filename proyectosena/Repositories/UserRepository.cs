@@ -88,13 +88,6 @@ namespace proyectosena.Repositories
         }
 
         // Obtiene un usuario por su nombre incluyendo rol y tipo de documento
-        public async Task<User> GetUserByName(string name)
-        {
-            return await _context.Users
-                                 .Include(u => u.Role)
-                                 .Include(u => u.DocumentType)
-                                 .FirstOrDefaultAsync(u => u.Name == name);
-        }
 
         // Busca un usuario por la combinación de número de documento Y tipo de documento
         // Un mismo número puede existir en diferentes tipos (cédula, pasaporte, etc.)

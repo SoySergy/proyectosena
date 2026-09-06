@@ -20,7 +20,9 @@ namespace proyectosena.Repositories
         // Obtiene todos los roles registrados en la base de datos
         public async Task<List<Role>> GetRoles()
         {
-            return await _context.Roles.ToListAsync();
+            return await _context.Roles
+                                 .OrderBy(r => r.RoleName)
+                                 .ToListAsync();
         }
 
         // Obtiene un rol específico por su ID

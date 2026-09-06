@@ -25,8 +25,6 @@ namespace proyectosena.Interfaces.Repositories
         // Obtiene un usuario por su correo electrónico
         Task<User> GetUserByEmail(string email);
 
-        // Obtiene un usuario por su nombre
-        Task<User> GetUserByName(string name);
 
         // Elimina un usuario por su ID
         Task<bool> DeleteUser(Guid idUser);

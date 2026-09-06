@@ -112,16 +112,5 @@ namespace proyectosena.Repositories
         }
 
         // Elimina una solicitud de recolección por su ID, retorna false si no existe
-        public async Task<bool> DeleteCollectionRequest(Guid idRequest)
-        {
-            var collectionRequest = await _context.CollectionRequests
-                                                  .FirstOrDefaultAsync(s => s.IdRequest == idRequest);
-            if (collectionRequest == null)
-                return false;
-
-            _context.CollectionRequests.Remove(collectionRequest);
-            await _context.SaveChangesAsync();
-            return true;
-        }
     }
 }
