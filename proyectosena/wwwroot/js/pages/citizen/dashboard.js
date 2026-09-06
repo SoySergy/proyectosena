@@ -245,16 +245,11 @@ async function loadMyRequests() {
 
         loadingEl.style.display = "none";
 
-        if (res.status === 404) {
-            listEl.innerHTML = "<p class='empty-msg'>No tienes solicitudes registradas aún.</p>";
-            return;
-        }
-
         if (!res.ok) throw new Error("Error al obtener solicitudes");
 
-        const requests = await res.json();
+        // La API responde { items, page, pageSize, totalItems, totalPages }
+        const { items: requests } = await res.json();
 
-        /*        listEl.innerHTML = requests.map(req => renderRequestCard(req)).join("");*/
         const activeRequests = requests.filter(r =>
             r.currentStatus === "Pending" ||
             r.currentStatus === "Assigned" ||
@@ -527,7 +522,7 @@ async function loadHistory() {
     showMessage("history-message", "");
 
     try {
-        // GET api/history/GetByUser?idUser={idUser}
+        // GET api/history/GetMyHistory?idUser={idUser}
         const response = await fetch(
             `${API_BASE}/history/GetMyHistory?idUser=${user.idUser}`,
             { headers: authHeaders() }
@@ -535,16 +530,12 @@ async function loadHistory() {
 
         loadingEl.style.display = "none";
 
-        if (response.status === 404) {
-            listEl.innerHTML = "<p class='empty-msg'>No tienes historial de recolecciones aún.</p>";
-            return;
-        }
-
         if (!response.ok) {
             throw new Error("Error al obtener el historial");
         }
 
-        const histories = await response.json();
+        // La API responde { items, page, pageSize, totalItems, totalPages }
+        const { items: histories } = await response.json();
 
         if (!histories || histories.length === 0) {
             listEl.innerHTML = "<p class='empty-msg'>No tienes historial de recolecciones aún.</p>";

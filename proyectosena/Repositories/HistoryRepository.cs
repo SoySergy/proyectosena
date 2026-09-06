@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
+using proyectosena.Extensions;
 using proyectosena.Models;
 using proyectosena.Interfaces;
 
@@ -18,13 +19,13 @@ namespace proyectosena.Repositorios
 
         // Obtiene todos los registros del historial con sus relaciones de solicitud y usuario
         // Ordena por fecha de cambio descendente (más recientes primero)
-        public async Task<IEnumerable<History>> GetAll()
+        public async Task<(List<History> Items, int Total)> GetAll(int page, int pageSize)
         {
             return await _context.Histories
                 .Include(h => h.CollectionRequest)
                 .Include(h => h.User)
                 .OrderByDescending(h => h.ChangeDate)
-                .ToListAsync();
+                .ToPagedAsync(page, pageSize);
         }
 
         // Busca un registro específico del historial por su ID
@@ -68,14 +69,14 @@ namespace proyectosena.Repositorios
             await _context.SaveChangesAsync();
             return history;
         }
-        public async Task<IEnumerable<History>> GetByRequestOwner(Guid idUser)
+        public async Task<(List<History> Items, int Total)> GetByRequestOwner(Guid idUser, int page, int pageSize)
         {
             return await _context.Histories
                 .Include(h => h.CollectionRequest)
                 .Include(h => h.User)
                 .Where(h => h.CollectionRequest!.IdUser == idUser)
                 .OrderByDescending(h => h.ChangeDate)
-                .ToListAsync();
+                .ToPagedAsync(page, pageSize);
         }
 
         // Verifica si existe un registro del historial con el ID proporcionado

@@ -4,8 +4,8 @@ namespace proyectosena.Interfaces
 {
     public interface IUserRepository
     {
-        // Obtiene todos los usuarios
-        Task<List<User>> GetUsers();
+        // Obtiene una página de usuarios activos
+        Task<(List<User> Items, int Total)> GetUsers(int page, int pageSize);
 
         // Obtiene un usuario por su ID
         Task<User> GetUser(Guid idUser);

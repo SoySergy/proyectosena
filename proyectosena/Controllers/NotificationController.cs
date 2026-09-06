@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.Models;
 using proyectosena.Interfaces;
+using proyectosena.DTOs.Common;
 using proyectosena.DTOs.Communication;
 
 namespace proyectosena.Controllers
@@ -93,12 +94,16 @@ namespace proyectosena.Controllers
         [HttpGet("GetMyNotifications")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetMyNotifications(Guid idUser)
+        public async Task<IActionResult> GetMyNotifications(Guid idUser, int page = 1, int pageSize = 20)
         {
             try
             {
-                var notifications = await _notificationRepository.GetByUser(idUser);
-                return Ok(notifications.Select(MapToResponseDto).ToList());
+                (page, pageSize) = PagedResult<NotificationResponseDto>.Normalize(page, pageSize);
+
+                var (items, total) = await _notificationRepository.GetByUser(idUser, page, pageSize);
+
+                return Ok(PagedResult<NotificationResponseDto>.Create(
+                    items.Select(MapToResponseDto).ToList(), page, pageSize, total));
             }
             catch
             {

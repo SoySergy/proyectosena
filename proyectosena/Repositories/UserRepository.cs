@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
+using proyectosena.Extensions;
 using proyectosena.Interfaces;
 using proyectosena.Models;
 
@@ -17,13 +18,14 @@ namespace proyectosena.Repositorios
         }
 
         // Obtiene todos los usuarios incluyendo su rol y tipo de documento
-        public async Task<List<User>> GetUsers()
+        public async Task<(List<User> Items, int Total)> GetUsers(int page, int pageSize)
         {
             return await _context.Users
-                                  .Include(u => u.Role)
+                                 .Include(u => u.Role)
                                  .Include(u => u.DocumentType)
                                  .Where(u => u.IsActive)
-                                 .ToListAsync();
+                                 .OrderBy(u => u.Name)
+                                 .ToPagedAsync(page, pageSize);
         }
 
         // Obtiene un usuario específico por ID incluyendo su rol y tipo de documento

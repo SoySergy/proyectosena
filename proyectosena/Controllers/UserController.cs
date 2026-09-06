@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using proyectosena.DTOs.Common;
 using proyectosena.DTOs.User;
 using proyectosena.Interfaces;
 using proyectosena.Models;
@@ -26,17 +27,17 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers(int page = 1, int pageSize = 20)
         {
             try
             {
-                var users = await _userRepository.GetUsers();
+                (page, pageSize) = PagedResult<UserInfoDto>.Normalize(page, pageSize);
 
-                if (users == null || !users.Any())
-                    return NotFound("No registered users were found.");
+                var (items, total) = await _userRepository.GetUsers(page, pageSize);
 
                 // Mapea a UserInfoDto para no exponer el campo Password
-                return Ok(users.Select(MapToUserInfoDto).ToList());
+                return Ok(PagedResult<UserInfoDto>.Create(
+                    items.Select(MapToUserInfoDto).ToList(), page, pageSize, total));
             }
             catch
             {
