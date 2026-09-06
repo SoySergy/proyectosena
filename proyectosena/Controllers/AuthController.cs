@@ -96,19 +96,14 @@ namespace proyectosena.Controllers
                     User = MapToUserInfoDto(newUser)
                 });
             }
-            // DESPUÉS ✅
+            // Only the duplicate-key case is handled here: it carries business
+            // meaning. Anything else goes to GlobalExceptionHandler.
             catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
                 when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx
                       && (sqlEx.Number == 2627 || sqlEx.Number == 2601))
             {
                 // Viola la constraint UQ_User_Document — documento duplicado
                 return BadRequest("El número de identificación ya se encuentra registrado.");
-            }
-            catch (Exception ex)
-            {
-                // Cualquier otro error inesperado — nunca se expone el detalle interno
-                return StatusCode(StatusCodes.Status500InternalServerError,
-                                  "Ocurrió un error inesperado. Por favor intente más tarde.");
             }
         }
 
@@ -121,46 +116,39 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            try
+            // Busca el usuario por correo electrónico incluyendo su rol
+            var user = await _userRepository.GetUserByEmail(dto.Email);
+            if (user == null)
+                return Unauthorized("Invalid credentials.");
+
+            // Un usuario dado de baja no puede entrar. Mismo mensaje que unas
+            // credenciales erróneas, para no revelar que la cuenta existe.
+            if (!user.IsActive)
+                return Unauthorized("Invalid credentials.");
+
+            // Verifica la contraseña usando BCrypt
+            // BCrypt.Verify compara el texto plano con el hash almacenado en la BD
+            // Nunca se desencripta — BCrypt hashea el intento y compara los hashes
+            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
+                return Unauthorized("Invalid credentials.");
+
+            // Should never happen: IdRole is required and GetUserByEmail includes it.
+            // If it does, it is corrupt data — let it surface in the log rather than
+            // silently issuing a token with the wrong role.
+            if (user.Role == null)
+                throw new InvalidOperationException($"User {user.IdUser} has no role loaded.");
+
+            // Genera el token JWT con los datos del usuario autenticado
+            var token = GenerateToken(user);
+
+            // Retorna el token y la información básica sin exponer Password
+            return Ok(new AuthResponseDto
             {
-                // Busca el usuario por correo electrónico incluyendo su rol
-                var user = await _userRepository.GetUserByEmail(dto.Email);
-                if (user == null)
-                    return Unauthorized("Invalid credentials.");
-
-                if (user.Role == null)
-                {
-                    throw new Exception("Role is null");
-                }
-                if (!user.IsActive)
-                    return Unauthorized("Invalid credentials.");
-
-                // Verifica la contraseña usando BCrypt
-                // BCrypt.Verify compara el texto plano con el hash almacenado en la BD
-                // Nunca se desencripta — BCrypt hashea el intento y compara los hashes
-                if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
-                    return Unauthorized(new
-                    {
-                        message = "Invalid crendetials"
-
-                    });
-
-                // Genera el token JWT con los datos del usuario autenticado
-                var token = GenerateToken(user);
-
-                // Retorna el token y la información básica sin exponer Password
-                return Ok(new AuthResponseDto
-                {
-                    Token = token,
-                    TokenType = "Bearer",
-                    ExpiresAt = DateTime.UtcNow.AddMinutes(60),
-                    User = MapToUserInfoDto(user)
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+                Token = token,
+                TokenType = "Bearer",
+                ExpiresAt = DateTime.UtcNow.AddMinutes(60),
+                User = MapToUserInfoDto(user)
+            });
         }
 
         // ── Métodos privados ────────────────────────────────────────────
@@ -215,7 +203,6 @@ namespace proyectosena.Controllers
             RegistrationDate = user.RegistrationDate
         };
 
-        private static readonly Dictionary<string, (string Code, DateTime Expiry)> _resetCodes = new();
         // ─────────────────────────────────────────────────────────────────
         // POST: api/auth/forgot-password
         // Genera el código OTP, lo guarda en memoria y envía el correo.
@@ -226,29 +213,21 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(dto.Email))
-                    return BadRequest("El correo es requerido.");
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                return BadRequest("El correo es requerido.");
 
-                var email = dto.Email.Trim().ToLower();
-                var user = await _userRepository.GetUserByEmail(email);
+            var email = dto.Email.Trim().ToLower();
+            var user = await _userRepository.GetUserByEmail(email);
 
-                // Respuesta idéntica exista o no el correo (evita enumerar emails)
-                if (user == null)
-                    return Ok(new { message = "Si el correo está registrado, recibirás un código." });
-
-                // Genera el código OTP (6 dígitos, 15 min de vida) y envía el correo
-                var code = _resetService.GenerateAndStoreCode(email);
-                await _emailService.SendPasswordResetCodeAsync(user.Email, code);
-
+            // Respuesta idéntica exista o no el correo (evita enumerar emails)
+            if (user == null)
                 return Ok(new { message = "Si el correo está registrado, recibirás un código." });
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[ForgotPassword] {ex.Message}");
-                return StatusCode(500, "Error al enviar el código. Intenta de nuevo.");
-            }
+
+            // Genera el código OTP (6 dígitos, 15 min de vida) y envía el correo
+            var code = _resetService.GenerateAndStoreCode(email);
+            await _emailService.SendPasswordResetCodeAsync(user.Email, code);
+
+            return Ok(new { message = "Si el correo está registrado, recibirás un código." });
         }
 
 
@@ -287,37 +266,29 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(dto.Email) ||
-                    string.IsNullOrWhiteSpace(dto.Code) ||
-                    string.IsNullOrWhiteSpace(dto.NewPassword))
-                    return BadRequest("Correo, código y nueva contraseña son requeridos.");
+            if (string.IsNullOrWhiteSpace(dto.Email) ||
+                string.IsNullOrWhiteSpace(dto.Code) ||
+                string.IsNullOrWhiteSpace(dto.NewPassword))
+                return BadRequest("Correo, código y nueva contraseña son requeridos.");
 
-                var email = dto.Email.Trim().ToLower();
+            var email = dto.Email.Trim().ToLower();
 
-                // Valida el código ANTES de tocar la base de datos
-                if (!_resetService.ValidateCode(email, dto.Code.Trim()))
-                    return BadRequest("Código inválido o expirado.");
+            // Valida el código ANTES de tocar la base de datos
+            if (!_resetService.ValidateCode(email, dto.Code.Trim()))
+                return BadRequest("Código inválido o expirado.");
 
-                var user = await _userRepository.GetUserByEmail(email);
-                if (user == null)
-                    return NotFound("Usuario no encontrado.");
+            var user = await _userRepository.GetUserByEmail(email);
+            if (user == null)
+                return NotFound("Usuario no encontrado.");
 
-                // Hashea la nueva contraseña con BCrypt (igual que en UpdateUser)
-                user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-                await _userRepository.UpdateUser(user);
+            // Hashea la nueva contraseña con BCrypt (igual que en UpdateUser)
+            user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _userRepository.UpdateUser(user);
 
-                // Invalida el código para que no pueda reutilizarse
-                _resetService.InvalidateCode(email);
+            // Invalida el código para que no pueda reutilizarse
+            _resetService.InvalidateCode(email);
 
-                return Ok(new { message = "Contraseña actualizada correctamente." });
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[ResetPassword] {ex.Message}");
-                return StatusCode(500, "Error al restablecer la contraseña. Intenta de nuevo.");
-            }
+            return Ok(new { message = "Contraseña actualizada correctamente." });
         }
     }
 }

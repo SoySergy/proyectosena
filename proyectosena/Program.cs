@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using proyectosena;
 using proyectosena.Context;
+using proyectosena.Middleware;
 using proyectosena.Repositories.Interfaces;
 using proyectosena.Services;
 using System.Text;
@@ -99,6 +100,12 @@ builder.Services.AddSingleton<IEmailService, EmailService>();
 builder.Services.AddSingleton<IPasswordResetService, PasswordResetService>();
 
 
+// ── 8. GLOBAL ERROR HANDLING ──────────────────────────
+// Every unhandled exception is logged here and returned as ProblemDetails,
+// so internal detail never reaches the client.
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 builder.Services.AddControllers();
 
 // ── BUILD ─────────────────────────────────────────────
@@ -130,6 +137,10 @@ if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// Must sit before everything it protects, so any exception thrown
+// further down the pipeline lands in GlobalExceptionHandler.
+app.UseExceptionHandler();
 
 app.UseCors("RecyRoutePolicy");
 app.UseAuthentication();
