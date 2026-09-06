@@ -27,19 +27,15 @@ namespace proyectosena.Repositories
                 .ToListAsync();
         }
 
-        // Obtiene una notificación específica por ID
-        // Lanza excepción si no existe
-        public async Task<Notification> GetNotification(Guid idNotification)
+        // Obtiene una notificación específica por ID, o null si no existe.
+        // "No encontrado" no es una excepción: es una respuesta posible, y quien
+        // decide qué hacer con ella es la capa de servicio.
+        public async Task<Notification?> GetNotification(Guid idNotification)
         {
-            var notification = await _context.Notifications
+            return await _context.Notifications
                 .Include(n => n.User)
                 .Include(n => n.CollectionRequest)
                 .FirstOrDefaultAsync(n => n.IdNotification == idNotification);
-
-            if (notification == null)
-                throw new KeyNotFoundException($"Notification with ID {idNotification} was not found.");
-
-            return notification;
         }
 
         // Crea una nueva notificación y guarda los cambios en la base de datos
