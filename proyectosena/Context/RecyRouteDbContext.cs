@@ -23,6 +23,7 @@ namespace proyectosena.Context
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<History> Histories { get; set; }
         public DbSet<ChatHistory> ChatHistories { get; set; }
+        public DbSet<ManagerApplication> ManagerApplications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,19 +48,19 @@ namespace proyectosena.Context
                 new Role
                 {
                     IdRole = SeedIds.Roles.Administrator,
-                    RoleName = "Administrator",
+                    RoleName = RoleNames.Administrator,
                     RoleDescription = "User with full access to the system."
                 },
                 new Role
                 {
                     IdRole = SeedIds.Roles.Manager,
-                    RoleName = "Manager",
+                    RoleName = RoleNames.Manager,
                     RoleDescription = "User responsible for managing collection requests."
                 },
                 new Role
                 {
                     IdRole = SeedIds.Roles.Citizen,
-                    RoleName = "Citizen",
+                    RoleName = RoleNames.Citizen,
                     RoleDescription = "User who can submit collection requests."
                 }
 
@@ -155,6 +156,9 @@ namespace proyectosena.Context
                 entity.Property(u => u.IsActive)
                      .IsRequired()
                      .HasDefaultValue(true);
+                entity.Property(u => u.IsEmailVerified)
+                     .IsRequired()
+                     .HasDefaultValue(false);
             });
 
             // ══════════════════════════════════════
@@ -360,6 +364,50 @@ namespace proyectosena.Context
                     .OnDelete(DeleteBehavior.NoAction)
                     .HasConstraintName("FK_ChatHistory_User");
             });
+
+            // ── MANAGER APPLICATION ────────────────────
+            modelBuilder.Entity<ManagerApplication>(entity =>
+            {
+                entity.ToTable("ManagerApplication");
+                entity.HasKey(a => a.IdApplication);
+                entity.Property(a => a.IdApplication)
+                    .HasDefaultValueSql("NEWID()");
+                entity.Property(a => a.IdUser)
+                    .IsRequired();
+                entity.Property(a => a.Motivation)
+                    .IsRequired()
+                    .HasMaxLength(500);
+                entity.Property(a => a.Status)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue(ManagerApplicationStatus.Pending);
+                entity.Property(a => a.RequestDate)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(a => a.ReviewComment)
+                    .HasMaxLength(500);
+
+                // Buscar "las pendientes" y "las de este usuario" son las dos
+                // consultas de esta tabla; el índice las cubre a las dos.
+                entity.HasIndex(a => new { a.IdUser, a.Status })
+                    .HasDatabaseName("IX_ManagerApplication_User_Status");
+
+                // ── Relationships ──────────────────
+                // NoAction en las dos: el historial de quién pidió y quién
+                // aprobó no debe desaparecer si se da de baja a un usuario.
+                entity.HasOne(a => a.User)
+                    .WithMany()
+                    .HasForeignKey(a => a.IdUser)
+                    .OnDelete(DeleteBehavior.NoAction)
+                    .HasConstraintName("FK_ManagerApplication_User");
+
+                entity.HasOne(a => a.Reviewer)
+                    .WithMany()
+                    .HasForeignKey(a => a.IdReviewer)
+                    .OnDelete(DeleteBehavior.NoAction)
+                    .HasConstraintName("FK_ManagerApplication_Reviewer");
+            });
         }
+
     }
 }

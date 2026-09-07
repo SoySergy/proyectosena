@@ -20,18 +20,19 @@ namespace proyectosena.Services
             _collectionRequestRepository = collectionRequestRepository;
         }
 
-        public async Task<(ChatAccessResult Result, ChatMessageResponseDto? Message)> SendMessage(SendMessageDto dto)
+        public async Task<(ChatAccessResult Result, ChatMessageResponseDto? Message)> SendMessage(
+            SendMessageDto dto, Guid idSender)
         {
             // La regla del negocio: solo el dueño de la solicitud o un gestor
             // asignado pueden escribir en su conversación.
-            var allowed = await _collectionRequestRepository.IsParticipant(dto.IdRequest, dto.IdSender);
+            var allowed = await _collectionRequestRepository.IsParticipant(dto.IdRequest, idSender);
             if (!allowed)
                 return (ChatAccessResult.NotParticipant, null);
 
             var message = new ChatHistory
             {
                 IdRequest = dto.IdRequest,
-                IdSender = dto.IdSender,
+                IdSender = idSender,
                 Message = dto.Message,
                 SendDate = DateTime.UtcNow,
                 IsRead = false

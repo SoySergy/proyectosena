@@ -101,12 +101,15 @@ namespace proyectosena.Services
 
                 return (true, "Request accepted successfully.");
             }
-            catch (Exception ex)
+            catch
             {
-                // Si algo falla revertimos toda la transacción
-                // Esto garantiza que no queden datos inconsistentes en la BD
+                // Se revierte todo para no dejar datos a medias…
                 await transaction.RollbackAsync();
-                return (false, $"Error accepting the request: {ex.Message}");
+
+                // …y la excepción sube al manejador global, que la registra entera con
+                // su traceId. Antes su mensaje se devolvía al cliente dentro de un 400,
+                // y un fallo de base trae nombres de tabla y de columna.
+                throw;
             }
         }
 
@@ -135,7 +138,7 @@ namespace proyectosena.Services
                     .Include(u => u.Role)
                     .FirstOrDefaultAsync(u => u.IdUser == idNewManager);
 
-                if (newManager == null || !newManager.IsActive || newManager.Role?.RoleName != "Manager")
+                if (newManager == null || !newManager.IsActive || newManager.Role?.RoleName != RoleNames.Manager)
                     return (false, "The target user is not an active manager.");
 
                 // Current assignment row for this request
@@ -182,17 +185,19 @@ namespace proyectosena.Services
 
                 return (true, "Request reassigned successfully.");
             }
-            catch (Exception ex)
+            catch
             {
+                // Igual que en AcceptRequestAsync: se revierte y el detalle va al log,
+                // no a la respuesta.
                 await transaction.RollbackAsync();
-                return (false, $"Error reassigning the request: {ex.Message}");
+                throw;
             }
         }
 
         public async Task NotifyAllManagersAsync(Guid idRequest, string collectionAddress)
         {
             // Get every user with the Manager role
-            var managers = await _userDirectory.GetByRoleNameAsync("Manager");
+            var managers = await _userDirectory.GetByRoleNameAsync(RoleNames.Manager);
 
             // Build one notification per manager, without touching the database yet
             var notifications = managers.Select(manager => new Notification

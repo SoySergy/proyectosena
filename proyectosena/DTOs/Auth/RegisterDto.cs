@@ -5,8 +5,10 @@ namespace proyectosena.DTOs.Auth
     public class RegisterDto
     {
         // ── Foreign Keys ───────────────────────────
-        [Required]
-        public Guid IdRole { get; set; }
+        // IdRole no viaja aquí a propósito. Cuando lo hacía, cualquiera podía
+        // registrarse como administrador mandando el identificador de ese rol.
+        // El registro siempre crea un ciudadano; el rol de gestor lo concede un
+        // administrador tras revisar la solicitud.
 
         [Required]
         public Guid IdDocumentType { get; set; }

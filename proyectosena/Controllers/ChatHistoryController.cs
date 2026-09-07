@@ -47,13 +47,13 @@ namespace proyectosena.Controllers
             if (dto == null)
                 return BadRequest("Message data cannot be null.");
 
-            if (dto.IdRequest == Guid.Empty || dto.IdSender == Guid.Empty)
-                return BadRequest("The message must have a valid IdRequest and IdSender.");
+            if (dto.IdRequest == Guid.Empty)
+                return BadRequest("The message must have a valid IdRequest.");
 
             if (string.IsNullOrWhiteSpace(dto.Message))
                 return BadRequest("Message content cannot be empty.");
 
-            var (result, message) = await _chatHistoryService.SendMessage(dto);
+            var (result, message) = await _chatHistoryService.SendMessage(dto, User.GetUserId());
 
             if (result == ChatAccessResult.NotParticipant)
                 return StatusCode(StatusCodes.Status403Forbidden,

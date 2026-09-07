@@ -22,10 +22,14 @@ namespace proyectosena.Interfaces.Services
         Task<CollectionRequestResponseDto?> GetById(Guid idRequest);
 
         // Crea la solicitud en estado Pending y avisa a todos los gestores activos
-        Task<CollectionRequestResponseDto> Create(CreateCollectionRequestDto dto);
+        // idUser lo pone quien llama a partir del token, no el cuerpo de la petición
+        Task<CollectionRequestResponseDto> Create(CreateCollectionRequestDto dto, Guid idUser);
 
         // Edita una solicitud. Solo mientras siga en Pending.
-        Task<(RequestUpdateResult Result, CollectionRequestResponseDto? Request)> Update(UpdateCollectionRequestDto dto);
+        // idUser lo pone quien llama a partir del token: sin él no se puede
+        // comprobar que la solicitud sea suya.
+        Task<(RequestUpdateResult Result, CollectionRequestResponseDto? Request)> Update(
+            UpdateCollectionRequestDto dto, Guid idUser);
 
         // Cambia el estado validando primero que el valor exista y luego que la
         // transición sea legal según la máquina de estados.

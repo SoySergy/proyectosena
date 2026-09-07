@@ -120,12 +120,14 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateUser(Guid idUser, [FromBody] UpdateUserDto dto)
+        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto dto)
         {
             if (dto == null)
                 return BadRequest("Update data cannot be null.");
 
-            var (result, user) = await _userService.UpdateUser(idUser, dto);
+            // El id sale del token: antes bastaba cambiarlo para editar el perfil
+            // de cualquier otra persona.
+            var (result, user) = await _userService.UpdateUser(User.GetUserId(), dto);
 
             if (result == UserUpdateResult.UserNotFound)
                 return NotFound("The requested user was not found.");

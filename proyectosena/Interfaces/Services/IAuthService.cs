@@ -17,9 +17,9 @@ namespace proyectosena.Interfaces.Services
     /// </remarks>
     public interface IAuthService
     {
-        // Crea la cuenta y devuelve la sesión ya iniciada.
-        // Response viene en null salvo que el resultado sea Success.
-        Task<(RegisterResult Result, AuthResponseDto? Response)> Register(RegisterDto dto);
+        // Crea la cuenta SIN sesión: queda pendiente de confirmar el correo.
+        // Pending viene en null salvo que el resultado sea Success.
+        Task<(RegisterResult Result, RegistrationPendingDto? Pending)> Register(RegisterDto dto);
 
         // Valida credenciales y emite el token.
         // Response viene en null salvo que el resultado sea Success.
@@ -34,5 +34,14 @@ namespace proyectosena.Interfaces.Services
 
         // Cambia la contraseña y quema el código.
         Task<ResetPasswordResult> ResetPassword(ResetPasswordDto dto);
+
+        // Confirma el correo y, si sale bien, deja la sesión iniciada: quien
+        // acaba de confirmar no tiene por qué volver a escribir su contraseña.
+        // Response viene en null salvo que el resultado sea Success.
+        Task<(EmailVerificationResult Result, AuthResponseDto? Response)> VerifyEmail(VerifyEmailDto dto);
+
+        // Vuelve a mandar el código si no llegó o venció. No devuelve nada: quien
+        // llama responde igual exista o no la cuenta.
+        Task ResendVerificationCode(string email);
     }
 }

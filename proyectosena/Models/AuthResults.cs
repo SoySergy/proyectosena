@@ -24,7 +24,25 @@ namespace proyectosena.Models
     {
         Success,
 
-        InvalidCredentials
+        InvalidCredentials,
+
+        // Las credenciales son correctas pero nunca confirmó el correo. Se
+        // distingue de InvalidCredentials a propósito: si no, quien se registra
+        // y no confirma queda afuera sin saber por qué.
+        EmailNotVerified
+    }
+
+    // Resultados posibles al confirmar el correo de una cuenta recién creada
+    public enum EmailVerificationResult
+    {
+        Success,
+
+        InvalidOrExpiredCode,
+
+        UserNotFound,
+
+        // Ya lo había confirmado: no es un error, pero no hay nada que hacer
+        AlreadyVerified
     }
 
     // Resultados posibles al restablecer la contraseña con el código del correo

@@ -29,7 +29,7 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            var (result, response) = await _authService.Register(dto);
+            var (result, pending) = await _authService.Register(dto);
 
             if (result == RegisterResult.EmailAlreadyUsed)
                 return BadRequest("Ya existe un usuario con este correo.");
@@ -40,7 +40,9 @@ namespace proyectosena.Controllers
             if (result == RegisterResult.DuplicateOnSave)
                 return BadRequest("El número de identificación ya se encuentra registrado.");
 
-            return Ok(response);
+            // Ya no se devuelve token: la cuenta existe pero no sirve hasta que
+            // confirme el correo con el código que acaba de recibir.
+            return Ok(pending);
         }
 
         // -------------------- POST: api/auth/Login --------------------
@@ -49,6 +51,7 @@ namespace proyectosena.Controllers
         [HttpPost("Login")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
@@ -56,6 +59,10 @@ namespace proyectosena.Controllers
 
             if (result == LoginResult.InvalidCredentials)
                 return Unauthorized("Invalid credentials.");
+
+            if (result == LoginResult.EmailNotVerified)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "Debes confirmar tu correo antes de entrar. Revisa tu bandeja o pide un código nuevo.");
 
             return Ok(response);
         }
@@ -103,6 +110,50 @@ namespace proyectosena.Controllers
         // POST: api/auth/reset-password
         // Valida el código y actualiza la contraseña hasheada con BCrypt.
         // ─────────────────────────────────────────────────────────────────
+        // POST: api/auth/verify-email
+        // Confirma que el correo del recién registrado existe y es suyo.
+        [AllowAnonymous]
+        [HttpPost("verify-email")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Code))
+                return BadRequest("Correo y código son requeridos.");
+
+            var (result, response) = await _authService.VerifyEmail(dto);
+
+            if (result == EmailVerificationResult.InvalidOrExpiredCode)
+                return BadRequest("Código inválido o expirado.");
+
+            if (result == EmailVerificationResult.UserNotFound)
+                return NotFound("Usuario no encontrado.");
+
+            if (result == EmailVerificationResult.AlreadyVerified)
+                return Ok(new { message = "Este correo ya estaba confirmado. Puedes iniciar sesión." });
+
+            // Queda con la sesión iniciada: acaba de demostrar que el correo es suyo
+            return Ok(response);
+        }
+
+        // POST: api/auth/resend-verification
+        // Vuelve a mandar el código si no llegó o venció.
+        [AllowAnonymous]
+        [HttpPost("resend-verification")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ResendVerification([FromBody] ForgotPasswordDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                return BadRequest("El correo es requerido.");
+
+            await _authService.ResendVerificationCode(dto.Email);
+
+            // Respuesta idéntica exista o no la cuenta, y esté o no confirmada
+            return Ok(new { message = "Si la cuenta existe y falta confirmarla, recibirás un código." });
+        }
+
         [AllowAnonymous]
         [HttpPost("reset-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]

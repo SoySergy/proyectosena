@@ -24,7 +24,7 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> MarkAsRead(Guid idNotification)
         {
-            var updated = await _notificationService.MarkAsRead(idNotification);
+            var updated = await _notificationService.MarkAsRead(idNotification, User.GetUserId());
 
             if (updated == null)
                 return NotFound("The requested notification was not found.");
@@ -54,9 +54,11 @@ namespace proyectosena.Controllers
         // -------------------- PATCH: api/notification/MarkAllAsRead --------------------
         [HttpPatch("MarkAllAsRead")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> MarkAllAsRead(Guid idUser)
+        public async Task<IActionResult> MarkAllAsRead()
         {
-            var updated = await _notificationService.MarkAllAsRead(idUser);
+            // El id sale del token: antes se podían marcar como leídas las
+            // notificaciones de otra persona.
+            var updated = await _notificationService.MarkAllAsRead(User.GetUserId());
             return Ok(new { MarkedAsRead = updated });
         }
     }

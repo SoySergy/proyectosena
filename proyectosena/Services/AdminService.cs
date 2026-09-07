@@ -109,8 +109,8 @@ namespace proyectosena.Services
                 Rejected = counts.GetValueOrDefault(CollectionRequestStatus.Rejected),
                 TotalRequests = counts.Values.Sum(),
                 RequestsLast30Days = await _requestRepository.CountSince(DateTime.UtcNow.AddDays(-ActivityWindowDays)),
-                ActiveManagers = await _userDirectory.CountByRole("Manager"),
-                ActiveCitizens = await _userDirectory.CountByRole("Citizen")
+                ActiveManagers = await _userDirectory.CountByRole(RoleNames.Manager),
+                ActiveCitizens = await _userDirectory.CountByRole(RoleNames.Citizen)
             };
         }
 

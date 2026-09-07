@@ -12,7 +12,9 @@ namespace proyectosena.Interfaces.Services
     {
         // Envía un mensaje. Devuelve NotParticipant si el remitente no pertenece
         // a la solicitud, y en ese caso Message viene en null.
-        Task<(ChatAccessResult Result, ChatMessageResponseDto? Message)> SendMessage(SendMessageDto dto);
+        // idSender lo pone quien llama a partir del token, no el cuerpo
+        Task<(ChatAccessResult Result, ChatMessageResponseDto? Message)> SendMessage(
+            SendMessageDto dto, Guid idSender);
 
         // Conversación completa de una solicitud, en orden cronológico.
         // Devuelve NotParticipant si quien consulta no pertenece a ella.

@@ -4,6 +4,7 @@ using Microsoft.OpenApi;
 using proyectosena;
 using proyectosena.Extensions;
 using proyectosena.Middleware;
+using proyectosena.Models;
 using proyectosena.Services;
 using System.Text;
 
@@ -39,10 +40,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // ── 4. ROLE-BASED AUTHORIZATION ───────────────────────
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Administrator"));
-    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Manager"));
-    options.AddPolicy("CitizenOnly", policy => policy.RequireRole("Citizen"));
-    options.AddPolicy("AdminOrManager", policy => policy.RequireRole("Administrator", "Manager"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole(RoleNames.Administrator));
+    options.AddPolicy("ManagerOnly", policy => policy.RequireRole(RoleNames.Manager));
+    options.AddPolicy("CitizenOnly", policy => policy.RequireRole(RoleNames.Citizen));
+    options.AddPolicy("AdminOrManager", policy => policy.RequireRole(RoleNames.Administrator, RoleNames.Manager));
 });
 
 // ── 5. CORS ───────────────────────────────────────────

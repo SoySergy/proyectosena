@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.User;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
@@ -70,10 +71,12 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> ReassignRequest(Guid idRequest, Guid idNewManager, Guid idAdmin)
+        public async Task<IActionResult> ReassignRequest(Guid idRequest, Guid idNewManager)
         {
+            // El administrador que reasigna es el del token; queda firmado así en el
+            // historial. idNewManager sí se queda: señala a otra persona a propósito.
             var (success, message) = await _adminService
-                .ReassignRequest(idRequest, idNewManager, idAdmin);
+                .ReassignRequest(idRequest, idNewManager, User.GetUserId());
 
             if (!success)
                 return BadRequest(message);

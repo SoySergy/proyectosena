@@ -1,3 +1,4 @@
+using proyectosena.Models;
 using System.Security.Claims;
 
 namespace proyectosena.Extensions
@@ -41,6 +42,6 @@ namespace proyectosena.Extensions
 
         /// <summary>True si quien llama es administrador.</summary>
         public static bool IsAdministrator(this ClaimsPrincipal principal)
-            => principal.IsInRole("Administrator");
+            => principal.IsInRole(RoleNames.Administrator);
     }
 }

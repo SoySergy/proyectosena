@@ -86,6 +86,40 @@ namespace proyectosena.Services
             await SendAsync(message);
         }
 
+        public async Task SendEmailVerificationCodeAsync(
+            string toEmail, string name, string code, int expiryMinutes)
+        {
+            var settings = _config.GetSection("EmailSettings");
+
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(
+                settings["SenderName"],
+                settings["SenderEmail"]
+            ));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = "Confirma tu correo – RecyRoute";
+
+            message.Body = new TextPart("html")
+            {
+                Text = $@"
+                    <div style='font-family:sans-serif;max-width:480px;margin:auto'>
+                        <h2 style='color:#2E7D32'>RecyRoute</h2>
+                        <p>Hola {name}, gracias por registrarte.</p>
+                        <p>Para terminar, confirma que este correo es tuyo con este código:</p>
+                        <div style='font-size:2.5rem;font-weight:bold;letter-spacing:10px;
+                                    color:#2E7D32;text-align:center;padding:1rem 0'>
+                            {code}
+                        </div>
+                        <p>El código vence en {expiryMinutes} minutos.</p>
+                        <p style='color:#777;font-size:0.9rem'>
+                            Si no fuiste tú quien se registró, ignora este mensaje.
+                        </p>
+                    </div>"
+            };
+
+            await SendAsync(message);
+        }
+
         // Shared SMTP delivery for every message this service builds
         private async Task SendAsync(MimeMessage message)
         {
