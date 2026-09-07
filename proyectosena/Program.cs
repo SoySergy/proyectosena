@@ -1,11 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using proyectosena;
-using proyectosena.Context;
+using proyectosena.Extensions;
 using proyectosena.Middleware;
-using proyectosena.Interfaces.Repositories;
 using proyectosena.Services;
 using System.Text;
 
@@ -106,13 +104,14 @@ builder.Services.AddControllers();
 // ── BUILD ─────────────────────────────────────────────
 var app = builder.Build();
 
-// ── APLICA LAS MIGRACIONES DE EF CORE AL INICIAR ──────
-// Necesario en Docker: crea la base de datos y las tablas
-// si aún no existen, o aplica las migraciones pendientes.
-using (var scope = app.Services.CreateScope())
+// ── MIGRACIONES DE EF CORE ────────────────────────────
+// Aplicarlas al arrancar es cómodo en desarrollo y en Docker. En producción,
+// con varias réplicas levantándose a la vez, hay carrera sobre el esquema: por
+// eso está detrás de un interruptor. Se pone en false y las migraciones pasan a
+// ser un paso explícito del despliegue (dotnet ef database update).
+if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<RecyRouteDbContext>();
-    dbContext.Database.Migrate();
+    await app.ApplyMigrationsAsync();
 }
 
 // ── 8. MIDDLEWARE PIPELINE ────────────────────────────

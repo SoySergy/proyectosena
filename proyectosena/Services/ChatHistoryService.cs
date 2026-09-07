@@ -58,10 +58,17 @@ namespace proyectosena.Services
             return (ChatAccessResult.Success, messages.Select(MapToDto).ToList());
         }
 
-        public async Task<List<ChatMessageResponseDto>> GetUnreadMessages(Guid idUser, Guid idRequest)
+        public async Task<(ChatAccessResult Result, List<ChatMessageResponseDto> Messages)> GetUnreadMessages(
+            Guid idUser, Guid idRequest)
         {
+            // Misma regla que GetMessagesByRequest: si no participas, no lees.
+            // Faltaba aquí, y el filtro del repositorio no la suple.
+            var allowed = await _collectionRequestRepository.IsParticipant(idRequest, idUser);
+            if (!allowed)
+                return (ChatAccessResult.NotParticipant, new List<ChatMessageResponseDto>());
+
             var messages = await _chatHistoryRepository.GetUnreadMessages(idUser, idRequest);
-            return messages.Select(MapToDto).ToList();
+            return (ChatAccessResult.Success, messages.Select(MapToDto).ToList());
         }
 
         public Task<bool> MarkAsRead(Guid idChatHistory)

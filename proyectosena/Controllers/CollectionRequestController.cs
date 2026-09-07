@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.Requests;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
@@ -185,9 +186,11 @@ namespace proyectosena.Controllers
         [HttpGet("GetMyAssignments")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetMyAssignments(Guid idManager, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> GetMyAssignments(int page = 1, int pageSize = 20)
         {
-            return Ok(await _requestService.GetByManager(idManager, page, pageSize));
+            // El id del gestor sale del token: antes un gestor podía ver la carga
+            // de trabajo de cualquier otro cambiando el parámetro.
+            return Ok(await _requestService.GetByManager(User.GetUserId(), page, pageSize));
         }
 
         // -------------------- GET: api/collectionrequest/GetRequestsByUser --------------------
@@ -195,9 +198,10 @@ namespace proyectosena.Controllers
         [HttpGet("GetRequestsByUser")]
         [Authorize(Policy = "CitizenOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetRequestsByUser(Guid idUser, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> GetRequestsByUser(int page = 1, int pageSize = 20)
         {
-            return Ok(await _requestService.GetByUser(idUser, page, pageSize));
+            // El id sale del token: estas solicitudes traen dirección y teléfono.
+            return Ok(await _requestService.GetByUser(User.GetUserId(), page, pageSize));
         }
     }
 }

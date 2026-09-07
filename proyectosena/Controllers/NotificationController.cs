@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
 
 namespace proyectosena.Controllers
@@ -34,17 +35,19 @@ namespace proyectosena.Controllers
         // -------------------- GET: api/notification/GetMyNotifications --------------------
         [HttpGet("GetMyNotifications")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetMyNotifications(Guid idUser, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> GetMyNotifications(int page = 1, int pageSize = 20)
         {
-            return Ok(await _notificationService.GetMyNotifications(idUser, page, pageSize));
+            // El id sale del token, no de la URL: antes bastaba cambiarlo para leer
+            // las notificaciones de otra persona.
+            return Ok(await _notificationService.GetMyNotifications(User.GetUserId(), page, pageSize));
         }
 
         // -------------------- GET: api/notification/GetUnreadCount --------------------
         [HttpGet("GetUnreadCount")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetUnreadCount(Guid idUser)
+        public async Task<IActionResult> GetUnreadCount()
         {
-            var count = await _notificationService.GetUnreadCount(idUser);
+            var count = await _notificationService.GetUnreadCount(User.GetUserId());
             return Ok(new { UnreadCount = count });
         }
 

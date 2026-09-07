@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.User;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
@@ -30,12 +31,20 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/user/GetUserById --------------------
-        // Cualquier usuario autenticado puede ver su propio perfil
+        // Tu propio perfil. El administrador puede consultar el de cualquiera.
         [HttpGet("GetUserById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUserById(Guid idUser)
         {
+            // Antes cualquier autenticado veía el perfil de cualquier otro con solo
+            // cambiar el parámetro. Ahora solo el propio, salvo el administrador,
+            // que lo necesita para el panel.
+            if (idUser != User.GetUserId() && !User.IsAdministrator())
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only view your own profile.");
+
             var user = await _userService.GetById(idUser);
 
             if (user == null)

@@ -19,8 +19,11 @@ namespace proyectosena.Interfaces.Services
         Task<(ChatAccessResult Result, List<ChatMessageResponseDto> Messages)> GetMessagesByRequest(
             Guid idRequest, Guid idUser);
 
-        // Mensajes de una solicitud que este usuario no ha leído
-        Task<List<ChatMessageResponseDto>> GetUnreadMessages(Guid idUser, Guid idRequest);
+        // Mensajes de una solicitud que este usuario no ha leído.
+        // Devuelve NotParticipant si no pertenece a ella: antes no lo comprobaba y
+        // cualquiera podía leer los mensajes sin leer de una conversación ajena.
+        Task<(ChatAccessResult Result, List<ChatMessageResponseDto> Messages)> GetUnreadMessages(
+            Guid idUser, Guid idRequest);
 
         // Marca un mensaje como leído. False si no existe.
         Task<bool> MarkAsRead(Guid idChatHistory);

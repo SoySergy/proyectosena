@@ -16,18 +16,18 @@ namespace proyectosena.Services
         // Repositorios necesarios para crear historial y notificaciones
         private readonly IHistoryRepository _historyRepository;
         private readonly INotificationRepository _notificationRepository;
-        private readonly IUserRepository _userRepository;
+        private readonly IUserDirectoryRepository _userDirectory;
 
         public AssignmentService(
             RecyRouteDbContext context,
             IHistoryRepository historyRepository,
             INotificationRepository notificationRepository,
-            IUserRepository userRepository)
+            IUserDirectoryRepository userDirectory)
         {
             _context = context;
             _historyRepository = historyRepository;
             _notificationRepository = notificationRepository;
-            _userRepository = userRepository;
+            _userDirectory = userDirectory;
         }
 
         public async Task<(bool Success, string Message)> AcceptRequestAsync(Guid idRequest, Guid idManager)
@@ -192,7 +192,7 @@ namespace proyectosena.Services
         public async Task NotifyAllManagersAsync(Guid idRequest, string collectionAddress)
         {
             // Get every user with the Manager role
-            var managers = await _userRepository.GetByRoleNameAsync("Manager");
+            var managers = await _userDirectory.GetByRoleNameAsync("Manager");
 
             // Build one notification per manager, without touching the database yet
             var notifications = managers.Select(manager => new Notification

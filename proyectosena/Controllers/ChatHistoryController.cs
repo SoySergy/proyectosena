@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.Communication;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
@@ -23,9 +24,11 @@ namespace proyectosena.Controllers
         [HttpGet("GetMessagesByRequest")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetMessagesByRequest(Guid idRequest, Guid idUser)
+        public async Task<IActionResult> GetMessagesByRequest(Guid idRequest)
         {
-            var (result, messages) = await _chatHistoryService.GetMessagesByRequest(idRequest, idUser);
+            // Quién pregunta sale del token. La comprobación de participante que ya
+            // hacía el servicio solo sirve si el id es de fiar.
+            var (result, messages) = await _chatHistoryService.GetMessagesByRequest(idRequest, User.GetUserId());
 
             if (result == ChatAccessResult.NotParticipant)
                 return StatusCode(StatusCodes.Status403Forbidden,
@@ -76,9 +79,16 @@ namespace proyectosena.Controllers
         // -------------------- GET: api/chathistory/GetUnreadMessages --------------------
         [HttpGet("GetUnreadMessages")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetUnreadMessages(Guid idUser, Guid idRequest)
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetUnreadMessages(Guid idRequest)
         {
-            return Ok(await _chatHistoryService.GetUnreadMessages(idUser, idRequest));
+            var (result, messages) = await _chatHistoryService.GetUnreadMessages(User.GetUserId(), idRequest);
+
+            if (result == ChatAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You are not a participant of this collection request.");
+
+            return Ok(messages);
         }
 
     }

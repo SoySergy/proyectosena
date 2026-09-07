@@ -46,19 +46,19 @@ namespace proyectosena.Context
                 entity.HasData(
                 new Role
                 {
-                    IdRole = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                    IdRole = SeedIds.Roles.Administrator,
                     RoleName = "Administrator",
                     RoleDescription = "User with full access to the system."
                 },
                 new Role
                 {
-                    IdRole = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                    IdRole = SeedIds.Roles.Manager,
                     RoleName = "Manager",
                     RoleDescription = "User responsible for managing collection requests."
                 },
                 new Role
                 {
-                    IdRole = Guid.Parse("7D759012-4D17-46E8-BCE8-D74FDF171EAB"),
+                    IdRole = SeedIds.Roles.Citizen,
                     RoleName = "Citizen",
                     RoleDescription = "User who can submit collection requests."
                 }
@@ -82,15 +82,15 @@ namespace proyectosena.Context
                     .IsRequired()
                     .HasMaxLength(3);
             entity.HasData(
-                new DocumentType { IdDocumentType = Guid.Parse("63D5F1A7-6C0C-4A05-ADF8-D65964D2B3B1"),
+                new DocumentType { IdDocumentType = SeedIds.DocumentTypes.CedulaCiudadania,
                     DocumentName = "Cédula de ciudadanía",
                     Abbreviation = "CC"
                 },
-                new DocumentType { IdDocumentType = Guid.Parse("FCCCB874-75F3-4374-B8E5-A7A92B084D6C"),
+                new DocumentType { IdDocumentType = SeedIds.DocumentTypes.Pasaporte,
                     DocumentName = "Pasaporte", Abbreviation = "PA" },
-                new DocumentType { IdDocumentType = Guid.Parse("5BCB367C-1F41-4C5A-B120-F01F35159DD8"),
+                new DocumentType { IdDocumentType = SeedIds.DocumentTypes.CedulaExtranjeria,
                     DocumentName = "Cédula de extranjería", Abbreviation = "CE" },
-                new DocumentType { IdDocumentType = Guid.Parse("D0000000-0000-0000-0000-000000000004"),
+                new DocumentType { IdDocumentType = SeedIds.DocumentTypes.TarjetaIdentidad,
                     DocumentName = "Tarjeta de identidad", Abbreviation = "TI" });                
             });
 

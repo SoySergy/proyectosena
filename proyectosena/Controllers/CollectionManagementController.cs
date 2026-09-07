@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using proyectosena.DTOs.Collection;
-using proyectosena.Interfaces.Repositories;
-using proyectosena.Models;
+using proyectosena.Interfaces.Services;
 
 namespace proyectosena.Controllers
 {
@@ -11,11 +9,12 @@ namespace proyectosena.Controllers
     [ApiController]
     public class CollectionManagementController : ControllerBase
     {
-        private readonly ICollectionManagementRepository _collectionManagementRepository;
+        // El controlador solo traduce HTTP: las reglas viven en el servicio
+        private readonly ICollectionManagementService _collectionManagementService;
 
-        public CollectionManagementController(ICollectionManagementRepository collectionManagementRepository)
+        public CollectionManagementController(ICollectionManagementService collectionManagementService)
         {
-            _collectionManagementRepository = collectionManagementRepository;
+            _collectionManagementService = collectionManagementService;
         }
 
         // -------------------- GET: api/collectionmanagement/GetByRequest --------------------
@@ -25,27 +24,14 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetByRequest(Guid idRequest)
         {
-            var management = await _collectionManagementRepository.GetByRequest(idRequest);
+            var management = await _collectionManagementService.GetByRequest(idRequest);
 
             // Una solicitud pendiente todavía no tiene gestor. Es una respuesta
             // legítima, pero quien pregunta necesita distinguirla de "sí lo tiene".
             if (management == null)
                 return NotFound("This request has not been taken by a manager yet.");
 
-            return Ok(MapToResponseDto(management));
+            return Ok(management);
         }
-
-        // ── Mapeo privado ───────────────────────────────────────────────
-        private static CollectionManagementResponseDto MapToResponseDto(CollectionManagement m) => new()
-        {
-            IdManagement = m.IdManagement,
-            IdRequest = m.IdRequest,
-            ManagerName = m.Manager != null ? $"{m.Manager.Name} {m.Manager.LastName}" : string.Empty,
-            Status = m.Status,
-            StatusChangeDate = m.StatusChangeDate,
-            ScheduledDate = m.ScheduledDate,
-            CompletionDate = m.CompletionDate,
-            ManagerObservations = m.ManagerObservations
-        };
     }
 }

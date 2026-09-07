@@ -42,6 +42,9 @@ services:
       EmailSettings__SenderEmail: "therecyroute@gmail.com"
       EmailSettings__SenderName: "RecyRoute"
       EmailSettings__Password: "qvfpjcoxvjtiodfr"
+      # true: la API aplica las migraciones al arrancar (comodo en desarrollo).
+      # false: se aplican como paso explicito del despliegue, sin carrera entre replicas.
+      Database__MigrateOnStartup: "true"
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:8080"
     depends_on:

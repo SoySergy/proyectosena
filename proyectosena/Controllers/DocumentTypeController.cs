@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using proyectosena.Models;
-using proyectosena.Interfaces.Repositories;
+using proyectosena.DTOs.User;
 using proyectosena.Interfaces.Services;
 
 namespace proyectosena.Controllers
@@ -11,12 +10,12 @@ namespace proyectosena.Controllers
     [ApiController]
     public class DocumentTypeController : ControllerBase
     {
-        // Repositorio de tipos de documento inyectado por dependencias
-        private readonly IDocumentTypeRepository _documentTypeRepository;
+        // El controlador solo traduce HTTP: las reglas viven en el servicio
+        private readonly IDocumentTypeService _documentTypeService;
 
-        public DocumentTypeController(IDocumentTypeRepository documentTypeRepository)
+        public DocumentTypeController(IDocumentTypeService documentTypeService)
         {
-            _documentTypeRepository = documentTypeRepository;
+            _documentTypeService = documentTypeService;
         }
 
         // -------------------- GET: api/documenttype/GetDocumentTypes --------------------
@@ -26,20 +25,12 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDocumentTypes()
         {
-            try
-            {
-                var types = await _documentTypeRepository.GetDocumentTypes();
+            var types = await _documentTypeService.GetAll();
 
-                // Verifica si la lista está vacía o nula
-                if (types == null || !types.Any())
-                    return NotFound("No registered document types were found.");
+            if (!types.Any())
+                return NotFound("No registered document types were found.");
 
-                return Ok(types);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving document types.");
-            }
+            return Ok(types);
         }
 
         // -------------------- GET: api/documenttype/GetDocumentTypeById --------------------
@@ -49,84 +40,60 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDocumentTypeById(Guid id)
         {
-            try
-            {
-                var type = await _documentTypeRepository.GetDocumentType(id);
+            var type = await _documentTypeService.GetById(id);
 
-                if (type == null)
-                    return NotFound("The requested document type was not found.");
+            if (type == null)
+                return NotFound("The requested document type was not found.");
 
-                return Ok(type);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the document type.");
-            }
+            return Ok(type);
         }
 
         // -------------------- POST: api/documenttype/CreateDocumentType --------------------
         [HttpPost("CreateDocumentType")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> CreateDocumentType([FromBody] DocumentType documentType)
+        public async Task<IActionResult> CreateDocumentType([FromBody] DocumentTypeDto documentType)
         {
-            try
-            {
-                if (documentType == null)
-                    return BadRequest("Document type data cannot be null.");
+            if (documentType == null)
+                return BadRequest("Document type data cannot be null.");
 
-                var newType = await _documentTypeRepository.CreateDocumentType(documentType);
-                return Ok(newType);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error creating the document type.");
-            }
+            return Ok(await _documentTypeService.Create(documentType));
         }
 
         // -------------------- PUT: api/documenttype/UpdateDocumentType --------------------
         [HttpPut("UpdateDocumentType")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateDocumentType([FromBody] DocumentType documentType)
+        public async Task<IActionResult> UpdateDocumentType([FromBody] DocumentTypeDto documentType)
         {
-            try
-            {
-                if (documentType == null)
-                    return BadRequest("Document type data cannot be null.");
+            if (documentType == null)
+                return BadRequest("Document type data cannot be null.");
 
-                var updated = await _documentTypeRepository.UpdateDocumentType(documentType);
-                return Ok(updated);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error updating the document type.");
-            }
+            return Ok(await _documentTypeService.Update(documentType));
         }
 
         // -------------------- DELETE: api/documenttype/DeleteDocumentType --------------------
         [HttpDelete("DeleteDocumentType")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteDocumentType(Guid id)
         {
-            try
-            {
-                var deleted = await _documentTypeRepository.DeleteDocumentType(id);
+            var deleted = await _documentTypeService.Delete(id);
 
-                // Retorna false si el tipo de documento no existe en la base de datos
-                if (!deleted)
-                    return BadRequest("Could not delete the document type. Please verify it exists.");
+            // Retorna false si el tipo de documento no existe en la base de datos
+            if (!deleted)
+                return BadRequest("Could not delete the document type. Please verify it exists.");
 
-                return Ok("Document type deleted successfully.");
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error deleting the document type.");
-            }
+            return Ok("Document type deleted successfully.");
         }
     }
 }
