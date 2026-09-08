@@ -21,7 +21,13 @@ namespace proyectosena
                 options.UseSqlServer(connectionString));
 
             // ── Repositories 
-            services.AddScoped<IUserRepository, UserRepository>();
+            // UserRepository cumple los tres contratos de usuario. Se registra la
+            // clase concreta una sola vez y los tres interfaces la reenvían: así
+            // una petición comparte una instancia en vez de crear tres.
+            services.AddScoped<UserRepository>();
+            services.AddScoped<IUserLookupRepository>(sp => sp.GetRequiredService<UserRepository>());
+            services.AddScoped<IUserDirectoryRepository>(sp => sp.GetRequiredService<UserRepository>());
+            services.AddScoped<IUserWriteRepository>(sp => sp.GetRequiredService<UserRepository>());
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IDocumentTypeRepository, DocumentTypeRepository>();
             services.AddScoped<ICollectionRequestRepository, CollectionRequestRepository>();
@@ -29,6 +35,7 @@ namespace proyectosena
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IHistoryRepository, HistoryRepository>();
             services.AddScoped<IChatHistoryRepository, ChatHistoryRepository>();
+            services.AddScoped<IManagerApplicationRepository, ManagerApplicationRepository>();
 
             // ── Services ───────────────────────────────
             services.AddScoped<ICollectionStatusService, CollectionStatusService>();
@@ -37,6 +44,13 @@ namespace proyectosena
             services.AddScoped<IChatHistoryService, ChatHistoryService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<ICollectionRequestService, CollectionRequestService>();
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<IDocumentTypeService, DocumentTypeService>();
+            services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<IHistoryService, HistoryService>();
+            services.AddScoped<ICollectionManagementService, CollectionManagementService>();
+            services.AddScoped<IManagerApplicationService, ManagerApplicationService>();
 
             // Singleton on purpose: PasswordResetService keeps the OTP codes in an
             // in-memory dictionary. As Scoped, every request would get an empty one

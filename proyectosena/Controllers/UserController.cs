@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.User;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
@@ -30,12 +31,20 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/user/GetUserById --------------------
-        // Cualquier usuario autenticado puede ver su propio perfil
+        // Tu propio perfil. El administrador puede consultar el de cualquiera.
         [HttpGet("GetUserById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUserById(Guid idUser)
         {
+            // Antes cualquier autenticado veía el perfil de cualquier otro con solo
+            // cambiar el parámetro. Ahora solo el propio, salvo el administrador,
+            // que lo necesita para el panel.
+            if (idUser != User.GetUserId() && !User.IsAdministrator())
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only view your own profile.");
+
             var user = await _userService.GetById(idUser);
 
             if (user == null)
@@ -111,12 +120,14 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateUser(Guid idUser, [FromBody] UpdateUserDto dto)
+        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto dto)
         {
             if (dto == null)
                 return BadRequest("Update data cannot be null.");
 
-            var (result, user) = await _userService.UpdateUser(idUser, dto);
+            // El id sale del token: antes bastaba cambiarlo para editar el perfil
+            // de cualquier otra persona.
+            var (result, user) = await _userService.UpdateUser(User.GetUserId(), dto);
 
             if (result == UserUpdateResult.UserNotFound)
                 return NotFound("The requested user was not found.");

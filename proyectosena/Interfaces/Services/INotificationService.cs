@@ -19,6 +19,8 @@ namespace proyectosena.Interfaces.Services
         Task<int> MarkAllAsRead(Guid idUser);
 
         // Marca una sola. Devuelve null si esa notificación no existe.
-        Task<NotificationResponseDto?> MarkAsRead(Guid idNotification);
+        // idUser lo pone quien llama a partir del token. Devuelve null también si la
+        // notificación no es suya: no se confirma que exista.
+        Task<NotificationResponseDto?> MarkAsRead(Guid idNotification, Guid idUser);
     }
 }

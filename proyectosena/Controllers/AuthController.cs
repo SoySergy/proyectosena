@@ -1,18 +1,9 @@
-﻿using MailKit.Net.Smtp;
-using MailKit.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using MimeKit;
 using proyectosena.DTOs.Auth;
 using proyectosena.DTOs.Auth.Password;
-using proyectosena.DTOs.User;
-using proyectosena.Interfaces.Repositories;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace proyectosena.Controllers
 {
@@ -21,25 +12,12 @@ namespace proyectosena.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        // Repositorio de usuarios para buscar credenciales
-        private readonly IUserRepository _userRepository;
+        // El controlador solo traduce HTTP: las reglas viven en el servicio
+        private readonly IAuthService _authService;
 
-        // Configuración para leer las claves JWT del appsettings.json
-        private readonly IConfiguration _configuration;
-
-        // 
-        private readonly IEmailService _emailService;
-
-        //
-        private readonly IPasswordResetService _resetService;
-
-        public AuthController(IUserRepository userRepository, IConfiguration configuration, IEmailService emailService, IPasswordResetService resetService)
+        public AuthController(IAuthService authService)
         {
-            _userRepository = userRepository;
-            _configuration = configuration;
-            _emailService = emailService;
-            _resetService = resetService;
-
+            _authService = authService;
         }
 
         // -------------------- POST: api/auth/Register --------------------
@@ -51,60 +29,20 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            try
-            {
-                // Verifica que el correo no esté ya registrado en la BD  sz
-                var existing = await _userRepository.GetUserByEmail(dto.Email);
-                if (existing != null)
-                    return BadRequest("Ya existe un usuario con este correo.");
+            var (result, pending) = await _authService.Register(dto);
 
-                // ✅ Agrega esto justo aquí ↓
-                var existingDoc = await _userRepository.GetUserByDocument(dto.DocumentNumber, dto.IdDocumentType);
-                if (existingDoc != null)
-                    return BadRequest("El número de documento ya se encuentra registrado con este tipo de documento.");
+            if (result == RegisterResult.EmailAlreadyUsed)
+                return BadRequest("Ya existe un usuario con este correo.");
 
+            if (result == RegisterResult.DocumentAlreadyUsed)
+                return BadRequest("El número de documento ya se encuentra registrado con este tipo de documento.");
 
-
-                // Construye el modelo User desde el DTO de registro
-                var user = new User
-                {
-                    IdUser = Guid.NewGuid(),
-                    IdRole = dto.IdRole,
-                    IdDocumentType = dto.IdDocumentType,
-                    DocumentNumber = dto.DocumentNumber,
-                    Name = dto.Name,
-                    LastName = dto.LastName,
-                    PhoneNumber = dto.PhoneNumber,
-                    Address = dto.Address,
-                    Email = dto.Email,
-                    // Hashea la contraseña antes de guardarla — nunca se guarda en texto plano
-                    Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                    RegistrationDate = DateTime.UtcNow
-                };
-
-                var newUser = await _userRepository.CreateUser(user);
-
-                // Genera el token JWT para que el usuario quede autenticado al registrarse
-                var token = GenerateToken(newUser);
-
-                // Retorna el token y la información básica del usuario sin exponer Password
-                return Ok(new AuthResponseDto
-                {
-                    Token = token,
-                    TokenType = "Bearer",
-                    ExpiresAt = DateTime.UtcNow.AddMinutes(60),
-                    User = MapToUserInfoDto(newUser)
-                });
-            }
-            // Only the duplicate-key case is handled here: it carries business
-            // meaning. Anything else goes to GlobalExceptionHandler.
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
-                when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx
-                      && (sqlEx.Number == 2627 || sqlEx.Number == 2601))
-            {
-                // Viola la constraint UQ_User_Document — documento duplicado
+            if (result == RegisterResult.DuplicateOnSave)
                 return BadRequest("El número de identificación ya se encuentra registrado.");
-            }
+
+            // Ya no se devuelve token: la cuenta existe pero no sirve hasta que
+            // confirme el correo con el código que acaba de recibir.
+            return Ok(pending);
         }
 
         // -------------------- POST: api/auth/Login --------------------
@@ -113,95 +51,21 @@ namespace proyectosena.Controllers
         [HttpPost("Login")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            // Busca el usuario por correo electrónico incluyendo su rol
-            var user = await _userRepository.GetUserByEmail(dto.Email);
-            if (user == null)
+            var (result, response) = await _authService.Login(dto);
+
+            if (result == LoginResult.InvalidCredentials)
                 return Unauthorized("Invalid credentials.");
 
-            // Un usuario dado de baja no puede entrar. Mismo mensaje que unas
-            // credenciales erróneas, para no revelar que la cuenta existe.
-            if (!user.IsActive)
-                return Unauthorized("Invalid credentials.");
+            if (result == LoginResult.EmailNotVerified)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "Debes confirmar tu correo antes de entrar. Revisa tu bandeja o pide un código nuevo.");
 
-            // Verifica la contraseña usando BCrypt
-            // BCrypt.Verify compara el texto plano con el hash almacenado en la BD
-            // Nunca se desencripta — BCrypt hashea el intento y compara los hashes
-            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
-                return Unauthorized("Invalid credentials.");
-
-            // Should never happen: IdRole is required and GetUserByEmail includes it.
-            // If it does, it is corrupt data — let it surface in the log rather than
-            // silently issuing a token with the wrong role.
-            if (user.Role == null)
-                throw new InvalidOperationException($"User {user.IdUser} has no role loaded.");
-
-            // Genera el token JWT con los datos del usuario autenticado
-            var token = GenerateToken(user);
-
-            // Retorna el token y la información básica sin exponer Password
-            return Ok(new AuthResponseDto
-            {
-                Token = token,
-                TokenType = "Bearer",
-                ExpiresAt = DateTime.UtcNow.AddMinutes(60),
-                User = MapToUserInfoDto(user)
-            });
+            return Ok(response);
         }
-
-        // ── Métodos privados ────────────────────────────────────────────
-
-        // Genera el token JWT con los claims del usuario
-        // Se reutiliza tanto en Login como en Register
-        private string GenerateToken(User user)
-        {
-            // Clave secreta para firmar el token, leída desde appsettings.json
-            var secretKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
-
-            // Credenciales de firma usando el algoritmo HmacSha256
-            var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
-
-            // Construye el token con issuer, audience, claims y expiración
-            var tokenOptions = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: new List<Claim>
-                {
-                    // IdUser en el token — el frontend lo usa para identificar al usuario
-                    new Claim(ClaimTypes.NameIdentifier, user.IdUser.ToString()),
-                    // El email se usa como nombre de usuario en el token
-                    new Claim(ClaimTypes.Name, user.Email),
-                    // El rol permite aplicar políticas de autorización por rol
-                    new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "Citizen")
-                },
-                expires: DateTime.UtcNow.AddMinutes(60),
-                signingCredentials: signinCredentials
-            );
-
-            // Serializa el token a string y lo retorna
-            return new JwtSecurityTokenHandler().WriteToken(tokenOptions);
-        }
-
-        // Mapea el modelo User al DTO de respuesta sin exponer datos sensibles
-        // Se usa tanto en Login como en Register para no duplicar código
-        private static UserInfoDto MapToUserInfoDto(User user) => new()
-        {
-            IdUser = user.IdUser,
-            IdRole = user.IdRole,
-            RoleName = user.Role?.RoleName ?? string.Empty,
-            IdDocumentType = user.IdDocumentType,
-            DocumentTypeName = user.DocumentType?.DocumentName ?? string.Empty,
-            DocumentNumber = user.DocumentNumber,
-            Name = user.Name,
-            LastName = user.LastName,
-            Email = user.Email,
-            PhoneNumber = user.PhoneNumber,
-            Address = user.Address,
-            RegistrationDate = user.RegistrationDate
-        };
 
         // ─────────────────────────────────────────────────────────────────
         // POST: api/auth/forgot-password
@@ -216,20 +80,11 @@ namespace proyectosena.Controllers
             if (string.IsNullOrWhiteSpace(dto.Email))
                 return BadRequest("El correo es requerido.");
 
-            var email = dto.Email.Trim().ToLower();
-            var user = await _userRepository.GetUserByEmail(email);
+            await _authService.RequestPasswordReset(dto.Email);
 
             // Respuesta idéntica exista o no el correo (evita enumerar emails)
-            if (user == null)
-                return Ok(new { message = "Si el correo está registrado, recibirás un código." });
-
-            // Genera el código OTP (6 dígitos, 15 min de vida) y envía el correo
-            var code = _resetService.GenerateAndStoreCode(email);
-            await _emailService.SendPasswordResetCodeAsync(user.Email, code);
-
             return Ok(new { message = "Si el correo está registrado, recibirás un código." });
         }
-
 
         // ─────────────────────────────────────────────────────────────────
         // POST: api/auth/verify-reset-code
@@ -245,19 +100,60 @@ namespace proyectosena.Controllers
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Code))
                 return BadRequest("Correo y código son requeridos.");
 
-            var isValid = _resetService.ValidateCode(dto.Email.Trim().ToLower(), dto.Code.Trim());
-
-            if (!isValid)
+            if (!_authService.VerifyResetCode(dto.Email, dto.Code))
                 return BadRequest("Código inválido o expirado.");
 
             return Ok(new { message = "Código verificado correctamente." });
         }
 
-
         // ─────────────────────────────────────────────────────────────────
         // POST: api/auth/reset-password
         // Valida el código y actualiza la contraseña hasheada con BCrypt.
         // ─────────────────────────────────────────────────────────────────
+        // POST: api/auth/verify-email
+        // Confirma que el correo del recién registrado existe y es suyo.
+        [AllowAnonymous]
+        [HttpPost("verify-email")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Code))
+                return BadRequest("Correo y código son requeridos.");
+
+            var (result, response) = await _authService.VerifyEmail(dto);
+
+            if (result == EmailVerificationResult.InvalidOrExpiredCode)
+                return BadRequest("Código inválido o expirado.");
+
+            if (result == EmailVerificationResult.UserNotFound)
+                return NotFound("Usuario no encontrado.");
+
+            if (result == EmailVerificationResult.AlreadyVerified)
+                return Ok(new { message = "Este correo ya estaba confirmado. Puedes iniciar sesión." });
+
+            // Queda con la sesión iniciada: acaba de demostrar que el correo es suyo
+            return Ok(response);
+        }
+
+        // POST: api/auth/resend-verification
+        // Vuelve a mandar el código si no llegó o venció.
+        [AllowAnonymous]
+        [HttpPost("resend-verification")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ResendVerification([FromBody] ForgotPasswordDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                return BadRequest("El correo es requerido.");
+
+            await _authService.ResendVerificationCode(dto.Email);
+
+            // Respuesta idéntica exista o no la cuenta, y esté o no confirmada
+            return Ok(new { message = "Si la cuenta existe y falta confirmarla, recibirás un código." });
+        }
+
         [AllowAnonymous]
         [HttpPost("reset-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -271,22 +167,13 @@ namespace proyectosena.Controllers
                 string.IsNullOrWhiteSpace(dto.NewPassword))
                 return BadRequest("Correo, código y nueva contraseña son requeridos.");
 
-            var email = dto.Email.Trim().ToLower();
+            var result = await _authService.ResetPassword(dto);
 
-            // Valida el código ANTES de tocar la base de datos
-            if (!_resetService.ValidateCode(email, dto.Code.Trim()))
+            if (result == ResetPasswordResult.InvalidOrExpiredCode)
                 return BadRequest("Código inválido o expirado.");
 
-            var user = await _userRepository.GetUserByEmail(email);
-            if (user == null)
+            if (result == ResetPasswordResult.UserNotFound)
                 return NotFound("Usuario no encontrado.");
-
-            // Hashea la nueva contraseña con BCrypt (igual que en UpdateUser)
-            user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-            await _userRepository.UpdateUser(user);
-
-            // Invalida el código para que no pueda reutilizarse
-            _resetService.InvalidateCode(email);
 
             return Ok(new { message = "Contraseña actualizada correctamente." });
         }

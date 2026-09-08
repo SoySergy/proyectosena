@@ -10,8 +10,8 @@ namespace proyectosena.DTOs.Communication
 {
     public class SendMessageDto
     {
-        [Required]
-        public Guid IdSender { get; set; }
+        // IdSender no viaja en el cuerpo a propósito: sale del token. Cuando venía
+        // aquí, cualquiera podía firmar un mensaje con el nombre de otro.
 
         [Required]
         public Guid IdRequest { get; set; }

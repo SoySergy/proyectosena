@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using proyectosena.DTOs.Common;
-using proyectosena.DTOs.Requests;
-using proyectosena.Interfaces.Repositories;
-using proyectosena.Models;
+using proyectosena.Extensions;
+using proyectosena.Interfaces.Services;
 
 namespace proyectosena.Controllers
 {
@@ -12,25 +10,22 @@ namespace proyectosena.Controllers
     [ApiController]
     public class HistoryController : ControllerBase
     {
-        private readonly IHistoryRepository _historyRepository;
+        // El controlador solo traduce HTTP: las reglas viven en el servicio
+        private readonly IHistoryService _historyService;
 
-        public HistoryController(IHistoryRepository historyRepository)
+        public HistoryController(IHistoryService historyService)
         {
-            _historyRepository = historyRepository;
+            _historyService = historyService;
         }
 
         // -------------------- GET: api/history/GetMyHistory --------------------
         // Historial de las solicitudes que pertenecen a este ciudadano
         [HttpGet("GetMyHistory")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetMyHistory(Guid idUser, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> GetMyHistory(int page = 1, int pageSize = 20)
         {
-            (page, pageSize) = PagedResult<HistoryResponseDto>.Normalize(page, pageSize);
-
-            var (items, total) = await _historyRepository.GetByRequestOwner(idUser, page, pageSize);
-
-            return Ok(PagedResult<HistoryResponseDto>.Create(
-                items.Select(MapToResponseDto).ToList(), page, pageSize, total));
+            // El id sale del token, no de la URL
+            return Ok(await _historyService.GetMyHistory(User.GetUserId(), page, pageSize));
         }
 
         // -------------------- GET: api/history/GetByRequest --------------------
@@ -39,10 +34,8 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetByRequest(Guid idRequest)
         {
-            var histories = await _historyRepository.GetByRequest(idRequest);
-
             // Una solicitud sin cambios registrados no es un error
-            return Ok(histories.Select(MapToResponseDto).ToList());
+            return Ok(await _historyService.GetByRequest(idRequest));
         }
 
         // -------------------- GET: api/history/GetByDateRange --------------------
@@ -52,31 +45,14 @@ namespace proyectosena.Controllers
         [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetByDateRange(
             DateTime startDate, DateTime endDate, int page = 1, int pageSize = 20)
         {
             if (startDate > endDate)
                 return BadRequest("startDate must be earlier than or equal to endDate.");
 
-            (page, pageSize) = PagedResult<HistoryResponseDto>.Normalize(page, pageSize);
-
-            var (items, total) = await _historyRepository.GetByDateRange(startDate, endDate, page, pageSize);
-
-            return Ok(PagedResult<HistoryResponseDto>.Create(
-                items.Select(MapToResponseDto).ToList(), page, pageSize, total));
+            return Ok(await _historyService.GetByDateRange(startDate, endDate, page, pageSize));
         }
-
-        // ── Mapeo privado ───────────────────────────────────────────────
-        private static HistoryResponseDto MapToResponseDto(History h) => new()
-        {
-            IdHistory = h.IdHistory,
-            IdRequest = h.IdRequest,
-            IdUser = h.IdUser,
-            UserName = h.User != null ? $"{h.User.Name} {h.User.LastName}" : string.Empty,
-            PreviousStatus = h.PreviousStatus,
-            NewStatus = h.NewStatus,
-            ChangeDate = h.ChangeDate,
-            Comment = h.Comment
-        };
     }
 }

@@ -20,18 +20,19 @@ namespace proyectosena.Services
             _collectionRequestRepository = collectionRequestRepository;
         }
 
-        public async Task<(ChatAccessResult Result, ChatMessageResponseDto? Message)> SendMessage(SendMessageDto dto)
+        public async Task<(ChatAccessResult Result, ChatMessageResponseDto? Message)> SendMessage(
+            SendMessageDto dto, Guid idSender)
         {
             // La regla del negocio: solo el dueño de la solicitud o un gestor
             // asignado pueden escribir en su conversación.
-            var allowed = await _collectionRequestRepository.IsParticipant(dto.IdRequest, dto.IdSender);
+            var allowed = await _collectionRequestRepository.IsParticipant(dto.IdRequest, idSender);
             if (!allowed)
                 return (ChatAccessResult.NotParticipant, null);
 
             var message = new ChatHistory
             {
                 IdRequest = dto.IdRequest,
-                IdSender = dto.IdSender,
+                IdSender = idSender,
                 Message = dto.Message,
                 SendDate = DateTime.UtcNow,
                 IsRead = false
@@ -58,10 +59,17 @@ namespace proyectosena.Services
             return (ChatAccessResult.Success, messages.Select(MapToDto).ToList());
         }
 
-        public async Task<List<ChatMessageResponseDto>> GetUnreadMessages(Guid idUser, Guid idRequest)
+        public async Task<(ChatAccessResult Result, List<ChatMessageResponseDto> Messages)> GetUnreadMessages(
+            Guid idUser, Guid idRequest)
         {
+            // Misma regla que GetMessagesByRequest: si no participas, no lees.
+            // Faltaba aquí, y el filtro del repositorio no la suple.
+            var allowed = await _collectionRequestRepository.IsParticipant(idRequest, idUser);
+            if (!allowed)
+                return (ChatAccessResult.NotParticipant, new List<ChatMessageResponseDto>());
+
             var messages = await _chatHistoryRepository.GetUnreadMessages(idUser, idRequest);
-            return messages.Select(MapToDto).ToList();
+            return (ChatAccessResult.Success, messages.Select(MapToDto).ToList());
         }
 
         public Task<bool> MarkAsRead(Guid idChatHistory)

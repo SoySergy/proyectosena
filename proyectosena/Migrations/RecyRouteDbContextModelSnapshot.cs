@@ -243,6 +243,53 @@ namespace proyectosena.Migrations
                     b.ToTable("History", (string)null);
                 });
 
+            modelBuilder.Entity("proyectosena.Models.ManagerApplication", b =>
+                {
+                    b.Property<Guid>("IdApplication")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
+
+                    b.Property<Guid?>("IdReviewer")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IdUser")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Motivation")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RequestDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReviewDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.HasKey("IdApplication");
+
+                    b.HasIndex("IdReviewer");
+
+                    b.HasIndex("IdUser", "Status")
+                        .HasDatabaseName("IX_ManagerApplication_User_Status");
+
+                    b.ToTable("ManagerApplication", (string)null);
+                });
+
             modelBuilder.Entity("proyectosena.Models.Notification", b =>
                 {
                     b.Property<Guid>("IdNotification")
@@ -365,6 +412,11 @@ namespace proyectosena.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("IsEmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(70)
@@ -476,6 +528,26 @@ namespace proyectosena.Migrations
                         .HasConstraintName("FK_History_User");
 
                     b.Navigation("CollectionRequest");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("proyectosena.Models.ManagerApplication", b =>
+                {
+                    b.HasOne("proyectosena.Models.User", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("IdReviewer")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_ManagerApplication_Reviewer");
+
+                    b.HasOne("proyectosena.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("IdUser")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_ManagerApplication_User");
+
+                    b.Navigation("Reviewer");
 
                     b.Navigation("User");
                 });

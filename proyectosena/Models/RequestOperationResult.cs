@@ -8,7 +8,10 @@ namespace proyectosena.Models
         RequestNotFound,
 
         // Una vez que un gestor la toma, la solicitud ya no se puede editar
-        NotPending
+        NotPending,
+
+        // Quien pide la edición no es el dueño de la solicitud
+        NotOwner
     }
 
     // Resultados posibles al cancelar una solicitud

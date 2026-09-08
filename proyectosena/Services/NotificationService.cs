@@ -32,10 +32,14 @@ namespace proyectosena.Services
         public Task<int> MarkAllAsRead(Guid idUser)
             => _notificationRepository.MarkAllAsRead(idUser);
 
-        public async Task<NotificationResponseDto?> MarkAsRead(Guid idNotification)
+        public async Task<NotificationResponseDto?> MarkAsRead(Guid idNotification, Guid idUser)
         {
             var notification = await _notificationRepository.GetNotification(idNotification);
-            if (notification == null)
+
+            // Faltaba la comprobación de dueño: cualquiera podía marcar como leída
+            // la notificación de otro. Se responde igual que si no existiera, para
+            // no confirmar que existe.
+            if (notification == null || notification.IdUser != idUser)
                 return null;
 
             // Solo cambia IsRead; los demás campos quedan como estaban

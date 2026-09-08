@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
 
 namespace proyectosena.Controllers
@@ -23,7 +24,7 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> MarkAsRead(Guid idNotification)
         {
-            var updated = await _notificationService.MarkAsRead(idNotification);
+            var updated = await _notificationService.MarkAsRead(idNotification, User.GetUserId());
 
             if (updated == null)
                 return NotFound("The requested notification was not found.");
@@ -34,26 +35,30 @@ namespace proyectosena.Controllers
         // -------------------- GET: api/notification/GetMyNotifications --------------------
         [HttpGet("GetMyNotifications")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetMyNotifications(Guid idUser, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> GetMyNotifications(int page = 1, int pageSize = 20)
         {
-            return Ok(await _notificationService.GetMyNotifications(idUser, page, pageSize));
+            // El id sale del token, no de la URL: antes bastaba cambiarlo para leer
+            // las notificaciones de otra persona.
+            return Ok(await _notificationService.GetMyNotifications(User.GetUserId(), page, pageSize));
         }
 
         // -------------------- GET: api/notification/GetUnreadCount --------------------
         [HttpGet("GetUnreadCount")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetUnreadCount(Guid idUser)
+        public async Task<IActionResult> GetUnreadCount()
         {
-            var count = await _notificationService.GetUnreadCount(idUser);
+            var count = await _notificationService.GetUnreadCount(User.GetUserId());
             return Ok(new { UnreadCount = count });
         }
 
         // -------------------- PATCH: api/notification/MarkAllAsRead --------------------
         [HttpPatch("MarkAllAsRead")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> MarkAllAsRead(Guid idUser)
+        public async Task<IActionResult> MarkAllAsRead()
         {
-            var updated = await _notificationService.MarkAllAsRead(idUser);
+            // El id sale del token: antes se podían marcar como leídas las
+            // notificaciones de otra persona.
+            var updated = await _notificationService.MarkAllAsRead(User.GetUserId());
             return Ok(new { MarkedAsRead = updated });
         }
     }

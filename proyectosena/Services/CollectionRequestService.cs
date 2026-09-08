@@ -64,11 +64,11 @@ namespace proyectosena.Services
 
         // ── Escritura ───────────────────────────────────────────────────
 
-        public async Task<CollectionRequestResponseDto> Create(CreateCollectionRequestDto dto)
+        public async Task<CollectionRequestResponseDto> Create(CreateCollectionRequestDto dto, Guid idUser)
         {
             var request = new CollectionRequest
             {
-                IdUser = dto.IdUser,
+                IdUser = idUser,
                 CollectionDate = dto.CollectionDate,
                 CollectionTime = dto.CollectionTime,
                 CollectionAddress = dto.CollectionAddress,
@@ -91,11 +91,16 @@ namespace proyectosena.Services
         }
 
         public async Task<(RequestUpdateResult Result, CollectionRequestResponseDto? Request)> Update(
-            UpdateCollectionRequestDto dto)
+            UpdateCollectionRequestDto dto, Guid idUser)
         {
             var existing = await _requestRepository.GetCollectionRequest(dto.IdRequest);
             if (existing == null)
                 return (RequestUpdateResult.RequestNotFound, null);
+
+            // Faltaba: cualquier ciudadano podía editar la solicitud pendiente de
+            // otro y cambiarle la dirección o el teléfono.
+            if (existing.IdUser != idUser)
+                return (RequestUpdateResult.NotOwner, null);
 
             // Una vez que un gestor la tomó, los datos ya no se pueden cambiar:
             // él ya organizó su ruta con la dirección y la hora originales.

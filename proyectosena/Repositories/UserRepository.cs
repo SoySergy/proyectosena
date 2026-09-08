@@ -7,7 +7,7 @@ using proyectosena.Models;
 
 namespace proyectosena.Repositories
 {
-    public class UserRepository : IUserRepository
+    public class UserRepository : IUserLookupRepository, IUserDirectoryRepository, IUserWriteRepository
     {
         // Contexto de la base de datos
         private readonly RecyRouteDbContext _context;

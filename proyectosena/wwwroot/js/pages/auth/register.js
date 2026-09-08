@@ -60,17 +60,16 @@ form.addEventListener("submit", async (e) => {
     try {
         const result = await registerUser(data);
 
-        // ✅ Guardar token
-        localStorage.setItem("token", result.token);
-        localStorage.setItem("user", JSON.stringify(result.user));
+        // El registro ya no entrega sesión: la cuenta queda creada pero sin
+        // confirmar, y el backend acaba de enviar un código al correo.
+        // El token llega cuando la persona confirme, no antes.
+        localStorage.setItem("pendingVerificationEmail", result.email);
 
         message.style.color = "green";
-        message.textContent = "Registro exitoso";
+        message.textContent = result.message
+            || "Cuenta creada. Te enviamos un código para confirmar tu correo.";
 
-        // 🚀 Redirigir
-        setTimeout(() => {
-            window.location.href = "/pages/citizen/dashboard.html";
-        }, 1000);
+        form.reset();
 
     } catch (error) {
         showError(error.message || "Error al registrarse");
