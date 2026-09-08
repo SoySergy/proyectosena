@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.Auth;
 using proyectosena.DTOs.Auth.Password;
@@ -23,6 +24,7 @@ namespace proyectosena.Controllers
         // -------------------- POST: api/auth/Register --------------------
         // AllowAnonymous permite registrarse sin token
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         [HttpPost("Register")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -48,6 +50,7 @@ namespace proyectosena.Controllers
         // -------------------- POST: api/auth/Login --------------------
         // AllowAnonymous permite acceder sin token — es el endpoint de autenticación
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         [HttpPost("Login")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -72,6 +75,7 @@ namespace proyectosena.Controllers
         // Genera el código OTP, lo guarda en memoria y envía el correo.
         // ─────────────────────────────────────────────────────────────────
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Email)]
         [HttpPost("forgot-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -92,6 +96,7 @@ namespace proyectosena.Controllers
         // de nueva contraseña en el frontend.
         // ─────────────────────────────────────────────────────────────────
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         [HttpPost("verify-reset-code")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -113,6 +118,7 @@ namespace proyectosena.Controllers
         // POST: api/auth/verify-email
         // Confirma que el correo del recién registrado existe y es suyo.
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         [HttpPost("verify-email")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -140,6 +146,7 @@ namespace proyectosena.Controllers
         // POST: api/auth/resend-verification
         // Vuelve a mandar el código si no llegó o venció.
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Email)]
         [HttpPost("resend-verification")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -155,6 +162,7 @@ namespace proyectosena.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Auth)]
         [HttpPost("reset-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

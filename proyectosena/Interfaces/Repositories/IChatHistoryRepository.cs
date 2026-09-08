@@ -8,7 +8,7 @@ namespace proyectosena.Interfaces.Repositories
         Task<List<ChatHistory>> GetMessagesByRequest(Guid idRequest);
 
         // Obtiene un mensaje específico por su ID
-        Task<ChatHistory> GetMessage(Guid idChatHistory);
+        Task<ChatHistory?> GetMessage(Guid idChatHistory);
 
         // Crea un nuevo mensaje en el chat
         Task<ChatHistory> CreateMessage(ChatHistory chatHistory);

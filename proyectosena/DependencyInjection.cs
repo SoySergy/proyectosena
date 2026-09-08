@@ -52,12 +52,12 @@ namespace proyectosena
             services.AddScoped<ICollectionManagementService, CollectionManagementService>();
             services.AddScoped<IManagerApplicationService, ManagerApplicationService>();
 
-            // Singleton on purpose: PasswordResetService keeps the OTP codes in an
-            // in-memory dictionary. As Scoped, every request would get an empty one
-            // and no code would ever validate. EmailService is stateless, so a single
-            // instance is enough.
+            // Singleton a propósito: VerificationCodeService guarda los códigos en un
+            // diccionario en memoria. Como Scoped, cada petición recibiría uno vacío y
+            // ningún código validaría nunca. EmailService no guarda estado, así que con
+            // una sola instancia basta.
             services.AddSingleton<IEmailService, EmailService>();
-            services.AddSingleton<IPasswordResetService, PasswordResetService>();
+            services.AddSingleton<IVerificationCodeService, VerificationCodeService>();
 
             return services;
         }

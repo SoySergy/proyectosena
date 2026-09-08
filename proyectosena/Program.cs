@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Microsoft.OpenApi;
 using proyectosena;
 using proyectosena.Extensions;
@@ -57,6 +59,54 @@ builder.Services.AddCors(options =>
     });
 });
 
+// ── 5b. LIMITE DE PETICIONES ──────────────────────────
+// Los endpoints anónimos son los únicos que se pueden golpear sin credencial,
+// y son justo los que dan acceso. Medido sobre este proyecto: 37 intentos por
+// segundo contra un código, sin que nada los frenara.
+//
+// El freno va por IP, así que es la segunda línea y no la primera: quien tenga
+// muchas IP se lo salta. La defensa que no se salta es el contador de intentos
+// del código, que no mira de dónde viene el golpe.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Diez por minuto: una persona real hace uno o dos, y esto frena el ataque
+    // medido más de doscientas veces.
+    options.AddPolicy(RateLimitPolicies.Auth, http =>
+        RateLimitPartition.GetFixedWindowLimiter(ClientKey(http), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1)
+        }));
+
+    // Más estricto porque cada llamada manda un correo a una dirección que elige
+    // quien llama: sin freno se inunda el buzón de otra persona.
+    options.AddPolicy(RateLimitPolicies.Email, http =>
+        RateLimitPartition.GetFixedWindowLimiter(ClientKey(http), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(5)
+        }));
+
+    // Texto plano, como el resto de errores de negocio del proyecto
+    options.OnRejected = async (context, token) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString();
+
+        context.HttpContext.Response.ContentType = "text/plain; charset=utf-8";
+        await context.HttpContext.Response.WriteAsync(
+            "Demasiados intentos. Espera un momento y vuelve a intentarlo.", token);
+    };
+});
+
+// Quién es «el que llama». Detrás de un proxy la IP sería la del proxy, no la
+// del navegador: hoy nginx solo sirve archivos y no hace de intermediario.
+static string ClientKey(HttpContext http)
+    => http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+
 // ── 6. SWAGGER ────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -90,9 +140,6 @@ builder.Services.AddSwaggerGen(options =>
 
 // ── 7. SERVICES ───────────────────────────────────────
 // Todos los registros viven en DependencyInjection.cs (paso 2), en un solo lugar.
-// Pendiente por crear (BE-13): IAuthService, IUserService, ICollectionRequestService,
-// INotificationService, IChatHistoryService.
-
 
 // ── 8. GLOBAL ERROR HANDLING ──────────────────────────
 // Every unhandled exception is logged here and returned as ProblemDetails,
@@ -138,23 +185,13 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandler();
 
 app.UseCors("RecyRoutePolicy");
+
+// Después de UseRouting (que WebApplication añade solo) para que conozca el
+// endpoint y sepa qué política aplicarle. Antes de autenticar: frenar es más
+// barato que validar un token.
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-
-// ── 401 CUSTOM MIDDLEWARE ─────────────────────────────
-//app.Use(async (context, next) =>
-//{
-//    await next();
-//    if (context.Response.StatusCode == StatusCodes.Status401Unauthorized)
-//    {
-//        //context.Response.ContentType = "application/json";
-//        var result = System.Text.Json.JsonSerializer.Serialize(new
-//        {
-//            mensaje = "Acceso no autorizado. Verifique su token o credenciales."
-//        });
-//        await context.Response.WriteAsync(result);
-//    }
-//});
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

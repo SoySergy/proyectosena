@@ -1,5 +1,6 @@
 using proyectosena.DTOs.Common;
 using proyectosena.DTOs.Requests;
+using proyectosena.Models;
 
 namespace proyectosena.Interfaces.Services
 {
@@ -19,7 +20,9 @@ namespace proyectosena.Interfaces.Services
 
         // Línea de tiempo de una solicitud. Sin cambios registrados devuelve
         // una lista vacía, que no es un error.
-        Task<List<HistoryResponseDto>> GetByRequest(Guid idRequest);
+        // Solo su dueño, o el personal. idUser y esPersonal salen del token.
+        Task<(RequestAccessResult Result, List<HistoryResponseDto> Items)> GetByRequest(
+            Guid idRequest, Guid idUser, bool esPersonal);
 
         // Reporte administrativo: qué pasó en el sistema entre dos fechas.
         Task<PagedResult<HistoryResponseDto>> GetByDateRange(

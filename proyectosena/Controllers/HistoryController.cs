@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
+using proyectosena.Models;
 
 namespace proyectosena.Controllers
 {
@@ -32,10 +33,18 @@ namespace proyectosena.Controllers
         // Línea de tiempo de una solicitud: todos sus cambios de estado
         [HttpGet("GetByRequest")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetByRequest(Guid idRequest)
         {
+            var (result, items) = await _historyService
+                .GetByRequest(idRequest, User.GetUserId(), User.IsStaff());
+
+            if (result == RequestAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only view the history of your own requests.");
+
             // Una solicitud sin cambios registrados no es un error
-            return Ok(await _historyService.GetByRequest(idRequest));
+            return Ok(items);
         }
 
         // -------------------- GET: api/history/GetByDateRange --------------------

@@ -1,4 +1,5 @@
 using proyectosena.DTOs.Collection;
+using proyectosena.Models;
 
 namespace proyectosena.Interfaces.Services
 {
@@ -13,6 +14,8 @@ namespace proyectosena.Interfaces.Services
     {
         // Gestión vigente de una solicitud. Null si todavía nadie la ha tomado:
         // una solicitud pendiente no tiene gestor, y eso no es un error.
-        Task<CollectionManagementResponseDto?> GetByRequest(Guid idRequest);
+        // Solo su dueño, o el personal. idUser y esPersonal salen del token.
+        Task<(RequestAccessResult Result, CollectionManagementResponseDto? Management)> GetByRequest(
+            Guid idRequest, Guid idUser, bool esPersonal);
     }
 }

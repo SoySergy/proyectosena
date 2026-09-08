@@ -30,7 +30,7 @@ namespace proyectosena.Controllers
             // hacía el servicio solo sirve si el id es de fiar.
             var (result, messages) = await _chatHistoryService.GetMessagesByRequest(idRequest, User.GetUserId());
 
-            if (result == ChatAccessResult.NotParticipant)
+            if (result == RequestAccessResult.NotParticipant)
                 return StatusCode(StatusCodes.Status403Forbidden,
                     "You are not a participant of this collection request.");
 
@@ -55,7 +55,7 @@ namespace proyectosena.Controllers
 
             var (result, message) = await _chatHistoryService.SendMessage(dto, User.GetUserId());
 
-            if (result == ChatAccessResult.NotParticipant)
+            if (result == RequestAccessResult.NotParticipant)
                 return StatusCode(StatusCodes.Status403Forbidden,
                     "You are not a participant of this collection request.");
 
@@ -65,13 +65,19 @@ namespace proyectosena.Controllers
         // -------------------- PUT: api/chathistory/MarkAsRead --------------------
         [HttpPut("MarkAsRead")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> MarkAsRead(Guid idChatHistory)
         {
-            var done = await _chatHistoryService.MarkAsRead(idChatHistory);
+            // Quién marca sale del token, igual que al leer y al escribir
+            var result = await _chatHistoryService.MarkAsRead(idChatHistory, User.GetUserId());
 
-            if (!done)
+            if (result == RequestAccessResult.NotFound)
                 return NotFound("The requested message was not found.");
+
+            if (result == RequestAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only read messages of your own requests.");
 
             return Ok("Message marked as read successfully.");
         }
@@ -84,7 +90,7 @@ namespace proyectosena.Controllers
         {
             var (result, messages) = await _chatHistoryService.GetUnreadMessages(User.GetUserId(), idRequest);
 
-            if (result == ChatAccessResult.NotParticipant)
+            if (result == RequestAccessResult.NotParticipant)
                 return StatusCode(StatusCodes.Status403Forbidden,
                     "You are not a participant of this collection request.");
 

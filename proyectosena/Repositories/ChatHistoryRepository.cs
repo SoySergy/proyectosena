@@ -30,7 +30,7 @@ namespace proyectosena.Repositories
         }
 
         // Obtiene un mensaje específico por su ID
-        public async Task<ChatHistory> GetMessage(Guid idChatHistory)
+        public async Task<ChatHistory?> GetMessage(Guid idChatHistory)
         {
             return await _context.ChatHistories
                 .Include(h => h.CollectionRequest)

@@ -10,9 +10,15 @@ namespace proyectosena.Services
     {
         private readonly IHistoryRepository _historyRepository;
 
-        public HistoryService(IHistoryRepository historyRepository)
+        // Necesario para saber de quién es cada solicitud
+        private readonly ICollectionRequestRepository _requestRepository;
+
+        public HistoryService(
+            IHistoryRepository historyRepository,
+            ICollectionRequestRepository requestRepository)
         {
             _historyRepository = historyRepository;
+            _requestRepository = requestRepository;
         }
 
         public async Task<PagedResult<HistoryResponseDto>> GetMyHistory(Guid idUser, int page, int pageSize)
@@ -25,10 +31,16 @@ namespace proyectosena.Services
                 items.Select(MapToDto).ToList(), page, pageSize, total);
         }
 
-        public async Task<List<HistoryResponseDto>> GetByRequest(Guid idRequest)
+        public async Task<(RequestAccessResult Result, List<HistoryResponseDto> Items)> GetByRequest(
+            Guid idRequest, Guid idUser, bool esPersonal)
         {
+            // Faltaba: con solo el id de la solicitud, cualquiera con token leía el
+            // historial ajeno completo, con nombres y fechas.
+            if (!esPersonal && !await _requestRepository.IsParticipant(idRequest, idUser))
+                return (RequestAccessResult.NotParticipant, new List<HistoryResponseDto>());
+
             var histories = await _historyRepository.GetByRequest(idRequest);
-            return histories.Select(MapToDto).ToList();
+            return (RequestAccessResult.Success, histories.Select(MapToDto).ToList());
         }
 
         public async Task<PagedResult<HistoryResponseDto>> GetByDateRange(

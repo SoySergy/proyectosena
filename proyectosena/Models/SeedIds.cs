@@ -26,7 +26,10 @@ namespace proyectosena.Models
             public static readonly Guid CedulaCiudadania  = Guid.Parse("63D5F1A7-6C0C-4A05-ADF8-D65964D2B3B1");
             public static readonly Guid Pasaporte         = Guid.Parse("FCCCB874-75F3-4374-B8E5-A7A92B084D6C");
             public static readonly Guid CedulaExtranjeria = Guid.Parse("5BCB367C-1F41-4C5A-B120-F01F35159DD8");
-            public static readonly Guid TarjetaIdentidad  = Guid.Parse("D0000000-0000-0000-0000-000000000004");
+
+            // Tarjeta de identidad se retiró: es de menores de edad, que por ley no
+            // pueden ser gestores, y admitirlos como ciudadanos exigiría todo el
+            // consentimiento de los padres. Su GUID era D0000000-...-0004; no reusar.
         }
     }
 }

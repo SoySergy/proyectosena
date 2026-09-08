@@ -27,20 +27,20 @@ namespace proyectosena.Services
         private readonly IUserLookupRepository _userLookup;
         private readonly IUserWriteRepository _userWrite;
         private readonly IEmailService _emailService;
-        private readonly IPasswordResetService _resetService;
+        private readonly IVerificationCodeService _codeService;
         private readonly IConfiguration _configuration;
 
         public AuthService(
             IUserLookupRepository userLookup,
             IUserWriteRepository userWrite,
             IEmailService emailService,
-            IPasswordResetService resetService,
+            IVerificationCodeService codeService,
             IConfiguration configuration)
         {
             _userLookup = userLookup;
             _userWrite = userWrite;
             _emailService = emailService;
-            _resetService = resetService;
+            _codeService = codeService;
             _configuration = configuration;
         }
 
@@ -145,19 +145,19 @@ namespace proyectosena.Services
             if (user == null)
                 return;
 
-            var code = _resetService.GenerateAndStoreCode(normalized);
+            var code = _codeService.GenerateAndStoreCode(normalized, CodePurpose.AccountAccess);
             await _emailService.SendPasswordResetCodeAsync(user.Email, code);
         }
 
         public bool VerifyResetCode(string email, string code)
-            => _resetService.ValidateCode(Normalize(email), code.Trim());
+            => _codeService.ValidateCode(Normalize(email), code.Trim(), CodePurpose.AccountAccess);
 
         public async Task<ResetPasswordResult> ResetPassword(ResetPasswordDto dto)
         {
             var email = Normalize(dto.Email);
 
             // El código se valida ANTES de tocar la base de datos
-            if (!_resetService.ValidateCode(email, dto.Code.Trim()))
+            if (!_codeService.ValidateCode(email, dto.Code.Trim(), CodePurpose.AccountAccess))
                 return ResetPasswordResult.InvalidOrExpiredCode;
 
             var user = await _userLookup.GetUserByEmail(email);
@@ -168,7 +168,7 @@ namespace proyectosena.Services
             await _userWrite.UpdateUser(user);
 
             // El código se quema para que no pueda reutilizarse
-            _resetService.InvalidateCode(email);
+            _codeService.InvalidateCode(email, CodePurpose.AccountAccess);
 
             return ResetPasswordResult.Success;
         }
@@ -179,7 +179,7 @@ namespace proyectosena.Services
             var email = Normalize(dto.Email);
 
             // El código se valida ANTES de tocar la base de datos
-            if (!_resetService.ValidateCode(email, dto.Code.Trim()))
+            if (!_codeService.ValidateCode(email, dto.Code.Trim(), CodePurpose.EmailConfirmation))
                 return (EmailVerificationResult.InvalidOrExpiredCode, null);
 
             var user = await _userLookup.GetUserByEmail(email);
@@ -193,7 +193,7 @@ namespace proyectosena.Services
             var updated = await _userWrite.UpdateUser(user);
 
             // El código se quema para que no pueda reutilizarse
-            _resetService.InvalidateCode(email);
+            _codeService.InvalidateCode(email, CodePurpose.EmailConfirmation);
 
             // Se entra directo: acaba de demostrar que el correo es suyo y ya
             // escribió su contraseña al registrarse.
@@ -218,7 +218,7 @@ namespace proyectosena.Services
         // Genera el código y lo manda. Lo usan el registro y el reenvío.
         private async Task EnviarCodigoDeConfirmacion(string email, string name)
         {
-            var code = _resetService.GenerateAndStoreCode(email, EmailVerificationExpiryMinutes);
+            var code = _codeService.GenerateAndStoreCode(email, CodePurpose.EmailConfirmation, EmailVerificationExpiryMinutes);
             await _emailService.SendEmailVerificationCodeAsync(
                 email, name, code, EmailVerificationExpiryMinutes);
         }
