@@ -1,4 +1,4 @@
-﻿import { API_BASE } from "./api.js";
+﻿import { API_BASE, leerCuerpo, mensajeDeError } from "./api.js";
 
 // REGISTER
 // Envía los datos del formulario al backend para crear un usuario
@@ -11,26 +11,10 @@ export async function registerUser(data) {
         body: JSON.stringify(data)
     });
 
-    const text = await response.text();
+    const result = await leerCuerpo(response);
 
-    let result;
-
-    try {
-        result = JSON.parse(text);
-    } catch {
-        result = text;
-    }
-
-    // maneja todos los formatos de error de ASP.NET
-    if (!response.ok) {
-        if (result?.message) throw new Error(result.message);
-        if (result?.errors) {
-            const firstError = Object.values(result.errors).flat()[0];
-            throw new Error(firstError || "Error de validación");
-        }
-        if (result?.title) throw new Error(result.title);
-        throw new Error(typeof result === "string" ? result : "Error en el registro");
-    }
+    if (!response.ok)
+        throw new Error(mensajeDeError(result, "Error en el registro"));
     return result;
 }
 
@@ -52,18 +36,10 @@ export async function loginUser(data) {
     }
 
     // 👇 Leer como texto primero, luego intentar parsear JSON
-    const text = await response.text();
-    let result;
-    try {
-        result = JSON.parse(text);
-    } catch {
-        result = text; // Si no es JSON, usar el texto plano directamente
-    }
+    const result = await leerCuerpo(response);
 
-    if (!response.ok) {
-        // result puede ser objeto {message:...} o string directo
-        throw new Error(result.message || result || "Error en login");
-    }
+    if (!response.ok)
+        throw new Error(mensajeDeError(result, "Error en login"));
 
     return result;
 }
@@ -79,10 +55,8 @@ export async function forgotPassword(email) {
         body: JSON.stringify({ email }),
     });
 
-    if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Error al enviar el código.");
-    }
+    if (!res.ok)
+        throw new Error(mensajeDeError(await leerCuerpo(res), "Error al enviar el código."));
 }
 
 /**
@@ -96,10 +70,8 @@ export async function verifyResetCode(email, code) {
         body: JSON.stringify({ email, code }),
     });
 
-    if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Código inválido o expirado.");
-    }
+    if (!res.ok)
+        throw new Error(mensajeDeError(await leerCuerpo(res), "Código inválido o expirado."));
 }
 
 /**
@@ -113,8 +85,6 @@ export async function resetPassword(email, code, newPassword) {
         body: JSON.stringify({ email, code, newPassword }),
     });
 
-    if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Error al restablecer la contraseña.");
-    }
+    if (!res.ok)
+        throw new Error(mensajeDeError(await leerCuerpo(res), "Error al restablecer la contraseña."));
 }
