@@ -1,6 +1,7 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole } from "../../utils/roleGuard.js";
 import { API_BASE } from "../../services/api.js";
+import { escapeHtml } from "../../utils/html.js";
 // /js/pages/citizen/dashboard.js
 // ============================================================
 // INICIALIZACIÓN
@@ -357,22 +358,22 @@ async function loadMyRequests() {
 //function renderRequestCard(req) {
 //    const isPending = req.currentStatus === "Pending";
 //    const editBtn = isPending
-//        ? `<button class="edit-btn" data-id="${req.idRequest}">✏️ Editar</button>`
+//        ? `<button class="edit-btn" data-id="${escapeHtml(req.idRequest)}">✏️ Editar</button>`
 //        : `<button class="edit-btn" disabled title="Solo se pueden editar solicitudes pendientes">✏️ Editar</button>`;
 
 //    return `
 //        <div class="request-card">
 //            <div class="card-header">
-//                <span class="status-badge status-${req.currentStatus.toLowerCase()}">${translateStatus(req.currentStatus)}</span>
+//                <span class="status-badge status-${escapeHtml(req.currentStatus.toLowerCase())}">${translateStatus(req.currentStatus)}</span>
 //                <span class="card-date">Creada: ${formatDate(req.requestDate)}</span>
 //            </div>
 //            <div class="card-body">
 //                <p><strong>📅 Fecha recolección:</strong> ${formatDate(req.collectionDate)}</p>
 //                <p><strong>🕐 Hora:</strong> ${formatTime(req.collectionTime)}</p>
-//                <p><strong>📍 Dirección:</strong> ${req.collectionAddress}</p>
-//                <p><strong>📞 Teléfono:</strong> ${req.contactPhone}</p>
-//                <p><strong>♻️ Residuos:</strong> ${req.wasteTypes}</p>
-//                ${req.citizenObservations ? `<p><strong>📝 Observaciones:</strong> ${req.citizenObservations}</p>` : ""}
+//                <p><strong>📍 Dirección:</strong> ${escapeHtml(req.collectionAddress)}</p>
+//                <p><strong>📞 Teléfono:</strong> ${escapeHtml(req.contactPhone)}</p>
+//                <p><strong>♻️ Residuos:</strong> ${escapeHtml(req.wasteTypes)}</p>
+//                ${req.citizenObservations ? `<p><strong>📝 Observaciones:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
 //            </div>
 //            <div class="card-actions">
 //                ${editBtn}
@@ -384,22 +385,22 @@ async function loadMyRequests() {
 function renderRequestCard(req) {
     const isPending = req.currentStatus === "Pending";
     const editBtn = isPending
-        ? `<button class="edit-btn" data-id="${req.idRequest}">${icon("lapiz")} Editar</button>`
+        ? `<button class="edit-btn" data-id="${escapeHtml(req.idRequest)}">${icon("lapiz")} Editar</button>`
         : `<button class="edit-btn" disabled title="Solo se pueden editar solicitudes pendientes">${icon("lapiz")} Editar</button>`;
 
     return `
         <div class="request-card">
             <div class="card-header">
-                <span class="status-badge status-${req.currentStatus.toLowerCase()}">${translateStatus(req.currentStatus)}</span>
+                <span class="status-badge status-${escapeHtml(req.currentStatus.toLowerCase())}">${translateStatus(req.currentStatus)}</span>
                 <span class="card-date">Creada: ${formatDate(req.requestDate)}</span>
             </div>
             <div class="card-body">
                 <p>${icon("calendario")}<strong>Fecha recolección:</strong> ${formatDate(req.collectionDate)}</p>
                 <p>${icon("reloj")}<strong>Hora:</strong> ${formatTime(req.collectionTime)}</p>
-                <p>${icon("direccion")}<strong>Dirección:</strong> ${req.collectionAddress}</p>
-                <p>${icon("telefono")}<strong>Teléfono:</strong> ${req.contactPhone}</p>
-                <p>${icon("reciclaje")}<strong>Residuos:</strong> ${req.wasteTypes}</p>
-                ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Observaciones:</strong> ${req.citizenObservations}</p>` : ""}
+                <p>${icon("direccion")}<strong>Dirección:</strong> ${escapeHtml(req.collectionAddress)}</p>
+                <p>${icon("telefono")}<strong>Teléfono:</strong> ${escapeHtml(req.contactPhone)}</p>
+                <p>${icon("reciclaje")}<strong>Residuos:</strong> ${escapeHtml(req.wasteTypes)}</p>
+                ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Observaciones:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
             </div>
             <div class="card-actions">
                 ${editBtn}
@@ -566,11 +567,11 @@ function renderHistoryRow(h) {
             <div class="history-change">
                 <span class="status-badge status-${(h.previousStatus || "none").toLowerCase()}">${prev}</span>
                 <span class="history-arrow">→</span>
-                <span class="status-badge status-${h.newStatus.toLowerCase()}">${next}</span>
+                <span class="status-badge status-${escapeHtml(h.newStatus.toLowerCase())}">${next}</span>
             </div>
             <div class="history-meta">
-                <span>Gestionado por: <strong>${h.userName || "Sistema"}</strong></span>
-                ${h.comment ? `<span class="history-comment">💬 ${h.comment}</span>` : ""}
+                <span>Gestionado por: <strong>${escapeHtml(h.userName || "Sistema")}</strong></span>
+                ${h.comment ? `<span class="history-comment">💬 ${escapeHtml(h.comment)}</span>` : ""}
             </div>
         </div>
     `;

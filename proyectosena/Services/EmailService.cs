@@ -2,16 +2,19 @@
 using MailKit.Security;
 using MimeKit;
 using proyectosena.Interfaces.Services;
+using System.Net.Sockets;
 
 namespace proyectosena.Services
 {
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _config;
+        private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IConfiguration config)
+        public EmailService(IConfiguration config, ILogger<EmailService> logger)
         {
             _config = config;
+            _logger = logger;
         }
 
         public async Task SendPasswordResetCodeAsync(string toEmail, string code)
@@ -120,8 +123,64 @@ namespace proyectosena.Services
             await SendAsync(message);
         }
 
-        // Shared SMTP delivery for every message this service builds
+        // Entrega compartida para todos los mensajes de este servicio.
+        //
+        // No relanza la excepción a propósito. Un fallo de envío no puede tumbar la
+        // petición: `forgot-password` debe responder igual exista o no el correo, y
+        // como el envío solo se intenta cuando la persona SÍ está registrada, un 500
+        // aquí delataría quién tiene cuenta. Queda anotado en el log.
         private async Task SendAsync(MimeMessage message)
+        {
+            var destinatario = message.To.ToString();
+
+            try
+            {
+                await EntregarAsync(message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                // Un fallo que no es pasajero no mejora por insistir: una contraseña
+                // de Gmail caducada seguirá caducada al segundo intento.
+                if (!EsFalloPasajero(ex))
+                {
+                    _logger.LogError(ex,
+                        "No se pudo enviar el correo a {Destinatario}: el fallo no es " +
+                        "pasajero y no se reintenta. Revisa la configuración de correo.",
+                        destinatario);
+                    return;
+                }
+
+                // El apretón de manos TLS con Gmail falla de vez en cuando desde el
+                // contenedor («unable to get certificate CRL»): se midió un fallo de
+                // cada cinco envíos, y el siguiente intento entró bien.
+                _logger.LogWarning(ex,
+                    "Falló el envío de correo a {Destinatario}. Se reintenta una vez.",
+                    destinatario);
+            }
+
+            try
+            {
+                await EntregarAsync(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "No se pudo enviar el correo a {Destinatario} tras reintentar. " +
+                    "La persona no recibirá su código y tendrá que pedir otro.",
+                    destinatario);
+            }
+        }
+
+        // Un tropiezo de red o de TLS se puede reintentar; una contraseña de Gmail
+        // equivocada no, y por eso esas no entran aquí.
+        private static bool EsFalloPasajero(Exception ex)
+            => ex is SslHandshakeException
+                  or SmtpProtocolException
+                  or IOException
+                  or SocketException;
+
+        private async Task EntregarAsync(MimeMessage message)
         {
             var settings = _config.GetSection("EmailSettings");
 
