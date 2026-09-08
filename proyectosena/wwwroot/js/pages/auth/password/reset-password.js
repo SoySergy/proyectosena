@@ -8,7 +8,7 @@
 //    PASO 3 – Éxito: redirige al login
 // ============================================================
 
-import { verifyResetCode, resetPassword } from "./AuthService.js";
+import { forgotPassword, verifyResetCode, resetPassword } from "../../../services/authService.js";
 
 // ── Email guardado en forgot-password.js ──────────────────────
 const email = sessionStorage.getItem("resetEmail");
@@ -130,14 +130,46 @@ verifyBtn.addEventListener("click", async () => {
     }
 });
 
+// ── Reenviar el código ────────────────────────────────────────
+// El botón ya existía en la pantalla pero no tenía nada detrás: para pedir
+// otro código había que volver a forgot-password a mano.
+resendBtn.addEventListener("click", async () => {
+    clearError(codeError);
+
+    const textoOriginal = resendBtn.textContent;
+    resendBtn.disabled = true;
+    resendBtn.textContent = "Enviando...";
+
+    try {
+        await forgotPassword(email);
+
+        // Vacía las casillas: el código viejo ya no sirve
+        codeInputs.forEach(i => (i.value = ""));
+        codeInputs[0]?.focus();
+        resendBtn.textContent = "Código enviado";
+
+    } catch (error) {
+        showError(codeError, error.message || "No se pudo reenviar el código.");
+        resendBtn.textContent = textoOriginal;
+    } finally {
+        resendBtn.disabled = false;
+    }
+});
+
 // ── PASO 2: nueva contraseña ──────────────────────────────────
 
-// Muestra/oculta la contraseña con el ícono del ojo (opcional)
-document.querySelectorAll(".toggle-password").forEach(btn => {
+// Muestra u oculta la contraseña. Intercambia las clases de ícono igual que
+// login.js, para no meter emojis donde el proyecto usa sus propios íconos.
+document.querySelectorAll(".toggle-pwd").forEach(btn => {
     btn.addEventListener("click", () => {
         const target = document.getElementById(btn.dataset.target);
-        target.type = target.type === "password" ? "text" : "password";
-        btn.textContent = target.type === "password" ? "👁" : "🙈";
+        const icono = btn.querySelector(".form-input-icon");
+
+        const oculta = target.type === "password";
+        target.type = oculta ? "text" : "password";
+        icono.classList.replace(
+            oculta ? "icon-ojocerrado" : "icon-ojo",
+            oculta ? "icon-ojo" : "icon-ojocerrado");
     });
 });
 
@@ -182,7 +214,7 @@ resetBtn.addEventListener("click", async () => {
 
 // ── PASO 3: ir al login ───────────────────────────────────────
 goToLoginBtn.addEventListener("click", () => {
-    window.location.href = "login.html";
+    window.location.href = "/pages/auth/login.html";
 });
 
 // ── Muestra el paso 1 al cargar ───────────────────────────────
