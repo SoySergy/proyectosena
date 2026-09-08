@@ -1,18 +1,20 @@
 ﻿using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
-using proyectosena.Interfaces;
-using proyectosena.Repositories.Interfaces;
+using proyectosena.Interfaces.Services;
+using System.Net.Sockets;
 
 namespace proyectosena.Services
 {
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _config;
+        private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IConfiguration config)
+        public EmailService(IConfiguration config, ILogger<EmailService> logger)
         {
             _config = config;
+            _logger = logger;
         }
 
         public async Task SendPasswordResetCodeAsync(string toEmail, string code)
@@ -47,7 +49,141 @@ namespace proyectosena.Services
                     </div>"
             };
 
-            // Envía el correo usando Gmail SMTP
+            await SendAsync(message);
+        }
+
+        // Invites a newly created manager to set their own password.
+        // The account already exists; the code is what proves they own the mailbox.
+        public async Task SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes)
+        {
+            var settings = _config.GetSection("EmailSettings");
+
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(
+                settings["SenderName"],
+                settings["SenderEmail"]
+            ));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = "Bienvenido a RecyRoute – Activa tu cuenta de gestor";
+
+            message.Body = new TextPart("html")
+            {
+                Text = $@"
+                    <div style='font-family:sans-serif;max-width:480px;margin:auto'>
+                        <h2 style='color:#2E7D32'>RecyRoute</h2>
+                        <p>Hola <strong>{name}</strong>,</p>
+                        <p>Se creó una cuenta de gestor para ti. Para activarla necesitas
+                           establecer tu propia contraseña con este código:</p>
+                        <div style='font-size:2.5rem;font-weight:bold;letter-spacing:10px;
+                                    color:#2E7D32;text-align:center;padding:1rem 0'>
+                            {code}
+                        </div>
+                        <p style='color:#666;font-size:0.875rem'>
+                            Este código expira en <strong>{expiryMinutes} minutos</strong>.<br>
+                            Si expira, usa la opción <em>¿Olvidaste tu contraseña?</em>
+                            en la pantalla de inicio de sesión para pedir uno nuevo.
+                        </p>
+                    </div>"
+            };
+
+            await SendAsync(message);
+        }
+
+        public async Task SendEmailVerificationCodeAsync(
+            string toEmail, string name, string code, int expiryMinutes)
+        {
+            var settings = _config.GetSection("EmailSettings");
+
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(
+                settings["SenderName"],
+                settings["SenderEmail"]
+            ));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = "Confirma tu correo – RecyRoute";
+
+            message.Body = new TextPart("html")
+            {
+                Text = $@"
+                    <div style='font-family:sans-serif;max-width:480px;margin:auto'>
+                        <h2 style='color:#2E7D32'>RecyRoute</h2>
+                        <p>Hola {name}, gracias por registrarte.</p>
+                        <p>Para terminar, confirma que este correo es tuyo con este código:</p>
+                        <div style='font-size:2.5rem;font-weight:bold;letter-spacing:10px;
+                                    color:#2E7D32;text-align:center;padding:1rem 0'>
+                            {code}
+                        </div>
+                        <p>El código vence en {expiryMinutes} minutos.</p>
+                        <p style='color:#777;font-size:0.9rem'>
+                            Si no fuiste tú quien se registró, ignora este mensaje.
+                        </p>
+                    </div>"
+            };
+
+            await SendAsync(message);
+        }
+
+        // Entrega compartida para todos los mensajes de este servicio.
+        //
+        // No relanza la excepción a propósito. Un fallo de envío no puede tumbar la
+        // petición: `forgot-password` debe responder igual exista o no el correo, y
+        // como el envío solo se intenta cuando la persona SÍ está registrada, un 500
+        // aquí delataría quién tiene cuenta. Queda anotado en el log.
+        private async Task SendAsync(MimeMessage message)
+        {
+            var destinatario = message.To.ToString();
+
+            try
+            {
+                await EntregarAsync(message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                // Un fallo que no es pasajero no mejora por insistir: una contraseña
+                // de Gmail caducada seguirá caducada al segundo intento.
+                if (!EsFalloPasajero(ex))
+                {
+                    _logger.LogError(ex,
+                        "No se pudo enviar el correo a {Destinatario}: el fallo no es " +
+                        "pasajero y no se reintenta. Revisa la configuración de correo.",
+                        destinatario);
+                    return;
+                }
+
+                // El apretón de manos TLS con Gmail falla de vez en cuando desde el
+                // contenedor («unable to get certificate CRL»): se midió un fallo de
+                // cada cinco envíos, y el siguiente intento entró bien.
+                _logger.LogWarning(ex,
+                    "Falló el envío de correo a {Destinatario}. Se reintenta una vez.",
+                    destinatario);
+            }
+
+            try
+            {
+                await EntregarAsync(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "No se pudo enviar el correo a {Destinatario} tras reintentar. " +
+                    "La persona no recibirá su código y tendrá que pedir otro.",
+                    destinatario);
+            }
+        }
+
+        // Un tropiezo de red o de TLS se puede reintentar; una contraseña de Gmail
+        // equivocada no, y por eso esas no entran aquí.
+        private static bool EsFalloPasajero(Exception ex)
+            => ex is SslHandshakeException
+                  or SmtpProtocolException
+                  or IOException
+                  or SocketException;
+
+        private async Task EntregarAsync(MimeMessage message)
+        {
+            var settings = _config.GetSection("EmailSettings");
+
             using var client = new SmtpClient();
             await client.ConnectAsync(
                 settings["Host"],

@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
 using proyectosena.Models;
-using proyectosena.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
     public class ChatHistoryRepository : IChatHistoryRepository
     {
@@ -16,34 +17,25 @@ namespace proyectosena.Repositorios
             _context = context;
         }
 
-        // Obtiene todos los mensajes incluyendo solicitud y emisor
-        // Ordena por fecha de envío ascendente (cronológico)
-        public async Task<List<ChatHistory>> GetMessages()
-        {
-            return await _context.ChatHistories
-                .Include(h => h.CollectionRequest)
-                .Include(h => h.Sender)
-                .OrderBy(h => h.SendDate)
-                .ToListAsync();
-        }
-
         // Obtiene todos los mensajes de una solicitud específica
         // Útil para cargar el chat completo de una solicitud
         public async Task<List<ChatHistory>> GetMessagesByRequest(Guid idRequest)
         {
             return await _context.ChatHistories
                 .Include(h => h.Sender)
+                    .ThenInclude(s => s!.Role)
                 .Where(h => h.IdRequest == idRequest)
                 .OrderBy(h => h.SendDate)
                 .ToListAsync();
         }
 
         // Obtiene un mensaje específico por su ID
-        public async Task<ChatHistory> GetMessage(Guid idChatHistory)
+        public async Task<ChatHistory?> GetMessage(Guid idChatHistory)
         {
             return await _context.ChatHistories
                 .Include(h => h.CollectionRequest)
                 .Include(h => h.Sender)
+                    .ThenInclude(s => s!.Role)
                 .FirstOrDefaultAsync(h => h.IdChatHistory == idChatHistory);
         }
 
@@ -55,27 +47,9 @@ namespace proyectosena.Repositorios
             return chatHistory;
         }
 
-        // Actualiza un mensaje existente y guarda los cambios en la base de datos
-        public async Task<ChatHistory> UpdateMessage(ChatHistory chatHistory)
-        {
-            _context.ChatHistories.Update(chatHistory);
-            await _context.SaveChangesAsync();
-            return chatHistory;
-        }
 
         // Elimina un mensaje por su ID
         // Retorna false si no existe
-        public async Task<bool> DeleteMessage(Guid idChatHistory)
-        {
-            var message = await _context.ChatHistories
-                .FirstOrDefaultAsync(h => h.IdChatHistory == idChatHistory);
-            if (message == null)
-                return false;
-
-            _context.ChatHistories.Remove(message);
-            await _context.SaveChangesAsync();
-            return true;
-        }
 
         // Marca un mensaje como leído
         // Retorna false si el mensaje no existe

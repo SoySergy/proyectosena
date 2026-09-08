@@ -1,9 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
-using proyectosena.Interfaces;
+using proyectosena.Extensions;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
     public class CollectionRequestRepository : ICollectionRequestRepository
     {
@@ -16,12 +18,13 @@ namespace proyectosena.Repositorios
             _context = context;
         }
 
-        // Obtiene todas las solicitudes de recolección incluyendo el usuario asociado
-        public async Task<List<CollectionRequest>> GetCollectionRequests()
+        // Obtiene una página de solicitudes, más recientes primero
+        public async Task<(List<CollectionRequest> Items, int Total)> GetCollectionRequests(int page, int pageSize)
         {
             return await _context.CollectionRequests
                                  .Include(s => s.User)
-                                 .ToListAsync();
+                                 .OrderByDescending(s => s.RequestDate)
+                                 .ToPagedAsync(page, pageSize);
         }
 
         // El ciudadano consulta sus propias solicitudes directamente Obtiene una solicitud específica por ID incluyendo el usuario asociado
@@ -32,34 +35,60 @@ namespace proyectosena.Repositorios
                                  .FirstOrDefaultAsync(s => s.IdRequest == idRequest);
         }
 
-        public async Task<IEnumerable<CollectionRequest>> GetRequestsByManager(Guid idManager)
+        // Number of requests per current status. One GROUP BY in SQL,
+        // not one query per status.
+        public async Task<Dictionary<string, int>> GetStatusCounts()
+        {
+            return await _context.CollectionRequests
+                .GroupBy(r => r.CurrentStatus)
+                .Select(g => new { Status = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Status, x => x.Count);
+        }
+
+        // Number of requests created on or after a given date
+        public async Task<int> CountSince(DateTime since)
+        {
+            return await _context.CollectionRequests
+                .CountAsync(r => r.RequestDate >= since);
+        }
+
+        // Checks whether a user takes part in a request: either its owner or an assigned manager.
+        // Runs as a single EXISTS query — no rows are loaded.
+        public async Task<bool> IsParticipant(Guid idRequest, Guid idUser)
+        {
+            return await _context.CollectionRequests
+                .AnyAsync(r => r.IdRequest == idRequest &&
+                               (r.IdUser == idUser ||
+                                r.CollectionManagement!.Any(m => m.IdManager == idUser)));
+        }
+
+        public async Task<(List<CollectionRequest> Items, int Total)> GetRequestsByManager(Guid idManager, int page, int pageSize)
         {
             return await _context.CollectionRequests
               .Include(r => r.User)
               .Where(r => r.CollectionManagement!.Any(m => m.IdManager == idManager))
               .OrderByDescending(r => r.RequestDate)
-              .ToListAsync();
-               
+              .ToPagedAsync(page, pageSize);
         }
 
-        public async Task<IEnumerable<CollectionRequest>> GetRequestsByUser(Guid idUser)
+        public async Task<(List<CollectionRequest> Items, int Total)> GetRequestsByUser(Guid idUser, int page, int pageSize)
         {
             return await _context.CollectionRequests
                 .Include(r => r.User)
                 .Where(r => r.IdUser == idUser)
                 .OrderByDescending(r => r.RequestDate)
-                .ToListAsync();
+                .ToPagedAsync(page, pageSize);
         }
 
         // Obtiene todas las solicitudes en estado Pending ordenadas por fecha de solicitud
         // Las más antiguas aparecen primero para priorizar las que llevan más tiempo esperando
-        public async Task<List<CollectionRequest>> GetPendingRequests()
+        public async Task<(List<CollectionRequest> Items, int Total)> GetPendingRequests(int page, int pageSize)
         {
             return await _context.CollectionRequests
                 .Include(r => r.User)
                 .Where(r => r.CurrentStatus == CollectionRequestStatus.Pending)
                 .OrderBy(r => r.RequestDate)
-                .ToListAsync();
+                .ToPagedAsync(page, pageSize);
         }
 
         // Crea una nueva solicitud de recolección y guarda los cambios en la base de datos
@@ -83,16 +112,5 @@ namespace proyectosena.Repositorios
         }
 
         // Elimina una solicitud de recolección por su ID, retorna false si no existe
-        public async Task<bool> DeleteCollectionRequest(Guid idRequest)
-        {
-            var collectionRequest = await _context.CollectionRequests
-                                                  .FirstOrDefaultAsync(s => s.IdRequest == idRequest);
-            if (collectionRequest == null)
-                return false;
-
-            _context.CollectionRequests.Remove(collectionRequest);
-            await _context.SaveChangesAsync();
-            return true;
-        }
     }
 }

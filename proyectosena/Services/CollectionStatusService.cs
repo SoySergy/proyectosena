@@ -1,5 +1,8 @@
-﻿using proyectosena.Interfaces;
+﻿using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
+using proyectosena.Repositories;
+
 
 namespace proyectosena.Services
 {
@@ -20,7 +23,7 @@ namespace proyectosena.Services
             _notificationRepository = notificationRepository;
         }
 
-        public async Task<bool> UpdateStatusAsync(
+        public async Task<StatusUpdateResult> UpdateStatusAsync(
             Guid idRequest,
             string newStatus,
             Guid idManager,
@@ -29,10 +32,13 @@ namespace proyectosena.Services
             // 1. Verifica que la solicitud exista
             var request = await _requestRepository.GetCollectionRequest(idRequest);
             if (request == null)
-                return false;
+                return StatusUpdateResult.RequestNotFound;
 
             // 2. Guarda el estado anterior antes de cambiarlo
             var previousStatus = request.CurrentStatus;
+
+            if (!CollectionRequestStatus.CanTransition(previousStatus, newStatus))
+                return StatusUpdateResult.InvalidTransition;
 
             // 3. Actualiza el estado de la solicitud
             request.CurrentStatus = newStatus;
@@ -51,49 +57,21 @@ namespace proyectosena.Services
             await _historyRepository.Create(history);
 
             // 5. Crea una notificación para el ciudadano dueño de la solicitud
+            var template = NotificationTemplates.For(newStatus);
+
             var notification = new Notification
             {
                 IdUser = request.IdUser,
                 IdRequest = idRequest,
-                Title = GetNotificationTitle(newStatus),
-                Message = GetNotificationMessage(newStatus),
-                Type = GetNotificationType(newStatus),
+                Title = template.Title,
+                Message = template.Message,
+                Type = template.Type,
                 IsRead = false,
                 CreationDate = DateTime.UtcNow
             };
             await _notificationRepository.CreateNotification(notification);
 
-            return true;
+            return StatusUpdateResult.Success;
         }
-
-        // Retorna el título de la notificación según el nuevo estado
-        private static string GetNotificationTitle(string status) => status switch
-        {
-            CollectionRequestStatus.Assigned => "Request Assigned",
-            CollectionRequestStatus.InProgress => "Collection In Progress",
-            CollectionRequestStatus.Completed => "Collection Completed",
-            CollectionRequestStatus.Rejected => "Request Rejected",
-            _ => "Status Updated"
-        };
-
-        // Retorna el mensaje descriptivo según el nuevo estado
-        private static string GetNotificationMessage(string status) => status switch
-        {
-            CollectionRequestStatus.Assigned => "A manager has been assigned to your collection request.",
-            CollectionRequestStatus.InProgress => "The manager is on the way to collect your waste.",
-            CollectionRequestStatus.Completed => "Your waste has been successfully collected. Thank you!",
-            CollectionRequestStatus.Rejected => "Unfortunately your request could not be processed. Please create a new one.",
-            _ => "The status of your request has been updated."
-        };
-
-        // Retorna el tipo de notificación según el nuevo estado (para estilos en el frontend)
-        private static string GetNotificationType(string status) => status switch
-        {
-            CollectionRequestStatus.Assigned => "Info",
-            CollectionRequestStatus.InProgress => "Info",
-            CollectionRequestStatus.Completed => "Success",
-            CollectionRequestStatus.Rejected => "Warning",
-            _ => "Info"
-        };
     }
 }

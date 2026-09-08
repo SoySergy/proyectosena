@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.Requests;
-using proyectosena.Interfaces;
+using proyectosena.Extensions;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
 namespace proyectosena.Controllers
@@ -11,364 +12,214 @@ namespace proyectosena.Controllers
     [ApiController]
     public class CollectionRequestController : ControllerBase
     {
-        // Repositorio de solicitudes de recolección inyectado por dependencias
-        private readonly ICollectionRequestRepository _collectionRequestRepository;
+        // El controlador solo traduce HTTP: las reglas viven en el servicio
+        private readonly ICollectionRequestService _requestService;
 
-        // Servicio que maneja el cambio de estado, historial y notificación
-        private readonly ICollectionStatusService _collectionStatusService;
-
-        // Servicio que maneja la asignación de solicitudes entre gestores (modelo Uber)
-        private readonly IAssignmentService _assignmentService;
-
-        // Constructor único con los tres servicios inyectados
-        public CollectionRequestController(
-            ICollectionRequestRepository collectionRequestRepository,
-            ICollectionStatusService collectionStatusService,
-            IAssignmentService assignmentService)
+        public CollectionRequestController(ICollectionRequestService requestService)
         {
-            _collectionRequestRepository = collectionRequestRepository;
-            _collectionStatusService = collectionStatusService;
-            _assignmentService = assignmentService;
+            _requestService = requestService;
         }
 
         // -------------------- GET: api/collectionrequest/GetCollectionRequests --------------------
-        // Retorna todas las solicitudes — Admin y Manager pueden verlas todas
+        // Todas las solicitudes — Admin y Manager pueden verlas
         [HttpGet("GetCollectionRequests")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetCollectionRequests()
+        public async Task<IActionResult> GetCollectionRequests(int page = 1, int pageSize = 20)
         {
-            try
-            {
-                var requests = await _collectionRequestRepository.GetCollectionRequests();
-
-                // Verifica si la lista está vacía o nula
-                if (requests == null || !requests.Any())
-                    return NotFound("No registered collection requests were found.");
-
-                // Mapea cada solicitud al DTO de respuesta para no exponer datos internos
-                return Ok(requests.Select(MapToResponseDto).ToList());
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving collection requests.");
-            }
+            return Ok(await _requestService.GetAll(page, pageSize));
         }
 
         // -------------------- GET: api/collectionrequest/GetCollectionRequestById --------------------
-        // Cualquier usuario autenticado puede ver el detalle de una solicitud específica
         [HttpGet("GetCollectionRequestById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetCollectionRequestById(Guid idRequest)
         {
-            try
-            {
-                var request = await _collectionRequestRepository.GetCollectionRequest(idRequest);
+            var request = await _requestService.GetById(idRequest);
 
-                if (request == null)
-                    return NotFound("The requested collection request was not found.");
+            if (request == null)
+                return NotFound("The requested collection request was not found.");
 
-                // Incluye los datos del User gracias al Include() del repositorio
-                return Ok(MapToResponseDto(request));
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the collection request.");
-            }
+            // Faltaba: cualquier ciudadano podía leer la solicitud de otro —con su
+            // dirección y teléfono— solo con el id. Gestores y administradores sí
+            // ven todas: es su trabajo.
+            if (!User.IsStaff() && request.IdUser != User.GetUserId())
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only view your own collection requests.");
+
+            return Ok(request);
         }
 
         // -------------------- POST: api/collectionrequest/CreateCollectionRequest --------------------
-        // Solo el ciudadano puede crear solicitudes de recolección
+        // Solo el ciudadano puede crear solicitudes
         [HttpPost("CreateCollectionRequest")]
         [Authorize(Policy = "CitizenOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateCollectionRequest([FromBody] CreateCollectionRequestDto dto)
         {
-            try
+            if (dto == null)
+                return BadRequest("Collection request data cannot be null.");
 
-            {
-                if (dto == null)
-                    return BadRequest("Collection request data cannot be null.");
-
-                if (dto.IdUser == Guid.Empty)
-                    return BadRequest("The request must have a valid IdUser.");
-
-                // Construye el modelo CollectionRequest desde el DTO
-                var collectionRequest = new CollectionRequest
-                {
-                    IdUser = dto.IdUser,
-                    CollectionDate = dto.CollectionDate,
-                    CollectionTime = dto.CollectionTime,
-                    CollectionAddress = dto.CollectionAddress,
-                    ContactPhone = dto.ContactPhone,
-                    WasteTypes = dto.WasteTypes,
-                    CitizenObservations = dto.CitizenObservations,
-                    // El estado siempre inicia en Pending al crear una solicitud
-                    CurrentStatus = CollectionRequestStatus.Pending,
-                    RequestDate = DateTime.UtcNow
-                };
-
-                var newRequest = await _collectionRequestRepository.CreateCollectionRequest(collectionRequest);
-
-                // Notifica a todos los gestores que hay una nueva solicitud disponible
-                // Replica el modelo Uber donde todos los conductores ven el viaje
-                await _assignmentService.NotifyAllManagersAsync(
-                    newRequest.IdRequest,
-                    newRequest.CollectionAddress);
-
-                return Ok(MapToResponseDto(newRequest));
-            } 
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error creating the collection request.");
-            }
+            // El dueño es quien llama. Ya no hace falta validar un IdUser del cuerpo:
+            // el token lo garantiza.
+            return Ok(await _requestService.Create(dto, User.GetUserId()));
         }
 
         // -------------------- PUT: api/collectionrequest/UpdateCollectionRequest --------------------
-        // Solo el ciudadano puede editar su solicitud y solo si está en Pending
+        // Solo el ciudadano, y solo mientras la solicitud siga en Pending
         [HttpPut("UpdateCollectionRequest")]
         [Authorize(Policy = "CitizenOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateCollectionRequest([FromBody] UpdateCollectionRequestDto dto)
         {
-            try
-            {
-                if (dto == null)
-                    return BadRequest("Collection request data cannot be null.");
+            if (dto == null)
+                return BadRequest("Collection request data cannot be null.");
 
-                if (dto.IdRequest == Guid.Empty)
-                    return BadRequest("IdRequest is required to update a record.");
+            if (dto.IdRequest == Guid.Empty)
+                return BadRequest("IdRequest is required to update a record.");
 
-                // Busca la solicitud existente en la base de datos
-                var existing = await _collectionRequestRepository.GetCollectionRequest(dto.IdRequest);
-                if (existing == null)
-                    return NotFound("Collection request not found.");
+            var (result, request) = await _requestService.Update(dto, User.GetUserId());
 
-                // Solo se puede editar si está en Pending — una vez asignada ya no se puede modificar
-                if (existing.CurrentStatus != CollectionRequestStatus.Pending)
-                    return BadRequest("Only pending requests can be modified.");
+            if (result == RequestUpdateResult.RequestNotFound)
+                return NotFound("Collection request not found.");
 
-                // Actualiza solo los campos que vienen en el DTO (campos opcionales)
-                if (dto.CollectionDate.HasValue) existing.CollectionDate = dto.CollectionDate.Value;
-                if (dto.CollectionTime != null) existing.CollectionTime = dto.CollectionTime;
-                if (dto.CollectionAddress != null) existing.CollectionAddress = dto.CollectionAddress;
-                if (dto.ContactPhone != null) existing.ContactPhone = dto.ContactPhone;
-                if (dto.WasteTypes != null) existing.WasteTypes = dto.WasteTypes;
-                if (dto.CitizenObservations != null) existing.CitizenObservations = dto.CitizenObservations;
+            if (result == RequestUpdateResult.NotOwner)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only edit your own collection requests.");
 
-                var updated = await _collectionRequestRepository.UpdateCollectionRequest(existing);
-                return Ok(MapToResponseDto(updated));
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error updating the collection request.");
-            }
-        }
+            if (result == RequestUpdateResult.NotPending)
+                return BadRequest("Only pending requests can be modified.");
 
-        // -------------------- DELETE: api/collectionrequest/DeleteCollectionRequest --------------------
-        // Solo Admin puede eliminar solicitudes
-        [HttpDelete("DeleteCollectionRequest")]
-        [Authorize(Policy = "AdminOnly")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteCollectionRequest(Guid idRequest)
-        {
-            try
-            {
-                var deleted = await _collectionRequestRepository.DeleteCollectionRequest(idRequest);
-
-                // Retorna false si la solicitud no existe en la base de datos
-                if (!deleted)
-                    return BadRequest("Could not delete the collection request. Please verify it exists.");
-
-                return Ok("Collection request deleted successfully.");
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error deleting the collection request.");
-            }
+            return Ok(request);
         }
 
         // -------------------- PATCH: api/collectionrequest/UpdateStatus --------------------
-        // Solo Admin o Manager pueden cambiar el estado de una solicitud
         [HttpPatch("UpdateStatus")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> UpdateStatus(
             Guid idRequest,
             string newStatus,
-            Guid idManager,
             string? comment = null)
         {
-            try
+            // Quién hace el cambio sale del token: antes un gestor podía mover una
+            // solicitud firmando el historial con el nombre de otro.
+            var result = await _requestService.UpdateStatus(idRequest, newStatus, User.GetUserId(), comment);
+
+            if (result == StatusUpdateResult.InvalidStatus)
+                return BadRequest($"Invalid status. Valid values: {string.Join(", ", CollectionRequestStatus.ValidStatuses)}");
+
+            if (result == StatusUpdateResult.RequestNotFound)
+                return NotFound("Collection request not found.");
+
+            if (result == StatusUpdateResult.InvalidTransition)
+                return Conflict($"Cannot change status to '{newStatus}' from the current state.");
+
+            return Ok(new
             {
-                // Valida que el estado sea uno de los valores permitidos en CollectionRequestStatus
-                if (!CollectionRequestStatus.ValidStatuses.Contains(newStatus))
-                    return BadRequest($"Invalid status. Valid values: {string.Join(", ", CollectionRequestStatus.ValidStatuses)}");
-
-                // El servicio se encarga de actualizar estado, historial y notificación automáticamente
-                var result = await _collectionStatusService.UpdateStatusAsync(
-                    idRequest, newStatus, idManager, comment);
-
-                if (!result)
-                    return NotFound("Collection request not found.");
-
-                return Ok(new
-                {
-                    IdRequest = idRequest,
-                    NewStatus = newStatus,
-                    UpdatedAt = DateTime.UtcNow
-                });
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error updating the status.");
-            }
+                IdRequest = idRequest,
+                NewStatus = newStatus,
+                UpdatedAt = DateTime.UtcNow
+            });
         }
 
         // -------------------- GET: api/collectionrequest/GetPendingRequests --------------------
-        // Endpoint que usan los gestores para ver todas las solicitudes disponibles para tomar
+        // Las que los gestores pueden tomar
         [HttpGet("GetPendingRequests")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetPendingRequests()
+        public async Task<IActionResult> GetPendingRequests(int page = 1, int pageSize = 20)
         {
-            try
-            {
-                var requests = await _collectionRequestRepository.GetPendingRequests();
-
-                // Si no hay solicitudes pendientes retorna 404 con mensaje descriptivo
-                if (requests == null || !requests.Any())
-                    return NotFound("No pending collection requests available.");
-
-                return Ok(requests.Select(MapToResponseDto).ToList());
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving pending requests.");
-            }
+            return Ok(await _requestService.GetPending(page, pageSize));
         }
 
         // -------------------- POST: api/collectionrequest/AcceptRequest --------------------
-        // Endpoint que usa el gestor para tomar una solicitud pendiente
-        // Usa transacción para garantizar que solo un gestor pueda aceptarla
+        // Un gestor toma una solicitud pendiente
         [HttpPost("AcceptRequest")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> AcceptRequest(Guid idRequest, Guid idManager)
+        public async Task<IActionResult> AcceptRequest(Guid idRequest)
         {
-            try
-            {
-                // El servicio maneja la lógica de concurrencia, historial y notificación
-                var (success, message) = await _assignmentService.AcceptRequestAsync(idRequest, idManager);
+            // El gestor que acepta es el del token, no el que diga la URL
+            var idManager = User.GetUserId();
 
-                if (!success)
-                    return BadRequest(message);
+            var (success, message) = await _requestService.Accept(idRequest, idManager);
 
-                return Ok(new
-                {
-                    Message = message,
-                    IdRequest = idRequest,
-                    IdManager = idManager,
-                    AcceptedAt = DateTime.UtcNow
-                });
-            }
-            catch
+            if (!success)
+                return BadRequest(message);
+
+            return Ok(new
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error accepting the request.");
-            }
+                Message = message,
+                IdRequest = idRequest,
+                IdManager = idManager,
+                AcceptedAt = DateTime.UtcNow
+            });
         }
 
+        // -------------------- PATCH: api/collectionrequest/CancelRequest --------------------
+        // El ciudadano cancela su propia solicitud, solo mientras nadie la haya tomado
+        [HttpPatch("CancelRequest")]
+        [Authorize(Policy = "CitizenOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> CancelRequest(Guid idRequest, string? reason = null)
+        {
+            // La comprobación de dueño que ya hacía el servicio solo vale si el id
+            // viene del token; con el parámetro se podía suplantar al dueño.
+            var result = await _requestService.Cancel(idRequest, User.GetUserId(), reason);
 
-        // -------------------- GET: api/collectionrequest/GetRequestsByUser --------------------
-        // El ciudadano consulta sus propias solicitudes directamente
+            if (result == RequestCancelResult.RequestNotFound)
+                return NotFound("Collection request not found.");
+
+            if (result == RequestCancelResult.NotOwner)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only cancel your own collection requests.");
+
+            if (result == RequestCancelResult.NotCancellable)
+                return Conflict("Only pending requests can be cancelled.");
+
+            return Ok(new
+            {
+                Message = "Collection request cancelled.",
+                IdRequest = idRequest,
+                CancelledAt = DateTime.UtcNow
+            });
+        }
+
+        // -------------------- GET: api/collectionrequest/GetMyAssignments --------------------
+        // Solicitudes que un gestor específico tomó
         [HttpGet("GetMyAssignments")]
-        //[Authorize(Policy = "CitizenOnly")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-
-
-        // Solicitudes que un gestor específico tomó
-        public async Task<IActionResult> GetMyAssignments (Guid idManager)
+        public async Task<IActionResult> GetMyAssignments(int page = 1, int pageSize = 20)
         {
-            try
-                {
-                var requests = await _collectionRequestRepository.GetRequestsByManager(idManager);
-
-                if (requests == null || !requests.Any())
-                    return NotFound("No assignments found for this manager.");
-
-                return Ok(requests.Select(MapToResponseDto).ToList());
-             }
-              catch
-                {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the manager's assignments.");
-                }
-
-
+            // El id del gestor sale del token: antes un gestor podía ver la carga
+            // de trabajo de cualquier otro cambiando el parámetro.
+            return Ok(await _requestService.GetByManager(User.GetUserId(), page, pageSize));
         }
+
+        // -------------------- GET: api/collectionrequest/GetRequestsByUser --------------------
+        // El ciudadano consulta sus propias solicitudes
         [HttpGet("GetRequestsByUser")]
         [Authorize(Policy = "CitizenOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetRequestsByUser(Guid idUser)
+        public async Task<IActionResult> GetRequestsByUser(int page = 1, int pageSize = 20)
         {
-            try
-            {
-                var requests = await _collectionRequestRepository.GetRequestsByUser(idUser);
-
-                if (requests == null || !requests.Any())
-                    return NotFound("No collection requests found for this user.");
-
-                return Ok(requests.Select(MapToResponseDto).ToList());
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving user requests.");
-            }
+            // El id sale del token: estas solicitudes traen dirección y teléfono.
+            return Ok(await _requestService.GetByUser(User.GetUserId(), page, pageSize));
         }
-
-
-
-        // ── Métodos privados ────────────────────────────────────────────
-
-        // Mapea el modelo CollectionRequest al DTO de respuesta
-        // Evita exponer campos innecesarios y aplana las propiedades de navegación
-        private static CollectionRequestResponseDto MapToResponseDto(CollectionRequest r) => new()
-        {
-            IdRequest = r.IdRequest,
-            IdUser = r.IdUser,
-            CitizenName = r.User?.Name ?? string.Empty,
-            CitizenLastName = r.User?.LastName ?? string.Empty,
-            CollectionDate = r.CollectionDate,
-            CollectionTime = r.CollectionTime,
-            CollectionAddress = r.CollectionAddress,
-            ContactPhone = r.ContactPhone,
-            CurrentStatus = r.CurrentStatus,
-            RequestDate = r.RequestDate,
-            WasteTypes = r.WasteTypes,
-            CitizenObservations = r.CitizenObservations
-        };
     }
 }

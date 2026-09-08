@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
+using proyectosena.Extensions;
+using proyectosena.Interfaces.Repositories;
 using proyectosena.Models;
-using proyectosena.Interfaces;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
     public class HistoryRepository : IHistoryRepository
     {
@@ -16,29 +17,20 @@ namespace proyectosena.Repositorios
             _context = context;
         }
 
-        // Obtiene todos los registros del historial con sus relaciones de solicitud y usuario
-        // Ordena por fecha de cambio descendente (más recientes primero)
-        public async Task<IEnumerable<History>> GetAll()
+        // Página del historial de las solicitudes que pertenecen a un ciudadano.
+        // Filtra por el dueño de la solicitud, no por el autor del cambio: el
+        // autor casi siempre es el gestor.
+        public async Task<(List<History> Items, int Total)> GetByRequestOwner(Guid idUser, int page, int pageSize)
         {
             return await _context.Histories
                 .Include(h => h.CollectionRequest)
                 .Include(h => h.User)
+                .Where(h => h.CollectionRequest!.IdUser == idUser)
                 .OrderByDescending(h => h.ChangeDate)
-                .ToListAsync();
+                .ToPagedAsync(page, pageSize);
         }
 
-        // Busca un registro específico del historial por su ID
-        // Incluye las relaciones de solicitud y usuario
-        public async Task<History?> GetById(Guid idHistory)
-        {
-            return await _context.Histories
-                .Include(h => h.CollectionRequest)
-                .Include(h => h.User)
-                .FirstOrDefaultAsync(h => h.IdHistory == idHistory);
-        }
-
-        // Obtiene todo el historial de cambios de una solicitud específica
-        // Útil para rastrear todos los estados por los que ha pasado una solicitud
+        // Historial completo de una solicitud, para mostrar su línea de tiempo
         public async Task<IEnumerable<History>> GetByRequest(Guid idRequest)
         {
             return await _context.Histories
@@ -48,19 +40,8 @@ namespace proyectosena.Repositorios
                 .ToListAsync();
         }
 
-        // Obtiene todos los cambios realizados por un usuario específico
-        // Útil para auditoría y seguimiento de acciones de usuarios
-        public async Task<IEnumerable<History>> GetByUser(Guid idUser)
-        {
-            return await _context.Histories
-                .Include(h => h.CollectionRequest)
-                .Where(h => h.IdUser == idUser)
-                .OrderByDescending(h => h.ChangeDate)
-                .ToListAsync();
-        }
-
-        //Crea un nuevo registro en el historial
-        //Establece automáticamente la fecha de cambio al momento actual
+        // Crea un nuevo registro en el historial
+        // Establece automáticamente la fecha de cambio al momento actual
         public async Task<History> Create(History history)
         {
             history.ChangeDate = DateTime.UtcNow;
@@ -68,45 +49,18 @@ namespace proyectosena.Repositorios
             await _context.SaveChangesAsync();
             return history;
         }
-        public async Task<IEnumerable<History>> GetByRequestOwner(Guid idUser)
-        {
-            return await _context.Histories
-                .Include(h => h.CollectionRequest)
-                .Include(h => h.User)
-                .Where(h => h.CollectionRequest!.IdUser == idUser)
-                .OrderByDescending(h => h.ChangeDate)
-                .ToListAsync();
-        }
 
-        // Verifica si existe un registro del historial con el ID proporcionado
-        public async Task<bool> Exists(Guid idHistory)
-        {
-            return await _context.Histories
-                .AnyAsync(h => h.IdHistory == idHistory);
-        }
-
-        // Obtiene registros del historial dentro de un rango de fechas
-        // Útil para reportes y análisis de cambios en períodos específicos
-        public async Task<IEnumerable<History>> GetByDateRange(DateTime startDate, DateTime endDate)
+        // Cambios de todo el sistema entre dos fechas, para reportes de administración.
+        // Paginado: un rango amplio puede abarcar miles de registros.
+        public async Task<(List<History> Items, int Total)> GetByDateRange(
+            DateTime startDate, DateTime endDate, int page, int pageSize)
         {
             return await _context.Histories
                 .Include(h => h.CollectionRequest)
                 .Include(h => h.User)
                 .Where(h => h.ChangeDate >= startDate && h.ChangeDate <= endDate)
                 .OrderByDescending(h => h.ChangeDate)
-                .ToListAsync();
-        }
-
-        // Filtra el historial por el estado nuevo al que cambiaron las solicitudes
-        // Útil para encontrar todas las veces que las solicitudes pasaron a un estado específico
-        public async Task<IEnumerable<History>> GetByNewStatus(string newStatus)
-        {
-            return await _context.Histories
-                .Include(h => h.CollectionRequest)
-                .Include(h => h.User)
-                .Where(h => h.NewStatus == newStatus)
-                .OrderByDescending(h => h.ChangeDate)
-                .ToListAsync();
+                .ToPagedAsync(page, pageSize);
         }
     }
 }

@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using proyectosena.DTOs.Communication;
+using proyectosena.Extensions;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
-using proyectosena.Interfaces;
 
 namespace proyectosena.Controllers
 {
@@ -10,155 +12,90 @@ namespace proyectosena.Controllers
     [ApiController]
     public class ChatHistoryController : ControllerBase
     {
-        // Repositorio de historial de chat inyectado por dependencias
-        private readonly IChatHistoryRepository _chatHistoryRepository;
+        // El controlador solo traduce HTTP: las reglas viven en el servicio
+        private readonly IChatHistoryService _chatHistoryService;
 
-        public ChatHistoryController(IChatHistoryRepository chatHistoryRepository)
+        public ChatHistoryController(IChatHistoryService chatHistoryService)
         {
-            _chatHistoryRepository = chatHistoryRepository;
+            _chatHistoryService = chatHistoryService;
         }
 
         // -------------------- GET: api/chathistory/GetMessagesByRequest --------------------
         [HttpGet("GetMessagesByRequest")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetMessagesByRequest(Guid idRequest)
         {
-            try
-            {
-                var messages = await _chatHistoryRepository.GetMessagesByRequest(idRequest);
+            // Quién pregunta sale del token. La comprobación de participante que ya
+            // hacía el servicio solo sirve si el id es de fiar.
+            var (result, messages) = await _chatHistoryService.GetMessagesByRequest(idRequest, User.GetUserId());
 
-                // Verifica si hay mensajes para esta solicitud
-                if (messages == null || !messages.Any())
-                    return NotFound("No messages found for this request.");
+            if (result == RequestAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You are not a participant of this collection request.");
 
-                return Ok(messages);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving messages.");
-            }
-        }
-
-        // -------------------- GET: api/chathistory/GetMessage --------------------
-        [HttpGet("GetMessage")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetMessage(Guid idChatHistory)
-        {
-            try
-            {
-                var message = await _chatHistoryRepository.GetMessage(idChatHistory);
-
-                if (message == null)
-                    return NotFound("The requested message was not found.");
-
-                return Ok(message);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the message.");
-            }
+            return Ok(messages);
         }
 
         // -------------------- POST: api/chathistory/SendMessage --------------------
         [HttpPost("SendMessage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> SendMessage([FromBody] ChatHistory chatHistory)
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> SendMessage([FromBody] SendMessageDto dto)
         {
-            try
-            {
-                if (chatHistory == null)
-                    return BadRequest("Message data cannot be null.");
+            if (dto == null)
+                return BadRequest("Message data cannot be null.");
 
-                // Valida que las claves foráneas sean válidas
-                if (chatHistory.IdRequest == Guid.Empty || chatHistory.IdSender == Guid.Empty)
-                    return BadRequest("The message must have a valid IdRequest and IdSender.");
+            if (dto.IdRequest == Guid.Empty)
+                return BadRequest("The message must have a valid IdRequest.");
 
-                if (string.IsNullOrWhiteSpace(chatHistory.Message))
-                    return BadRequest("Message content cannot be empty.");
+            if (string.IsNullOrWhiteSpace(dto.Message))
+                return BadRequest("Message content cannot be empty.");
 
-                var newMessage = await _chatHistoryRepository.CreateMessage(chatHistory);
-                return Ok(newMessage);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error sending the message.");
-            }
+            var (result, message) = await _chatHistoryService.SendMessage(dto, User.GetUserId());
+
+            if (result == RequestAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You are not a participant of this collection request.");
+
+            return Ok(message);
         }
 
         // -------------------- PUT: api/chathistory/MarkAsRead --------------------
-        // Operación para marcar un mensaje como leído
         [HttpPut("MarkAsRead")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> MarkAsRead(Guid idChatHistory)
         {
-            try
-            {
-                var result = await _chatHistoryRepository.MarkAsRead(idChatHistory);
+            // Quién marca sale del token, igual que al leer y al escribir
+            var result = await _chatHistoryService.MarkAsRead(idChatHistory, User.GetUserId());
 
-                // Retorna false si el mensaje no existe en la base de datos
-                if (!result)
-                    return BadRequest("Could not mark the message as read. Please verify it exists.");
+            if (result == RequestAccessResult.NotFound)
+                return NotFound("The requested message was not found.");
 
-                return Ok("Message marked as read successfully.");
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error marking the message as read.");
-            }
+            if (result == RequestAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only read messages of your own requests.");
+
+            return Ok("Message marked as read successfully.");
         }
 
         // -------------------- GET: api/chathistory/GetUnreadMessages --------------------
-        // Obtiene mensajes no leídos de otros usuarios en una solicitud específica
         [HttpGet("GetUnreadMessages")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetUnreadMessages(Guid idUser, Guid idRequest)
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetUnreadMessages(Guid idRequest)
         {
-            try
-            {
-                var messages = await _chatHistoryRepository.GetUnreadMessages(idUser, idRequest);
+            var (result, messages) = await _chatHistoryService.GetUnreadMessages(User.GetUserId(), idRequest);
 
-                // Retorna lista vacía si no hay mensajes pendientes, no un 404
-                if (messages == null || !messages.Any())
-                    return Ok(new List<ChatHistory>());
+            if (result == RequestAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You are not a participant of this collection request.");
 
-                return Ok(messages);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving unread messages.");
-            }
+            return Ok(messages);
         }
 
-        // -------------------- DELETE: api/chathistory/DeleteMessage --------------------
-        [HttpDelete("DeleteMessage")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteMessage(Guid idChatHistory)
-        {
-            try
-            {
-                var deleted = await _chatHistoryRepository.DeleteMessage(idChatHistory);
-
-                // Retorna false si el mensaje no existe en la base de datos
-                if (!deleted)
-                    return BadRequest("Could not delete the message. Please verify it exists.");
-
-                return Ok("Message deleted successfully.");
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error deleting the message.");
-            }
-        }
     }
 }

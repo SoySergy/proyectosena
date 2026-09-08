@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
-using proyectosena.Interfaces;
-using proyectosena.Repositories.Interfaces;
-using proyectosena.Repositorios;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
+using proyectosena.Repositories;
 using proyectosena.Services;
 
 namespace proyectosena
@@ -21,7 +21,13 @@ namespace proyectosena
                 options.UseSqlServer(connectionString));
 
             // ── Repositories 
-            services.AddScoped<IUserRepository, UserRepository>();
+            // UserRepository cumple los tres contratos de usuario. Se registra la
+            // clase concreta una sola vez y los tres interfaces la reenvían: así
+            // una petición comparte una instancia en vez de crear tres.
+            services.AddScoped<UserRepository>();
+            services.AddScoped<IUserLookupRepository>(sp => sp.GetRequiredService<UserRepository>());
+            services.AddScoped<IUserDirectoryRepository>(sp => sp.GetRequiredService<UserRepository>());
+            services.AddScoped<IUserWriteRepository>(sp => sp.GetRequiredService<UserRepository>());
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IDocumentTypeRepository, DocumentTypeRepository>();
             services.AddScoped<ICollectionRequestRepository, CollectionRequestRepository>();
@@ -29,11 +35,29 @@ namespace proyectosena
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IHistoryRepository, HistoryRepository>();
             services.AddScoped<IChatHistoryRepository, ChatHistoryRepository>();
+            services.AddScoped<IManagerApplicationRepository, ManagerApplicationRepository>();
 
+            // ── Services ───────────────────────────────
             services.AddScoped<ICollectionStatusService, CollectionStatusService>();
             services.AddScoped<IAssignmentService, AssignmentService>();
-            services.AddScoped<IEmailService, EmailService>();
-            services.AddScoped<IPasswordResetService, PasswordResetService>();
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IChatHistoryService, ChatHistoryService>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<ICollectionRequestService, CollectionRequestService>();
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<IDocumentTypeService, DocumentTypeService>();
+            services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<IHistoryService, HistoryService>();
+            services.AddScoped<ICollectionManagementService, CollectionManagementService>();
+            services.AddScoped<IManagerApplicationService, ManagerApplicationService>();
+
+            // Singleton a propósito: VerificationCodeService guarda los códigos en un
+            // diccionario en memoria. Como Scoped, cada petición recibiría uno vacío y
+            // ningún código validaría nunca. EmailService no guarda estado, así que con
+            // una sola instancia basta.
+            services.AddSingleton<IEmailService, EmailService>();
+            services.AddSingleton<IVerificationCodeService, VerificationCodeService>();
 
             return services;
         }

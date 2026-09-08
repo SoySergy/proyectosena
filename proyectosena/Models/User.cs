@@ -32,6 +32,15 @@ namespace proyectosena.Models
         public string Address { get; set; } = string.Empty;
         public DateTime RegistrationDate { get; set; } = DateTime.UtcNow;
 
+        // Soft delete flag: inactive users cannot log in and are hidden from listings
+        public bool IsActive { get; set; } = true;
+
+        // Separado de IsActive a propósito: «el administrador lo dio de baja» y
+        // «nunca confirmó su correo» son cosas distintas y hay que poder
+        // distinguirlas. Las cuentas que ya existían quedan en true: no se les
+        // puede exigir algo que no se les pidió al registrarse.
+        public bool IsEmailVerified { get; set; }
+
         // ── Navigation Properties ──────────────────
         [JsonIgnore]
         [ForeignKey("IdRole")]

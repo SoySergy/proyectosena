@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using proyectosena.Models;
-using proyectosena.Interfaces;
+using proyectosena.Extensions;
+using proyectosena.Interfaces.Services;
 
 namespace proyectosena.Controllers
 {
@@ -10,82 +10,56 @@ namespace proyectosena.Controllers
     [ApiController]
     public class NotificationController : ControllerBase
     {
-        // Repositorio de notificaciones inyectado por dependencias
-        private readonly INotificationRepository _notificationRepository;
+        // El controlador solo traduce HTTP: las reglas viven en el servicio
+        private readonly INotificationService _notificationService;
 
-        public NotificationController(INotificationRepository notificationRepository)
+        public NotificationController(INotificationService notificationService)
         {
-            _notificationRepository = notificationRepository;
+            _notificationService = notificationService;
         }
 
-        // -------------------- GET: api/notification/GetNotifications --------------------
-        [HttpGet("GetNotifications")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetNotifications()
-        {
-            try
-            {
-                var notifications = await _notificationRepository.GetNotifications();
-
-                // Verifica si la lista está vacía o nula
-                if (notifications == null || !notifications.Any())
-                    return NotFound("No registered notifications were found.");
-
-                return Ok(notifications);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving notifications.");
-            }
-        }
-
-        // -------------------- GET: api/notification/GetNotificationById --------------------
-        [HttpGet("GetNotificationById")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetNotificationById(Guid idNotification)
-        {
-            try
-            {
-                var notification = await _notificationRepository.GetNotification(idNotification);
-
-                if (notification == null)
-                    return NotFound("The requested notification was not found.");
-
-                return Ok(notification);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the notification.");
-            }
-        }
         // -------------------- PATCH: api/notification/MarkAsRead --------------------
-        // Operación parcial: solo cambia el campo IsRead a true
         [HttpPatch("MarkAsRead")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> MarkAsRead(Guid idNotification)
         {
-            try
-            {
-                var notification = await _notificationRepository.GetNotification(idNotification);
+            var updated = await _notificationService.MarkAsRead(idNotification, User.GetUserId());
 
-                if (notification == null)
-                    return NotFound("The requested notification was not found.");
+            if (updated == null)
+                return NotFound("The requested notification was not found.");
 
-                // Actualiza solo el campo IsRead sin tocar los demás campos
-                notification.IsRead = true;
-                var updated = await _notificationRepository.UpdateNotification(notification);
-                return Ok(updated);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error marking the notification as read.");
-            }
+            return Ok(updated);
+        }
+
+        // -------------------- GET: api/notification/GetMyNotifications --------------------
+        [HttpGet("GetMyNotifications")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetMyNotifications(int page = 1, int pageSize = 20)
+        {
+            // El id sale del token, no de la URL: antes bastaba cambiarlo para leer
+            // las notificaciones de otra persona.
+            return Ok(await _notificationService.GetMyNotifications(User.GetUserId(), page, pageSize));
+        }
+
+        // -------------------- GET: api/notification/GetUnreadCount --------------------
+        [HttpGet("GetUnreadCount")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            var count = await _notificationService.GetUnreadCount(User.GetUserId());
+            return Ok(new { UnreadCount = count });
+        }
+
+        // -------------------- PATCH: api/notification/MarkAllAsRead --------------------
+        [HttpPatch("MarkAllAsRead")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> MarkAllAsRead()
+        {
+            // El id sale del token: antes se podían marcar como leídas las
+            // notificaciones de otra persona.
+            var updated = await _notificationService.MarkAllAsRead(User.GetUserId());
+            return Ok(new { MarkedAsRead = updated });
         }
     }
 }

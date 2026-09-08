@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using proyectosena.Extensions;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
-using proyectosena.Interfaces;
-using proyectosena.DTOs.Requests;
 
 namespace proyectosena.Controllers
 {
@@ -11,211 +11,57 @@ namespace proyectosena.Controllers
     [ApiController]
     public class HistoryController : ControllerBase
     {
-        // Repositorio de historial inyectado por dependencias
-        private readonly IHistoryRepository _historyRepository;
+        // El controlador solo traduce HTTP: las reglas viven en el servicio
+        private readonly IHistoryService _historyService;
 
-        public HistoryController(IHistoryRepository historyRepository)
+        public HistoryController(IHistoryService historyService)
         {
-            _historyRepository = historyRepository;
+            _historyService = historyService;
         }
 
-        // -------------------- GET: api/history/GetAll --------------------
-        [HttpGet("GetAll")]
+        // -------------------- GET: api/history/GetMyHistory --------------------
+        // Historial de las solicitudes que pertenecen a este ciudadano
+        [HttpGet("GetMyHistory")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetMyHistory(int page = 1, int pageSize = 20)
         {
-            try
-            {
-                var histories = await _historyRepository.GetAll();
-
-                // Verifica si la lista está vacía o nula
-                if (histories == null || !histories.Any())
-                    return NotFound("No history records were found.");
-
-                return Ok(histories);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving history records.");
-            }
-        }
-
-        // -------------------- GET: api/history/GetById --------------------
-        [HttpGet("GetById")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetById(Guid idHistory)
-        {
-            try
-            {
-                var history = await _historyRepository.GetById(idHistory);
-
-                if (history == null)
-                    return NotFound("The requested history record was not found.");
-
-                return Ok(history);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the history record.");
-            }
+            // El id sale del token, no de la URL
+            return Ok(await _historyService.GetMyHistory(User.GetUserId(), page, pageSize));
         }
 
         // -------------------- GET: api/history/GetByRequest --------------------
+        // Línea de tiempo de una solicitud: todos sus cambios de estado
         [HttpGet("GetByRequest")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetByRequest(Guid idRequest)
         {
-            try
-            {
-                var histories = await _historyRepository.GetByRequest(idRequest);
+            var (result, items) = await _historyService
+                .GetByRequest(idRequest, User.GetUserId(), User.IsStaff());
 
-                // Útil para ver todos los cambios de estado de una solicitud específica
-                if (histories == null || !histories.Any())
-                    return NotFound("No history found for this request.");
+            if (result == RequestAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only view the history of your own requests.");
 
-                return Ok(histories);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the request history.");
-            }
-        }
-
-        // -------------------- GET: api/history/GetByUser --------------------
-        [HttpGet("GetByUser")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetByUser(Guid idUser)
-        {
-            try
-            {
-                var histories = await _historyRepository.GetByUser(idUser);
-
-                // Útil para auditoría y seguimiento de acciones de un usuario
-                if (histories == null || !histories.Any())
-                    return NotFound("No changes found made by this user.");
-
-                return Ok(histories);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the user history.");
-            }
-        }
-
-        [HttpGet("GetMyHistory")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetMyHistory(Guid idUser)
-        {
-            try
-            {
-                var histories = await _historyRepository.GetByRequestOwner(idUser);
-
-                // Útil para auditoría y seguimiento de acciones de un usuario
-                if (histories == null || !histories.Any())
-                    return NotFound("No changes found for this user's requests.");
-
-                return Ok(histories.Select(MapToResponseDto).ToList());
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving the history.");
-            }
-        }
-
-
-
-
-        // -------------------- GET: api/history/GetByNewStatus --------------------
-        [HttpGet("GetByNewStatus")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetByNewStatus(string newStatus)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(newStatus))
-                    return BadRequest("Status cannot be empty.");
-
-                var histories = await _historyRepository.GetByNewStatus(newStatus);
-
-                if (histories == null || !histories.Any())
-                    return NotFound($"No records found with status '{newStatus}'.");
-
-                return Ok(histories);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving history by status.");
-            }
+            // Una solicitud sin cambios registrados no es un error
+            return Ok(items);
         }
 
         // -------------------- GET: api/history/GetByDateRange --------------------
+        // Reporte administrativo: qué pasó en el sistema entre dos fechas.
+        // Solo Admin: expone la actividad de todos los usuarios.
         [HttpGet("GetByDateRange")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetByDateRange([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetByDateRange(
+            DateTime startDate, DateTime endDate, int page = 1, int pageSize = 20)
         {
-            try
-            {
-                // Valida que el rango de fechas sea coherente
-                if (startDate > endDate)
-                    return BadRequest("Start date cannot be greater than end date.");
+            if (startDate > endDate)
+                return BadRequest("startDate must be earlier than or equal to endDate.");
 
-                var histories = await _historyRepository.GetByDateRange(startDate, endDate);
-
-                if (histories == null || !histories.Any())
-                    return NotFound("No records found in the specified date range.");
-
-                return Ok(histories);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error retrieving history by date range.");
-            }
+            return Ok(await _historyService.GetByDateRange(startDate, endDate, page, pageSize));
         }
-
-        // -------------------- GET: api/history/HistoryExists --------------------
-        [HttpGet("HistoryExists")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> HistoryExists(Guid idHistory)
-        {
-            try
-            {
-                // Retorna un objeto con la propiedad exists para el frontend
-                var exists = await _historyRepository.Exists(idHistory);
-                return Ok(new { exists });
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error checking history existence.");
-            }
-        }
-
-        private static HistoryResponseDto MapToResponseDto(History h) => new()
-        {
-            IdHistory = h.IdHistory,
-            IdRequest = h.IdRequest,
-            IdUser = h.IdUser,
-            UserName = h.User != null ? $"{h.User.Name} {h.User.LastName}" : string.Empty,
-            PreviousStatus = h.PreviousStatus,
-            NewStatus = h.NewStatus,
-            ChangeDate = h.ChangeDate,
-            Comment = h.Comment
-        };
-
     }
 }

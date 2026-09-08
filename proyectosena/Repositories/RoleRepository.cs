@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
-using proyectosena.Interfaces;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
     public class RoleRepository : IRoleRepository
     {
@@ -19,7 +20,9 @@ namespace proyectosena.Repositorios
         // Obtiene todos los roles registrados en la base de datos
         public async Task<List<Role>> GetRoles()
         {
-            return await _context.Roles.ToListAsync();
+            return await _context.Roles
+                                 .OrderBy(r => r.RoleName)
+                                 .ToListAsync();
         }
 
         // Obtiene un rol específico por su ID

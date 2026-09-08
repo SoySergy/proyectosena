@@ -1,11 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
-using proyectosena.Interfaces;
+using proyectosena.Extensions;
+using proyectosena.Interfaces.Repositories;
+using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 
-namespace proyectosena.Repositorios
+namespace proyectosena.Repositories
 {
-    public class UserRepository : IUserRepository
+    public class UserRepository : IUserLookupRepository, IUserDirectoryRepository, IUserWriteRepository
     {
         // Contexto de la base de datos
         private readonly RecyRouteDbContext _context;
@@ -17,12 +19,14 @@ namespace proyectosena.Repositorios
         }
 
         // Obtiene todos los usuarios incluyendo su rol y tipo de documento
-        public async Task<List<User>> GetUsers()
+        public async Task<(List<User> Items, int Total)> GetUsers(int page, int pageSize)
         {
             return await _context.Users
                                  .Include(u => u.Role)
                                  .Include(u => u.DocumentType)
-                                 .ToListAsync();
+                                 .Where(u => u.IsActive)
+                                 .OrderBy(u => u.Name)
+                                 .ToPagedAsync(page, pageSize);
         }
 
         // Obtiene un usuario específico por ID incluyendo su rol y tipo de documento
@@ -40,8 +44,16 @@ namespace proyectosena.Repositorios
         {
             return await _context.Users
                 .Include(u => u.Role)
-                .Where(u => u.Role!.RoleName == roleName)
+                .Where(u => u.Role!.RoleName == roleName && u.IsActive)
                 .ToListAsync();
+        }
+
+        // Counts active users of a role. Asks the database for the number,
+        // instead of loading every user just to count them.
+        public async Task<int> CountByRole(string roleName)
+        {
+            return await _context.Users
+                .CountAsync(u => u.Role!.RoleName == roleName && u.IsActive);
         }
 
         // Crea un nuevo usuario y guarda los cambios en la base de datos
@@ -76,13 +88,6 @@ namespace proyectosena.Repositorios
         }
 
         // Obtiene un usuario por su nombre incluyendo rol y tipo de documento
-        public async Task<User> GetUserByName(string name)
-        {
-            return await _context.Users
-                                 .Include(u => u.Role)
-                                 .Include(u => u.DocumentType)
-                                 .FirstOrDefaultAsync(u => u.Name == name);
-        }
 
         // Busca un usuario por la combinación de número de documento Y tipo de documento
         // Un mismo número puede existir en diferentes tipos (cédula, pasaporte, etc.)
@@ -96,14 +101,15 @@ namespace proyectosena.Repositorios
                                                         && u.IdDocumentType == idDocumentType);
         }
 
-        // Elimina un usuario por su ID, retorna false si no existe
+        // Inactiva un usuario por su ID, retorna false si no existe
+        // Soft delete: the row stays for audit purposes, the user just stops being active
         public async Task<bool> DeleteUser(Guid idUser)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.IdUser == idUser);
             if (user == null)
                 return false;
 
-            _context.Users.Remove(user);
+            user.IsActive = false;
             await _context.SaveChangesAsync();
             return true;
         }

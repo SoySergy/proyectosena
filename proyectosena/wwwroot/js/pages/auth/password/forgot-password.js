@@ -4,7 +4,7 @@
 //         → redirige a reset-password.html para ingresar código + nueva contraseña
 // ============================================================
 
-import { forgotPassword } from "./AuthService.js";
+import { forgotPassword } from "../../../services/authService.js";
 
 // ── Referencias al DOM ──────────────────────────────────────
 const form = document.getElementById("forgotForm");

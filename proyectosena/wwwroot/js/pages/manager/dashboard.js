@@ -1,6 +1,7 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole } from "../../utils/roleGuard.js";
 import { API_BASE } from "../../services/api.js";
+import { escapeHtml } from "../../utils/html.js";
 //js/pages / manager / dashboard.js
 // ============================================================
 // INICIALIZACIÓN
@@ -142,14 +143,10 @@ async function loadPendingRequests() {
 
         loading.style.display = "none";
 
-        if (res.status === 404) {
-            list.innerHTML = "<p class='empty-msg'>No hay solicitudes pendientes en este momento.</p>";
-            return;
-        }
-
         if (!res.ok) throw new Error("Error al obtener solicitudes pendientes");
 
-        const requests = await res.json();
+        // La API responde { items, page, pageSize, totalItems, totalPages }
+        const { items: requests } = await res.json();
 
         if (!requests?.length) {
             list.innerHTML = "<p class='empty-msg'>No hay solicitudes pendientes.</p>";
@@ -177,16 +174,16 @@ function renderPendingCard(req) {
                 <span class="card-date">Creada: ${formatDate(req.requestDate)}</span>
             </div>
             <div class="card-body">
-                <p>${icon("usuario")}<strong>Ciudadano:</strong> ${req.citizenName} ${req.citizenLastName}</p>
+                <p>${icon("usuario")}<strong>Ciudadano:</strong> ${escapeHtml(req.citizenName)} ${escapeHtml(req.citizenLastName)}</p>
                 <p>${icon("calendario")}<strong>Fecha:</strong> ${formatDate(req.collectionDate)}</p>
                 <p>${icon("reloj")}<strong>Hora:</strong> ${formatTime(req.collectionTime)}</p>
-                <p>${icon("direccion")}<strong>Dirección:</strong> ${req.collectionAddress}</p>
-                <p>${icon("telefono")}<strong>Teléfono:</strong> ${req.contactPhone}</p>
-                <p>${icon("reciclaje")}<strong>Residuos:</strong> ${req.wasteTypes}</p>
-                ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Notas:</strong> ${req.citizenObservations}</p>` : ""}
+                <p>${icon("direccion")}<strong>Dirección:</strong> ${escapeHtml(req.collectionAddress)}</p>
+                <p>${icon("telefono")}<strong>Teléfono:</strong> ${escapeHtml(req.contactPhone)}</p>
+                <p>${icon("reciclaje")}<strong>Residuos:</strong> ${escapeHtml(req.wasteTypes)}</p>
+                ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Notas:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
             </div>
             <div class="card-actions">
-                <button class="btn-accept" data-id="${req.idRequest}">Aceptar solicitud</button>
+                <button class="btn-accept" data-id="${escapeHtml(req.idRequest)}">Aceptar solicitud</button>
             </div>
         </div>
     `;
@@ -236,14 +233,10 @@ async function loadMyAssignments() {
 
         loading.style.display = "none";
 
-        if (res.status === 404) {
-            list.innerHTML = "<p class='empty-msg'>No tienes asignaciones activas.</p>";
-            return;
-        }
-
         if (!res.ok) throw new Error("Error al obtener asignaciones");
 
-        const all = await res.json();
+        // La API responde { items, page, pageSize, totalItems, totalPages }
+        const { items: all } = await res.json();
         const mine = all.filter(r =>
             r.currentStatus === "Assigned" || r.currentStatus === "InProgress"
         );
@@ -274,16 +267,16 @@ function renderAssignedCard(req) {
                 <span class="card-date">Creada: ${formatDate(req.requestDate)}</span>
             </div>
             <div class="card-body">
-                <p>${icon("usuario")}<strong>Ciudadano:</strong> ${req.citizenName} ${req.citizenLastName}</p>
+                <p>${icon("usuario")}<strong>Ciudadano:</strong> ${escapeHtml(req.citizenName)} ${escapeHtml(req.citizenLastName)}</p>
                 <p>${icon("calendario")}<strong>Fecha:</strong> ${formatDate(req.collectionDate)}</p>
                 <p>${icon("reloj")}<strong>Hora:</strong> ${formatTime(req.collectionTime)}</p>
-                <p>${icon("direccion")}<strong>Dirección:</strong> ${req.collectionAddress}</p>
-                <p>${icon("telefono")}<strong>Teléfono:</strong> ${req.contactPhone}</p>
-                <p>${icon("reciclaje")}<strong>Residuos:</strong> ${req.wasteTypes}</p>
-                ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Notas:</strong> ${req.citizenObservations}</p>` : ""}
+                <p>${icon("direccion")}<strong>Dirección:</strong> ${escapeHtml(req.collectionAddress)}</p>
+                <p>${icon("telefono")}<strong>Teléfono:</strong> ${escapeHtml(req.contactPhone)}</p>
+                <p>${icon("reciclaje")}<strong>Residuos:</strong> ${escapeHtml(req.wasteTypes)}</p>
+                ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Notas:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
             </div>
             <div class="card-actions">
-                <button class="btn-status" data-id="${req.idRequest}" data-status="${req.currentStatus}">
+                <button class="btn-status" data-id="${escapeHtml(req.idRequest)}" data-status="${escapeHtml(req.currentStatus)}">
                     Cambiar estado
                 </button>
             </div>
@@ -314,14 +307,11 @@ async function loadAllRequests() {
 
         loading.style.display = "none";
 
-        if (res.status === 404) {
-            list.innerHTML = "<p class='empty-msg'>No hay solicitudes registradas.</p>";
-            return;
-        }
-
         if (!res.ok) throw new Error("Error al obtener todas las solicitudes");
 
-        allRequests = await res.json();
+        // La API responde { items, page, pageSize, totalItems, totalPages }
+        const { items } = await res.json();
+        allRequests = items;
         allRequests.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
         renderFilteredList();
 
@@ -355,7 +345,7 @@ function renderAllCard(req) {
     const isPending = req.currentStatus === "Pending";
     const isTerminal = req.currentStatus === "Completed" || req.currentStatus === "Rejected";
     const statusBtn = (!isPending && !isTerminal)
-        ? `<button class="btn-status" data-id="${req.idRequest}" data-status="${req.currentStatus}">Cambiar estado</button>`
+        ? `<button class="btn-status" data-id="${escapeHtml(req.idRequest)}" data-status="${escapeHtml(req.currentStatus)}">Cambiar estado</button>`
         : "";
 
     return `
@@ -365,12 +355,12 @@ function renderAllCard(req) {
                 <span class="card-date">Creada: ${formatDate(req.requestDate)}</span>
             </div>
             <div class="card-body">
-                <p>${icon("usuario")}<strong>Ciudadano:</strong> ${req.citizenName} ${req.citizenLastName}</p>
+                <p>${icon("usuario")}<strong>Ciudadano:</strong> ${escapeHtml(req.citizenName)} ${escapeHtml(req.citizenLastName)}</p>
                 <p>${icon("calendario")}<strong>Fecha:</strong> ${formatDate(req.collectionDate)}</p>
                 <p>${icon("reloj")}<strong>Hora:</strong> ${formatTime(req.collectionTime)}</p>
-                <p>${icon("direccion")}<strong>Dirección:</strong> ${req.collectionAddress}</p>
-                <p>${icon("telefono")}<strong>Teléfono:</strong> ${req.contactPhone}</p>
-                <p>${icon("reciclaje")}<strong>Residuos:</strong> ${req.wasteTypes}</p>
+                <p>${icon("direccion")}<strong>Dirección:</strong> ${escapeHtml(req.collectionAddress)}</p>
+                <p>${icon("telefono")}<strong>Teléfono:</strong> ${escapeHtml(req.contactPhone)}</p>
+                <p>${icon("reciclaje")}<strong>Residuos:</strong> ${escapeHtml(req.wasteTypes)}</p>
             </div>
             ${statusBtn ? `<div class="card-actions">${statusBtn}</div>` : ""}
         </div>
