@@ -9,15 +9,28 @@ namespace proyectosena.Services
     {
         private readonly ICollectionManagementRepository _collectionManagementRepository;
 
-        public CollectionManagementService(ICollectionManagementRepository collectionManagementRepository)
+        // Necesario para saber de quién es cada solicitud
+        private readonly ICollectionRequestRepository _requestRepository;
+
+        public CollectionManagementService(
+            ICollectionManagementRepository collectionManagementRepository,
+            ICollectionRequestRepository requestRepository)
         {
             _collectionManagementRepository = collectionManagementRepository;
+            _requestRepository = requestRepository;
         }
 
-        public async Task<CollectionManagementResponseDto?> GetByRequest(Guid idRequest)
+        public async Task<(RequestAccessResult Result, CollectionManagementResponseDto? Management)> GetByRequest(
+            Guid idRequest, Guid idUser, bool esPersonal)
         {
+            // Faltaba: con solo el id de la solicitud, cualquiera con token veía quién
+            // atiende la solicitud de otro, con su nombre y sus fechas.
+            if (!esPersonal && !await _requestRepository.IsParticipant(idRequest, idUser))
+                return (RequestAccessResult.NotParticipant, null);
+
             var management = await _collectionManagementRepository.GetByRequest(idRequest);
-            return management == null ? null : MapToDto(management);
+
+            return (RequestAccessResult.Success, management == null ? null : MapToDto(management));
         }
 
         // ── Mapeo ───────────────────────────────────────────────────────

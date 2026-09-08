@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Services;
+using proyectosena.Models;
 
 namespace proyectosena.Controllers
 {
@@ -21,10 +23,16 @@ namespace proyectosena.Controllers
         // Quién gestiona una solicitud y desde cuándo. La usa la vista de detalle.
         [HttpGet("GetByRequest")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetByRequest(Guid idRequest)
         {
-            var management = await _collectionManagementService.GetByRequest(idRequest);
+            var (result, management) = await _collectionManagementService
+                .GetByRequest(idRequest, User.GetUserId(), User.IsStaff());
+
+            if (result == RequestAccessResult.NotParticipant)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only view the management of your own requests.");
 
             // Una solicitud pendiente todavía no tiene gestor. Es una respuesta
             // legítima, pero quien pregunta necesita distinguirla de "sí lo tiene".

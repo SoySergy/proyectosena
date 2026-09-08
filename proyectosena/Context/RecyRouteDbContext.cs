@@ -90,9 +90,7 @@ namespace proyectosena.Context
                 new DocumentType { IdDocumentType = SeedIds.DocumentTypes.Pasaporte,
                     DocumentName = "Pasaporte", Abbreviation = "PA" },
                 new DocumentType { IdDocumentType = SeedIds.DocumentTypes.CedulaExtranjeria,
-                    DocumentName = "Cédula de extranjería", Abbreviation = "CE" },
-                new DocumentType { IdDocumentType = SeedIds.DocumentTypes.TarjetaIdentidad,
-                    DocumentName = "Tarjeta de identidad", Abbreviation = "TI" });                
+                    DocumentName = "Cédula de extranjería", Abbreviation = "CE" });
             });
 
             // ══════════════════════════════════════

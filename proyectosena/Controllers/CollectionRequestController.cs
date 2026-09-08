@@ -45,8 +45,7 @@ namespace proyectosena.Controllers
             // Faltaba: cualquier ciudadano podía leer la solicitud de otro —con su
             // dirección y teléfono— solo con el id. Gestores y administradores sí
             // ven todas: es su trabajo.
-            var esDelPersonal = User.IsAdministrator() || User.IsInRole(RoleNames.Manager);
-            if (!esDelPersonal && request.IdUser != User.GetUserId())
+            if (!User.IsStaff() && request.IdUser != User.GetUserId())
                 return StatusCode(StatusCodes.Status403Forbidden,
                     "You can only view your own collection requests.");
 

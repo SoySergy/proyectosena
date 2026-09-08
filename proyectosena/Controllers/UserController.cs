@@ -58,18 +58,15 @@ namespace proyectosena.Controllers
         [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUsersByRole(string roleName)
         {
-            if (string.IsNullOrWhiteSpace(roleName))
-                return BadRequest("Role name cannot be empty.");
-
-            var users = await _userService.GetByRole(roleName);
-
-            if (!users.Any())
-                return NotFound($"No users found with role '{roleName}'.");
-
-            return Ok(users);
+            // Una lista vacía no es un error: un rol sin usuarios es una respuesta
+            // legítima, no un fallo (BE-15).
+            //
+            // El 400 por roleName vacío lo devuelve el framework antes de entrar aquí:
+            // con [ApiController] y nulos activados, un string no anulable es obligatorio.
+            // Había una comprobación propia que nunca llegaba a ejecutarse.
+            return Ok(await _userService.GetByRole(roleName));
         }
 
         // -------------------- GET: api/user/GetUserByEmail --------------------
@@ -80,9 +77,8 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUserByEmail(string email)
         {
-            if (string.IsNullOrWhiteSpace(email))
-                return BadRequest("Email cannot be empty.");
-
+            // Sin comprobar que email venga: al ser un string no anulable en la URL,
+            // el framework devuelve 400 antes de entrar aquí.
             var user = await _userService.GetByEmail(email);
 
             if (user == null)
@@ -100,9 +96,9 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUserByDocument(string documentNumber, Guid idDocumentType)
         {
-            if (string.IsNullOrWhiteSpace(documentNumber))
-                return BadRequest("Document number cannot be empty.");
-
+            // documentNumber no se comprueba: el framework lo exige por ser un string
+            // no anulable. idDocumentType sí, porque un Guid es tipo de valor y llega
+            // como Guid.Empty cuando no viene — el framework lo da por bueno.
             if (idDocumentType == Guid.Empty)
                 return BadRequest("Document type is required.");
 

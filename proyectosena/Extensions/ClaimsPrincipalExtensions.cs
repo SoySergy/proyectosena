@@ -43,5 +43,13 @@ namespace proyectosena.Extensions
         /// <summary>True si quien llama es administrador.</summary>
         public static bool IsAdministrator(this ClaimsPrincipal principal)
             => principal.IsInRole(RoleNames.Administrator);
+
+        /// <summary>True si quien llama es del personal: gestor o administrador.</summary>
+        /// <remarks>
+        /// El personal ve las solicitudes de todos —es su trabajo—; un ciudadano solo
+        /// las suyas. La expresión estaba escrita a mano en tres controladores.
+        /// </remarks>
+        public static bool IsStaff(this ClaimsPrincipal principal)
+            => principal.IsAdministrator() || principal.IsInRole(RoleNames.Manager);
     }
 }

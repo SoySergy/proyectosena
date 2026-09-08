@@ -23,7 +23,7 @@ namespace proyectosena.Services
         private readonly ICollectionRequestRepository _requestRepository;
         private readonly IAssignmentService _assignmentService;
         private readonly IEmailService _emailService;
-        private readonly IPasswordResetService _resetService;
+        private readonly IVerificationCodeService _codeService;
 
         public AdminService(
             IUserLookupRepository userLookup,
@@ -32,7 +32,7 @@ namespace proyectosena.Services
             ICollectionRequestRepository requestRepository,
             IAssignmentService assignmentService,
             IEmailService emailService,
-            IPasswordResetService resetService)
+            IVerificationCodeService codeService)
         {
             _userLookup = userLookup;
             _userDirectory = userDirectory;
@@ -40,7 +40,7 @@ namespace proyectosena.Services
             _requestRepository = requestRepository;
             _assignmentService = assignmentService;
             _emailService = emailService;
-            _resetService = resetService;
+            _codeService = codeService;
         }
 
         public async Task<(CreateManagerResult Result, Guid IdUser, string Email, int ExpiresInMinutes)>
@@ -89,7 +89,7 @@ namespace proyectosena.Services
             }
 
             // Mismo mecanismo de código que el flujo de recuperación, con más vida
-            var code = _resetService.GenerateAndStoreCode(email, InvitationExpiryMinutes);
+            var code = _codeService.GenerateAndStoreCode(email, CodePurpose.AccountAccess, InvitationExpiryMinutes);
             await _emailService.SendManagerInvitationAsync(email, dto.Name, code, InvitationExpiryMinutes);
 
             return (CreateManagerResult.Success, created.IdUser, created.Email, InvitationExpiryMinutes);

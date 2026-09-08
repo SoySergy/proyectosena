@@ -19,18 +19,18 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/documenttype/GetDocumentTypes --------------------
+        // Anónimo a propósito: el formulario de registro necesita llenar el selector
+        // de tipo de documento, y todavía no hay token. Es un catálogo público de tres
+        // filas —los tipos de documento que existen en Colombia—, sin dato de nadie.
+        [AllowAnonymous]
         [HttpGet("GetDocumentTypes")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDocumentTypes()
         {
-            var types = await _documentTypeService.GetAll();
-
-            if (!types.Any())
-                return NotFound("No registered document types were found.");
-
-            return Ok(types);
+            // Una lista vacía no es un error: es la respuesta «no hay ninguno».
+            // Devolver 404 obligaba al cliente a tratar «no hay» como fallo (BE-15).
+            return Ok(await _documentTypeService.GetAll());
         }
 
         // -------------------- GET: api/documenttype/GetDocumentTypeById --------------------
