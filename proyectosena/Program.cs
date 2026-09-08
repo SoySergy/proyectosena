@@ -64,9 +64,19 @@ builder.Services.AddCors(options =>
 // y son justo los que dan acceso. Medido sobre este proyecto: 37 intentos por
 // segundo contra un código, sin que nada los frenara.
 //
-// El freno va por IP, así que es la segunda línea y no la primera: quien tenga
-// muchas IP se lo salta. La defensa que no se salta es el contador de intentos
-// del código, que no mira de dónde viene el golpe.
+// Son tres capas, y cada una tapa lo que la anterior deja pasar:
+//
+//   1. El contador de intentos del código (5 por código, en
+//      VerificationCodeService). Es la única que no se salta: no mira de dónde
+//      viene el golpe.
+//   2. El cupo por destinatario, más abajo: protege el buzón de cada persona.
+//   3. El tope general de envíos: impide pedir códigos para mil direcciones
+//      distintas, que con la capa 2 sola estrenarían sus cinco cada una.
+//
+// La política Auth sigue repartiendo por IP, y eso es un problema conocido:
+// detrás de Docker todos los clientes llegan con la misma dirección, así que
+// son diez por minuto para toda la instalación y dos personas probando a la
+// vez se estorban. Pendiente de decidir (AL-02).
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -82,12 +92,34 @@ builder.Services.AddRateLimiter(options =>
 
     // Más estricto porque cada llamada manda un correo a una dirección que elige
     // quien llama: sin freno se inunda el buzón de otra persona.
+    //
+    // Reparte por DESTINATARIO, no por IP: lo que se protege es el buzón de cada
+    // persona, y así dos personas distintas dejan de estorbarse.
     options.AddPolicy(RateLimitPolicies.Email, http =>
-        RateLimitPartition.GetFixedWindowLimiter(ClientKey(http), _ => new FixedWindowRateLimiterOptions
+        RateLimitPartition.GetFixedWindowLimiter(ClaveDeDestinatario(http), _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 5,
             Window = TimeSpan.FromMinutes(5)
         }));
+
+    // ── Tope general de envíos ────────────────────────────────────────
+    //
+    // El cupo por destinatario protege el buzón de cada persona, pero no impide
+    // pedir códigos para mil direcciones distintas: cada una estrenaría sus cinco.
+    // Este tope cuenta TODOS los envíos juntos, sin mirar a quién van.
+    //
+    // Alcanza solo a los dos endpoints que mandan correo. El resto de la
+    // aplicación pasa sin tope, para no frenar el uso normal.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
+        EsEndpointDeCorreo(http)
+            ? RateLimitPartition.GetFixedWindowLimiter("correo-total", _ => new FixedWindowRateLimiterOptions
+            {
+                // Holgado a propósito: una sustentación con varios equipos no debe
+                // chocar con esto, pero un envío masivo sí.
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(5)
+            })
+            : RateLimitPartition.GetNoLimiter<string>("sin-tope"));
 
     // Texto plano, como el resto de errores de negocio del proyecto
     options.OnRejected = async (context, token) =>
@@ -102,10 +134,25 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// Quién es «el que llama». Detrás de un proxy la IP sería la del proxy, no la
-// del navegador: hoy nginx solo sirve archivos y no hace de intermediario.
+// Quién es «el que llama», por dirección IP.
+//
+// Ojo: detrás de Docker TODOS los clientes llegan con la misma IP. Se comprobó
+// gastando el cupo desde la terminal y viendo al navegador recibir 429 sin haber
+// pedido nada. Por eso esto ya no vale para separar personas: sirve solo como
+// tope general.
 static string ClientKey(HttpContext http)
     => http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+
+// A quién se le va a mandar el correo. Lo deja ClientEmailMiddleware leyendo el
+// cuerpo. Si no viniera, se cae a la IP para no quedarse sin ningún freno.
+static string ClaveDeDestinatario(HttpContext http)
+    => http.Items[ClientEmailMiddleware.ItemKey] as string ?? ClientKey(http);
+
+// Los dos endpoints que mandan un correo a una dirección que elige quien llama.
+// Son los únicos con tope general: los demás no envían nada.
+static bool EsEndpointDeCorreo(HttpContext http)
+    => http.Request.Path.StartsWithSegments("/api/auth/forgot-password", StringComparison.OrdinalIgnoreCase)
+    || http.Request.Path.StartsWithSegments("/api/auth/resend-verification", StringComparison.OrdinalIgnoreCase);
 
 // ── 6. SWAGGER ────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
@@ -185,6 +232,11 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandler();
 
 app.UseCors("RecyRoutePolicy");
+
+// Antes del limitador: deja el correo del cuerpo en HttpContext.Items para que
+// el cupo se pueda repartir por persona y no por IP —que detrás de Docker es la
+// misma para todos—. Rebobina el cuerpo, así los controladores lo leen intacto.
+app.UseMiddleware<ClientEmailMiddleware>();
 
 // Después de UseRouting (que WebApplication añade solo) para que conozca el
 // endpoint y sepa qué política aplicarle. Antes de autenticar: frenar es más
