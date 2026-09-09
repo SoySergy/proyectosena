@@ -1,4 +1,17 @@
-﻿export const API_BASE = "http://localhost:8080/api";
+﻿// ── A qué dirección se le piden los datos ─────────────────────────
+//
+// En el ordenador, Docker levanta dos cosas separadas: Nginx sirve estas
+// páginas en el puerto 8081 y la API escucha en el 8080. Ahí hace falta
+// escribir la dirección entera, porque son dos sitios distintos.
+//
+// Al publicarlo, no: la propia API sirve estas páginas desde su carpeta
+// wwwroot (Program.cs usa UseStaticFiles), así que la web y los datos
+// viven en el mismo dominio. Una ruta relativa vale para cualquier
+// dirección —la de Render, un dominio propio, el que sea— sin volver a
+// tocar este archivo ni compilar nada distinto.
+export const API_BASE = window.location.port === "8081"
+    ? "http://localhost:8080/api"
+    : "/api";
 
 // ── Cabeceras de las peticiones con sesión ────────────────────────
 
