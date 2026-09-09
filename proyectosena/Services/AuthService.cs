@@ -16,9 +16,13 @@ namespace proyectosena.Services
 {
     public class AuthService : IAuthService
     {
-        // Una sola definición de cuánto dura la sesión: la usan el token y la
-        // fecha que se le informa al cliente. Antes el 60 estaba escrito tres veces.
-        private const int TokenLifetimeMinutes = 60;
+        // Cuánto dura la sesión si la configuración no dice nada.
+        //
+        // Antes este 60 era el valor real y no había forma de cambiarlo: el
+        // docker-compose declaraba Jwt__TokenExpirationMinutes: "120" y nadie
+        // la leía nunca, así que la sesión duraba una hora por mucho que
+        // pusiera otra cosa. Se comprobó decodificando un token recién emitido.
+        private const int TokenLifetimeMinutesPorDefecto = 60;
 
         // El código para confirmar el correo dura más que uno de recuperación:
         // quien acaba de registrarse puede no tener el correo a mano.
@@ -226,6 +230,21 @@ namespace proyectosena.Services
         // El correo del flujo de recuperación se normaliza en un solo sitio.
         private static string Normalize(string email) => email.Trim().ToLower();
 
+        /// <summary>
+        /// Minutos que dura la sesión, según Jwt:TokenExpirationMinutes.
+        /// </summary>
+        /// <remarks>
+        /// Si el valor falta, no es un número o no es positivo, se usa el de
+        /// por defecto: es preferible una sesión de una hora que una que
+        /// caduca al instante —o que no caduca nunca— por un dedazo en la
+        /// configuración. Se lee cada vez, que es una operación de diccionario
+        /// y ocurre solo al iniciar sesión.
+        /// </remarks>
+        private int TokenLifetimeMinutes =>
+            int.TryParse(_configuration["Jwt:TokenExpirationMinutes"], out var minutos) && minutos > 0
+                ? minutos
+                : TokenLifetimeMinutesPorDefecto;
+
         // Arma la sesión que se devuelve tras un login o un registro correctos.
         private AuthResponseDto BuildSession(User user) => new()
         {
@@ -249,6 +268,10 @@ namespace proyectosena.Services
                 audience: _configuration["Jwt:Audience"],
                 claims: new List<Claim>
                 {
+                    // Identificador único de ESTE token, no del usuario. Sirve para
+                    // poder anularlo al cerrar sesión: sin él, todos los tokens de
+                    // una persona son indistinguibles y no hay cuál revocar.
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     // IdUser en el token — el frontend lo usa para identificar al usuario
                     new Claim(ClaimTypes.NameIdentifier, user.IdUser.ToString()),
                     // El email hace de nombre de usuario

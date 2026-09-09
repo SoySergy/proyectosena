@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/css/components/headers/headerusuario.css">
     <link rel="stylesheet" href="/css/components/cards.css">
     <link rel="stylesheet" href="/css/components/form.css">
+    <link rel="stylesheet" href="/css/components/notificaciones.css">
     <!-- Page -->
     <link rel="stylesheet" href="/css/pages/citizen/dashboard.css">
     <link rel="stylesheet" href="/css/pages/manager/dashboard.css">
@@ -25,6 +26,19 @@
         </h1>
         <div class="header-user">
             <span id="welcomeMsg" class="header-user__name"></span>
+            <div class="notificaciones">
+                <button class="notificaciones__boton" id="notifTrigger" type="button"
+                        aria-label="Notificaciones" aria-haspopup="true" aria-expanded="false">
+                    <span class="notificaciones__icono" aria-hidden="true"></span>
+                    <span class="notificaciones__contador" id="notifCount" hidden></span>
+                </button>
+                <div class="notificaciones__panel" id="notifPanel" role="menu">
+                    <div class="notificaciones__cabecera">
+                        <span class="notificaciones__titulo">Notificaciones</span>
+                    </div>
+                    <div class="notificaciones__lista" id="notifList"></div>
+                </div>
+            </div>
             <div class="header-user__menu">
                 <button class="header-user__trigger"
                         id="userMenuTrigger"

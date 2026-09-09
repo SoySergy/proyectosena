@@ -1,7 +1,8 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
-import { requireRole } from "../../utils/roleGuard.js";
+import { requireRole, ROLES } from "../../utils/roleGuard.js";
 import { API_BASE } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
+import { initNotificaciones } from "../../utils/notificaciones.js";
 // /js/pages/citizen/dashboard.js
 // ============================================================
 // INICIALIZACIÓN
@@ -11,7 +12,10 @@ import { escapeHtml } from "../../utils/html.js";
 checkAuth();
 
 // 🛡️ Verificar que el usuario sea Citizen (redirige si es Manager)
-requireRole("Citizen");
+requireRole(ROLES.CITIZEN);
+
+// Campana de avisos sin leer, la misma que en los otros paneles.
+initNotificaciones();
 
 // 👤 Leer usuario desde localStorage (guardado en login)
 const user = JSON.parse(localStorage.getItem("user"));

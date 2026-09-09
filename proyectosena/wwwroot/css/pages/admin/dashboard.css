@@ -1,0 +1,170 @@
+﻿/* =============================================
+   DASHBOARD ADMINISTRADOR (Administrator)
+   =============================================
+   Esta hoja es corta a proposito. La pagina ya enlaza la del
+   ciudadano, de donde hereda la disposicion (.dashboard-main,
+   .main-nav, .nav-btn, .section), las tarjetas de solicitud
+   (.request-card, .card-header, .card-body, .card-actions),
+   las etiquetas de estado (.status-badge y sus variantes) y
+   los mensajes (.msg, .loading-msg, .empty-msg).
+
+   Aqui solo vive lo que no existia en ningun sitio: la rejilla
+   de numeros del resumen.
+   ============================================= */
+
+/* ===== REJILLA DE NUMEROS DEL SISTEMA ===== */
+
+/* auto-fit deja que el navegador decida cuantas columnas caben, sin
+   escribir ni un solo media query.
+
+   Medido en el navegador: tres columnas tanto en escritorio como en
+   tableta y una sola en movil. En escritorio no salen mas porque la
+   tarjeta que las contiene no pasa de 640px (cards.css), asi que el
+   ancho util es el mismo que en tableta. */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.85rem;
+    margin-top: 1.25rem;
+}
+
+.stat-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.1rem 1.25rem;
+    border: 1.5px solid #e8ede9;
+    border-radius: var(--radius-md);
+    background: #fff;
+    overflow: hidden;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+    .stat-card:hover {
+        box-shadow: 0 2px 10px rgba(26, 92, 58, 0.1);
+        border-color: #c8ddd0;
+    }
+
+    /* La franja de color va en ::before y no como borde superior:
+       asi una tarjeta sin modificador se ve exactamente igual que
+       las demas, con la franja en el verde de siempre. */
+    .stat-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--color-primary);
+    }
+
+.stat-card__value {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    line-height: 1.1;
+    color: var(--color-primary-dark);
+}
+
+.stat-card__label {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    color: var(--color-text-secondary);
+}
+
+/* ===== ACENTOS POR TIPO DE DATO ===== */
+
+/* Son nueve numeros seguidos. Todos del mismo color no se leen:
+   el acento deja ver de un vistazo que esta pendiente, que se
+   completo y que se rechazo. Los tonos son los mismos que ya usan
+   las etiquetas .status-* del panel del ciudadano. */
+
+.stat-card--warning::before {
+    background: var(--color-warning);
+}
+
+.stat-card--success::before {
+    background: var(--color-success);
+}
+
+.stat-card--danger::before {
+    background: var(--color-danger);
+}
+
+/* El amarillo de --color-warning no se lee sobre blanco, asi que
+   para el numero se usa el mismo marron que .status-pending. */
+.stat-card--warning .stat-card__value {
+    color: #92400e;
+}
+
+.stat-card--success .stat-card__value {
+    color: var(--color-success);
+}
+
+.stat-card--danger .stat-card__value {
+    color: var(--color-danger);
+}
+
+/* ===== BOTONES DE LAS TARJETAS DE SOLICITUD ===== */
+
+/* El panel del gestor ya tiene botones de este tamaño (.btn-accept), pero
+   viven en su hoja y esta página no la carga. Se repite la forma —no el
+   selector— para que los dos paneles se vean igual.
+
+   No usan .btn de components/buttons.css a propósito: ese lleva
+   width:100% pensado para formularios y aquí ocuparía la tarjeta entera. */
+.btn-card {
+    padding: 0.45rem 1rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    background-color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+    .btn-card:hover {
+        opacity: 0.88;
+    }
+
+    /* Mientras se manda la decisión al servidor el botón se apaga, para que
+       no se pueda aprobar dos veces la misma solicitud con doble clic. */
+    .btn-card:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+.btn-card--approve {
+    background-color: var(--icon-color);
+}
+
+.btn-card--reject {
+    background-color: var(--color-danger);
+}
+
+/* Hay que separar los dos botones: .card-actions solo los empuja a la derecha. */
+.card-actions .btn-card + .btn-card {
+    margin-left: 0.5rem;
+}
+
+/* ===== CAJA DEL MOTIVO DE RECHAZO ===== */
+
+/* Aparece dentro de la propia tarjeta al pulsar «Rechazar», en vez de abrir
+   una ventana aparte: así se sigue viendo de quién es la solicitud que se
+   está rechazando mientras se escribe el motivo. */
+.reject-box {
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1.5px solid #e8ede9;
+}
+
+    /* .form-input reserva sitio a la izquierda para el iconito de los
+       formularios. Aquí no hay icono, así que se recupera ese hueco. */
+    .reject-box .form-input {
+        padding-left: 14px;
+        resize: vertical;
+        min-height: 62px;
+    }
