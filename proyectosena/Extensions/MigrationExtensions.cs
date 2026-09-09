@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
 
@@ -9,7 +9,7 @@ namespace proyectosena.Extensions
     /// de datos acepte conexiones.
     /// </summary>
     /// <remarks>
-    /// Antes esto era un <c>Migrate()</c> pelado en <c>Program.cs</c>. Si SQL
+    /// Antes esto era un <c>Migrate()</c> pelado en <c>Program.cs</c>. Si PostgreSQL
     /// Server todavía no estaba escuchando, la aplicación reventaba con una
     /// excepción sin controlar y Docker la reiniciaba una y otra vez hasta que
     /// la base respondiera. El <c>depends_on: service_healthy</c> del compose no
@@ -48,7 +48,7 @@ namespace proyectosena.Extensions
                     return;
                 }
                 // La base todavía no está lista: se espera y se vuelve a intentar
-                catch (SqlException ex) when (attempt < MaxAttempts)
+                catch (NpgsqlException ex) when (attempt < MaxAttempts)
                 {
                     logger.LogWarning(
                         "La base de datos aún no acepta conexiones (intento {Intento} de {Maximo}). " +
@@ -58,7 +58,7 @@ namespace proyectosena.Extensions
                     await Task.Delay(DelayBetweenAttempts);
                 }
                 // Se agotó la espera: sin esquema no tiene sentido atender peticiones
-                catch (SqlException ex)
+                catch (NpgsqlException ex)
                 {
                     logger.LogCritical(ex,
                         "No se pudo conectar a la base de datos tras {Maximo} intentos ({Segundos} s en total). " +

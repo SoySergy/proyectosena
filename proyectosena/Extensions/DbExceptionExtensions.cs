@@ -1,5 +1,5 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace proyectosena.Extensions
 {
@@ -8,23 +8,26 @@ namespace proyectosena.Extensions
     /// </summary>
     public static class DbExceptionExtensions
     {
-        // SQL Server devuelve 2627 cuando se viola una constraint UNIQUE o PRIMARY KEY,
-        // y 2601 cuando se viola un índice único. Para el negocio es lo mismo:
-        // alguien intentó guardar un valor que ya existe.
-        private const int UniqueConstraintViolation = 2627;
-        private const int DuplicateKeyInIndex = 2601;
+        // PostgreSQL usa un código estándar de cinco caracteres (SQLSTATE) para
+        // cada tipo de error. El 23505 es "unique_violation": alguien intentó
+        // guardar un valor que ya existe, sea por una constraint UNIQUE, por la
+        // clave primaria o por un índice único.
+        //
+        // Con SQL Server esto eran dos números distintos (2627 y 2601) porque
+        // separaba la constraint del índice; PostgreSQL los junta en uno.
+        private const string UniqueViolation = "23505";
 
         /// <summary>
         /// True si el guardado falló porque el valor ya existe en la base.
         /// </summary>
         /// <remarks>
-        /// Antes estos dos números estaban escritos a mano en <c>AuthService</c> y en
-        /// <c>AdminController</c>. Un número mal copiado no rompe la compilación:
+        /// Antes estos códigos estaban escritos a mano en <c>AuthService</c> y en
+        /// <c>AdminController</c>. Uno mal copiado no rompe la compilación:
         /// simplemente el error deja de reconocerse y el usuario recibe un 500 en vez
         /// del mensaje que le explica qué pasó.
         /// </remarks>
         public static bool IsDuplicateKey(this DbUpdateException ex)
-            => ex.InnerException is SqlException sqlEx
-               && (sqlEx.Number == UniqueConstraintViolation || sqlEx.Number == DuplicateKeyInIndex);
+            => ex.InnerException is PostgresException pgEx
+               && pgEx.SqlState == UniqueViolation;
     }
 }

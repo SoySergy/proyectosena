@@ -71,7 +71,10 @@ namespace proyectosena.Services
                 LastName = dto.LastName,
                 PhoneNumber = dto.PhoneNumber,
                 Address = dto.Address,
-                Email = dto.Email,
+                // Se guarda en minúsculas para que quede una sola forma del correo
+                // en la base. Con PostgreSQL, "Ana@X.com" y "ana@x.com" serían dos
+                // cuentas distintas, y la persona no sabría con cuál se registró.
+                Email = Normalize(dto.Email),
                 // La contraseña se hashea antes de guardarla; nunca se guarda en texto plano
                 Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 RegistrationDate = DateTime.UtcNow,
