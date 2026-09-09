@@ -18,7 +18,7 @@ namespace proyectosena
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
             services.AddDbContext<RecyRouteDbContext>(options =>
-                options.UseSqlServer(connectionString));
+                options.UseNpgsql(connectionString));
 
             // ── Repositories 
             // UserRepository cumple los tres contratos de usuario. Se registra la
