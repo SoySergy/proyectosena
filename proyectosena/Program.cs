@@ -5,9 +5,11 @@ using System.Threading.RateLimiting;
 using Microsoft.OpenApi;
 using proyectosena;
 using proyectosena.Extensions;
+using proyectosena.Interfaces.Services;
 using proyectosena.Middleware;
 using proyectosena.Models;
 using proyectosena.Services;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,6 +38,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                                            Encoding.UTF8.GetBytes(
                                                builder.Configuration["Jwt:Key"]!)),
             ClockSkew = TimeSpan.Zero
+        };
+
+        // La firma y la fecha no bastan: un token de alguien que ya cerró sesión
+        // sigue estando bien firmado y sin caducar. Aquí se comprueba, además,
+        // que no esté en la lista de anulados.
+        //
+        // Va en OnTokenValidated y no en un middleware aparte para que ningún
+        // endpoint pueda saltárselo: todo lo que exige [Authorize] pasa por aquí.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var revocados = context.HttpContext.RequestServices
+                    .GetRequiredService<IRevokedTokenService>();
+
+                var tokenId = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+
+                if (revocados.IsRevoked(tokenId ?? string.Empty))
+                    context.Fail("El token fue anulado al cerrar sesión.");
+
+                return Task.CompletedTask;
+            }
         };
     });
 

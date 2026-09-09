@@ -59,6 +59,11 @@ namespace proyectosena
             services.AddSingleton<IEmailService, EmailService>();
             services.AddSingleton<IVerificationCodeService, VerificationCodeService>();
 
+            // Singleton por lo mismo: la lista de tokens anulados al cerrar sesión
+            // tiene que ser la misma para todas las peticiones. Como Scoped, cada
+            // una recibiría una lista vacía y no se revocaría nada.
+            services.AddSingleton<IRevokedTokenService, RevokedTokenService>();
+
             return services;
         }
     }

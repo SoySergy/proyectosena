@@ -1,14 +1,18 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
-import { requireRole } from "../../utils/roleGuard.js";
+import { requireRole, ROLES } from "../../utils/roleGuard.js";
 import { API_BASE } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
+import { initNotificaciones } from "../../utils/notificaciones.js";
 //js/pages / manager / dashboard.js
 // ============================================================
 // INICIALIZACIÓN
 // ============================================================
 
 checkAuth();
-requireRole("Manager");
+requireRole(ROLES.MANAGER);
+
+// Campana de avisos sin leer, la misma que en los otros paneles.
+initNotificaciones();
 
 const user = JSON.parse(localStorage.getItem("user"));
 const token = localStorage.getItem("token");

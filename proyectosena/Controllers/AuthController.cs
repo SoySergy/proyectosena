@@ -5,6 +5,7 @@ using proyectosena.DTOs.Auth;
 using proyectosena.DTOs.Auth.Password;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace proyectosena.Controllers
 {
@@ -15,10 +16,12 @@ namespace proyectosena.Controllers
     {
         // El controlador solo traduce HTTP: las reglas viven en el servicio
         private readonly IAuthService _authService;
+        private readonly IRevokedTokenService _revokedTokens;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, IRevokedTokenService revokedTokens)
         {
             _authService = authService;
+            _revokedTokens = revokedTokens;
         }
 
         // -------------------- POST: api/auth/Register --------------------
@@ -184,6 +187,36 @@ namespace proyectosena.Controllers
                 return NotFound("Usuario no encontrado.");
 
             return Ok(new { message = "Contraseña actualizada correctamente." });
+        }
+
+        // -------------------- POST: api/auth/Logout --------------------
+        // Anula el token con el que se llama, para que cerrar sesión signifique
+        // algo aquí y no solo en el navegador.
+        //
+        // Sin esto, el botón únicamente borraba el token de localStorage: el
+        // servidor lo seguía aceptando durante la hora que le quedaba de vida.
+        // Se comprobó guardando un token, cerrando sesión y volviéndolo a usar.
+        [HttpPost("Logout")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public IActionResult Logout()
+        {
+            // Ambos claims los pone el propio servidor al emitir el token, y
+            // llegar aquí ya exige que la firma sea válida.
+            var tokenId = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            var expiracion = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
+
+            // Un token emitido antes de este cambio no trae identificador y no
+            // hay forma de anularlo. Caducará solo; no es motivo para dar error.
+            if (string.IsNullOrEmpty(tokenId))
+                return Ok(new { message = "Sesión cerrada." });
+
+            var expiraEn = long.TryParse(expiracion, out var segundos)
+                ? DateTimeOffset.FromUnixTimeSeconds(segundos).UtcDateTime
+                : DateTime.UtcNow.AddHours(1);
+
+            _revokedTokens.Revoke(tokenId, expiraEn);
+
+            return Ok(new { message = "Sesión cerrada." });
         }
     }
 }
