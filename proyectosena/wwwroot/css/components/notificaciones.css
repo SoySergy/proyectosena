@@ -1,0 +1,186 @@
+﻿/* =============================================
+   NOTIFICACIONES (campana de la cabecera)
+   =============================================
+   Vive en su propio archivo y no dentro del bloque .header-user
+   porque las tres pantallas la comparten y su hoja de estilos no.
+
+   Las medidas están copiadas de .header-user__trigger a propósito:
+   la campana y el avatar tienen que verse como dos botones iguales,
+   uno al lado del otro.
+   ============================================= */
+
+.notificaciones {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.notificaciones__boton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+}
+
+    .notificaciones__boton:hover {
+        background-color: rgba(255, 255, 255, 0.12);
+    }
+
+/* El icono se pinta con máscara y no con <img> por un motivo concreto:
+   notificaciones.svg trae fill="#1f1f1f" fijo, y puesto tal cual sobre el
+   verde de la cabecera casi no se veía. Con la máscara el color lo decide
+   el CSS, que es el mismo truco que usa .form-input-icon en form.css. */
+.notificaciones__icono {
+    width: 18px;
+    height: 18px;
+    background-color: var(--color-text-light);
+    mask-image: url('../../assets/icons/notificaciones.svg');
+    mask-repeat: no-repeat;
+    mask-size: contain;
+    mask-position: center;
+    -webkit-mask-image: url('../../assets/icons/notificaciones.svg');
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    -webkit-mask-position: center;
+}
+
+/* El numerito rojo va encima de la campana y no al lado: así aparecer
+   o desaparecer no mueve de sitio al resto de la cabecera. */
+.notificaciones__contador {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background-color: var(--color-danger);
+    color: var(--color-text-light);
+    font-size: 0.65rem;
+    font-weight: var(--font-bold);
+    line-height: 17px;
+    text-align: center;
+    /* Un borde del color de la cabecera lo despega de la campana. Va el
+       valor literal y no una variable porque así está escrito el fondo en
+       headerusuario.css: si un día cambia, cambian los dos juntos. */
+    box-shadow: 0 0 0 2px #1A5C3A;
+}
+
+/* ===== PANEL DESPLEGABLE ===== */
+
+/* Mismas reglas de posición que .header-user__dropdown para que los dos
+   paneles de la cabecera caigan igual. Solo cambia el ancho: aquí hay
+   frases enteras, no dos opciones de menú. */
+.notificaciones__panel {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 340px;
+    max-width: calc(100vw - 24px);
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    display: none;
+    z-index: 200;
+    overflow: hidden;
+}
+
+    .notificaciones__panel.is-open {
+        display: block;
+    }
+
+.notificaciones__cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1.5px solid #e8ede9;
+}
+
+.notificaciones__titulo {
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+    color: var(--color-text-primary);
+}
+
+/* La lista se limita en alto y hace su propio scroll: con treinta y tres
+   avisos, el panel llegaría más abajo que la pantalla. */
+.notificaciones__lista {
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.notif-item {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid #f0f4f1;
+}
+
+    .notif-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Los que no se han leído llevan fondo, para distinguirlos de un vistazo */
+    .notif-item--sin-leer {
+        background-color: #f3f8f5;
+    }
+
+/* Punto de color según el tipo que manda el servidor (Info, Success,
+   Warning). Es lo único que distingue un aviso bueno de uno de aviso. */
+.notif-item__punto {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+}
+
+.notif-item__punto--success {
+    background-color: var(--color-success);
+}
+
+.notif-item__punto--warning {
+    background-color: var(--color-warning);
+}
+
+.notif-item__cuerpo {
+    min-width: 0;
+}
+
+.notif-item__titulo {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-primary);
+}
+
+.notif-item__mensaje {
+    margin: 0.15rem 0 0;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    line-height: 1.35;
+}
+
+.notif-item__fecha {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.68rem;
+    color: var(--color-text-secondary);
+}
+
+.notificaciones__vacio {
+    padding: 1.4rem 0.9rem;
+    text-align: center;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}

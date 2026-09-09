@@ -1,10 +1,213 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="utf-8" />
-    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecyRoute Administrador</title>
+    <!--Favicon-->
+    <link rel="icon" href="/assets/icons/recyroute.svg" />
+    <!--Styles-->
+    <link rel="stylesheet" href="/css/base/styles.css">
+    <link rel="stylesheet" href="/css/components/headers/headerusuario.css">
+    <link rel="stylesheet" href="/css/components/cards.css">
+    <link rel="stylesheet" href="/css/components/form.css">
+    <link rel="stylesheet" href="/css/components/notificaciones.css">
+    <!-- La disposición de los paneles (main-nav, section, dashboard-main) vive
+         en la hoja del ciudadano; el panel del gestor la enlaza igual. -->
+    <link rel="stylesheet" href="/css/pages/citizen/dashboard.css">
+    <link rel="stylesheet" href="/css/pages/admin/dashboard.css">
 </head>
 <body>
 
+    <!--===== HEADER PRINCIPAL =====-->
+    <header class="header-usuario">
+        <h1 class="recyroute">
+            recyroute
+        </h1>
+        <div class="header-user">
+            <span id="welcomeMsg" class="header-user__name"></span>
+            <div class="notificaciones">
+                <button class="notificaciones__boton" id="notifTrigger" type="button"
+                        aria-label="Notificaciones" aria-haspopup="true" aria-expanded="false">
+                    <span class="notificaciones__icono" aria-hidden="true"></span>
+                    <span class="notificaciones__contador" id="notifCount" hidden></span>
+                </button>
+                <div class="notificaciones__panel" id="notifPanel" role="menu">
+                    <div class="notificaciones__cabecera">
+                        <span class="notificaciones__titulo">Notificaciones</span>
+                    </div>
+                    <div class="notificaciones__lista" id="notifList"></div>
+                </div>
+            </div>
+            <div class="header-user__menu">
+                <button class="header-user__trigger"
+                        id="userMenuTrigger"
+                        type="button"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                    <span class="header-user__avatar" aria-hidden="true">
+                        <img src="/assets/icons/usuario.svg" alt="" />
+                    </span>
+                </button>
+                <div class="header-user__dropdown" id="userDropdown" role="menu">
+                    <div class="dropdown-email" id="userEmail">cargando...</div>
+                    <a href="/pages/general/settings/profile.html" class="dropdown-item" role="menuitem">
+                        <img src="/assets/icons/configuracion.svg" alt="" class="dropdown-item__icon" />
+                        Configuración
+                    </a>
+                    <div class="dropdown-separator"></div>
+                    <button class="dropdown-item dropdown-item--danger" id="logoutBtn" type="button" role="menuitem">
+                        <img src="/assets/icons/salir.svg" alt="" class="dropdown-item__icon" />
+                        Cerrar sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+
+    <nav class="main-nav">
+        <button class="nav-btn active" data-section="resumen">
+            Resumen
+        </button>
+        <button class="nav-btn" data-section="solicitudes-gestor">
+            Solicitudes de gestor
+        </button>
+        <button class="nav-btn" data-section="crear-gestor">
+            Crear gestor
+        </button>
+    </nav>
+
+    <main class="dashboard-main">
+
+        <!-- SECCIÓN 1: RESUMEN -->
+        <section id="resumen" class="section active">
+            <div class="card">
+                <div class="section-header">
+                    <div>
+                        <h2 class="card__title">Resumen del sistema</h2>
+                        <p class="card__subtitle">Cómo van las solicitudes y cuánta gente hay activa.</p>
+                    </div>
+                    <button id="refreshStatsBtn" class="btn btn-secondary">Actualizar</button>
+                </div>
+                <div id="stats-message" class="form-hint" role="alert"></div>
+                <div id="stats-loading" class="loading-msg" style="display:none">Cargando...</div>
+                <div id="stats-grid" class="stats-grid"></div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: SOLICITUDES DE GESTOR -->
+        <section id="solicitudes-gestor" class="section">
+            <div class="card">
+                <div class="section-header">
+                    <div>
+                        <h2 class="card__title">Solicitudes de gestor</h2>
+                        <p class="card__subtitle">Ciudadanos que piden el rol de gestor. Aprueba o rechaza con un motivo.</p>
+                    </div>
+                    <button id="refreshApplicationsBtn" class="btn btn-secondary">Actualizar</button>
+                </div>
+                <div id="applications-message" class="form-hint" role="alert"></div>
+                <div id="applications-loading" class="loading-msg" style="display:none">Cargando...</div>
+                <div id="applications-list"></div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: CREAR GESTOR -->
+        <section id="crear-gestor" class="section">
+            <div class="card">
+                <div class="section-header">
+                    <div>
+                        <h2 class="card__title">Crear gestor</h2>
+                        <p class="card__subtitle">
+                            Se le envía un código por correo para que ponga su propia contraseña.
+                            Aquí no se escribe ninguna.
+                        </p>
+                    </div>
+                </div>
+
+                <form id="createManagerForm">
+
+                    <!-- Fila: Nombre y Apellido -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="managerName">Nombre</label>
+                            <div class="form-input-wrapper">
+                                <input type="text" id="managerName" class="form-input form-input--no-icon"
+                                       placeholder="Nombre del gestor" required autocomplete="off" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="managerLastName">Apellido</label>
+                            <div class="form-input-wrapper">
+                                <input type="text" id="managerLastName" class="form-input form-input--no-icon"
+                                       placeholder="Apellido del gestor" required autocomplete="off" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fila: Tipo de documento y Número de documento -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="managerDocumentType">Tipo de documento</label>
+                            <div class="form-input-wrapper">
+                                <span class="form-input-icon icon-tipodocumento" aria-hidden="true"></span>
+                                <!-- Las opciones las carga el JS desde la API: si se escribieran
+                                     aquí a mano quedarían desfasadas al cambiar el catálogo. -->
+                                <select id="managerDocumentType" class="form-input" required>
+                                    <option value="">Cargando...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="managerDocumentNumber">Número de documento</label>
+                            <div class="form-input-wrapper">
+                                <input type="text" id="managerDocumentNumber" class="form-input form-input--no-icon"
+                                       placeholder="Ej: 1234567890" required autocomplete="off" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campo: Correo electrónico -->
+                    <div class="form-group">
+                        <label class="form-label" for="managerEmail">Correo electrónico</label>
+                        <div class="form-input-wrapper">
+                            <span class="form-input-icon icon-correo" aria-hidden="true"></span>
+                            <input type="email" id="managerEmail" class="form-input"
+                                   placeholder="gestor@ejemplo.com" required autocomplete="off" />
+                        </div>
+                    </div>
+
+                    <!-- Fila: Teléfono y Dirección -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="managerPhone">Teléfono</label>
+                            <div class="form-input-wrapper">
+                                <span class="form-input-icon icon-telefono" aria-hidden="true"></span>
+                                <input type="tel" id="managerPhone" class="form-input"
+                                       placeholder="Ej: 3001234567" required autocomplete="off" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="managerAddress">Dirección</label>
+                            <div class="form-input-wrapper">
+                                <span class="form-input-icon icon-direccion" aria-hidden="true"></span>
+                                <input type="text" id="managerAddress" class="form-input"
+                                       placeholder="Ej: Calle 45 #12-30" required autocomplete="off" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="create-message" class="form-hint" role="alert"></div>
+
+                    <button type="submit" id="createManagerBtn" class="btn btn-primary">
+                        Crear y enviar invitación
+                    </button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module" src="/js/pages/admin/dashboard.js"></script>
 </body>
 </html>

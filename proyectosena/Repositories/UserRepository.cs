@@ -79,12 +79,20 @@ namespace proyectosena.Repositories
         }
 
         // Obtiene un usuario por su correo electrónico incluyendo rol y tipo de documento
+        //
+        // La comparación va en minúsculas por los dos lados a propósito. SQL Server
+        // no distinguía mayúsculas y esto daba igual, pero PostgreSQL sí: quien se
+        // registró como "ana@x.com" no podía entrar escribiendo "Ana@X.com", y
+        // tampoco recuperar su contraseña. Se comprobó al migrar: el mismo correo
+        // devolvía 403 en minúsculas y 401 en mayúsculas.
         public async Task<User> GetUserByEmail(string email)
         {
+            var normalizado = (email ?? string.Empty).Trim().ToLower();
+
             return await _context.Users
                                  .Include(u => u.Role)
                                  .Include(u => u.DocumentType)
-                                 .FirstOrDefaultAsync(u => u.Email == email);
+                                 .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizado);
         }
 
         // Obtiene un usuario por su nombre incluyendo rol y tipo de documento

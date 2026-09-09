@@ -37,7 +37,7 @@ namespace proyectosena.Context
                 entity.ToTable("Role");
                 entity.HasKey(r => r.IdRole);
                 entity.Property(r => r.IdRole)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(r => r.RoleName)
                     .IsRequired()
                     .HasMaxLength(50);
@@ -75,7 +75,7 @@ namespace proyectosena.Context
                 entity.ToTable("DocumentType");
                 entity.HasKey(d => d.IdDocumentType);
                 entity.Property(d => d.IdDocumentType)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(d => d.DocumentName)
                     .IsRequired()
                     .HasMaxLength(30);
@@ -101,7 +101,7 @@ namespace proyectosena.Context
                 entity.ToTable("Users");
                 entity.HasKey(u => u.IdUser);
                 entity.Property(u => u.IdUser)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(u => u.IdRole)
                     .IsRequired();
                 entity.Property(u => u.IdDocumentType)
@@ -129,7 +129,7 @@ namespace proyectosena.Context
                     .HasMaxLength(200);
                 entity.Property(u => u.RegistrationDate)
                     .IsRequired()
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 // ── Unique Constraints ─────────────
                 entity.HasIndex(u => u.Email)
@@ -167,7 +167,7 @@ namespace proyectosena.Context
                 entity.ToTable("CollectionRequest");
                 entity.HasKey(s => s.IdRequest);
                 entity.Property(s => s.IdRequest)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(s => s.IdUser)
                     .IsRequired();
                 entity.Property(s => s.CollectionDate)
@@ -187,7 +187,7 @@ namespace proyectosena.Context
                     .HasDefaultValue("Pending");
                 entity.Property(s => s.RequestDate)
                     .IsRequired()
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
                 entity.Property(s => s.WasteTypes)
                     .IsRequired()
                     .HasMaxLength(200);
@@ -211,7 +211,7 @@ namespace proyectosena.Context
                 entity.ToTable("CollectionManagement");
                 entity.HasKey(g => g.IdManagement);
                 entity.Property(g => g.IdManagement)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(g => g.IdRequest)
                     .IsRequired();
                 entity.Property(g => g.IdManager)
@@ -251,7 +251,7 @@ namespace proyectosena.Context
                 entity.ToTable("Notification");
                 entity.HasKey(n => n.IdNotification);
                 entity.Property(n => n.IdNotification)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(n => n.IdUser)
                     .IsRequired(false);
                 entity.Property(n => n.IdRequest)
@@ -267,7 +267,7 @@ namespace proyectosena.Context
                     .HasMaxLength(50);
                 entity.Property(n => n.CreationDate)
                     .IsRequired()
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
                 entity.Property(n => n.IsRead)
                     .IsRequired()
                     .HasDefaultValue(false);
@@ -294,7 +294,7 @@ namespace proyectosena.Context
                 entity.ToTable("History");
                 entity.HasKey(h => h.IdHistory);
                 entity.Property(h => h.IdHistory)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(h => h.IdRequest)
                     .IsRequired();
                 entity.Property(h => h.IdUser)
@@ -307,7 +307,7 @@ namespace proyectosena.Context
                     .HasMaxLength(20);
                 entity.Property(h => h.ChangeDate)
                     .IsRequired()
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
                 entity.Property(h => h.Comment)
                     .HasMaxLength(500)
                     .IsRequired(false);
@@ -334,7 +334,7 @@ namespace proyectosena.Context
                 entity.ToTable("ChatHistory");
                 entity.HasKey(c => c.IdChatHistory);
                 entity.Property(c => c.IdChatHistory)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(c => c.IdRequest)
                     .IsRequired();
                 entity.Property(c => c.IdSender)
@@ -344,7 +344,7 @@ namespace proyectosena.Context
                     .HasMaxLength(1000);
                 entity.Property(c => c.SendDate)
                     .IsRequired()
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
                 entity.Property(c => c.IsRead)
                     .IsRequired()
                     .HasDefaultValue(false);
@@ -369,7 +369,7 @@ namespace proyectosena.Context
                 entity.ToTable("ManagerApplication");
                 entity.HasKey(a => a.IdApplication);
                 entity.Property(a => a.IdApplication)
-                    .HasDefaultValueSql("NEWID()");
+                    .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(a => a.IdUser)
                     .IsRequired();
                 entity.Property(a => a.Motivation)
@@ -381,7 +381,7 @@ namespace proyectosena.Context
                     .HasDefaultValue(ManagerApplicationStatus.Pending);
                 entity.Property(a => a.RequestDate)
                     .IsRequired()
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
                 entity.Property(a => a.ReviewComment)
                     .HasMaxLength(500);
 

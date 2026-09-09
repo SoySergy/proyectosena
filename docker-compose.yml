@@ -2,24 +2,29 @@ version: '3.9'
 
 services:
 
-  # ── BASE DE DATOS: SQL Server ──────────────────────────
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+  # ── BASE DE DATOS: PostgreSQL ─────────────────────────
+  # Se cambió desde SQL Server porque los alojamientos gratuitos (Render y
+  # compañía) ofrecen PostgreSQL, y SQL Server pedía una licencia de pago.
+  postgres:
+    image: postgres:16-alpine
     container_name: recyroute_db
     environment:
-      SA_PASSWORD: "RecyRoute@2024"
-      ACCEPT_EULA: "Y"
-      MSSQL_PID: "Developer"
+      POSTGRES_DB: "RecyRoute"
+      POSTGRES_USER: "recyroute"
+      POSTGRES_PASSWORD: "RecyRoute@2024"
     ports:
-      - "1433:1433"
+      - "5432:5432"
     volumes:
-      - sqlserver_data:/var/opt/mssql
+      - postgres_data:/var/lib/postgresql/data
+    # Se reinicia solo, igual que los otros dos. Antes no lo hacía y al
+    # reabrir Docker la API arrancaba sin base de datos.
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'RecyRoute@2024' -Q 'SELECT 1' -No -C || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U recyroute -d RecyRoute"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 30s
+      start_period: 10s
 
   # ── APLICACIÓN: API ASP.NET Core ──────────────────────
   api:
@@ -32,7 +37,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=RecyRoute;User Id=sa;Password=RecyRoute@2024;TrustServerCertificate=True;MultipleActiveResultSets=True"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=RecyRoute;Username=recyroute;Password=RecyRoute@2024"
       Jwt__Key: "TuClaveSecretaSuperSeguraDeAlMenos32Caracteres!"
       Jwt__Issuer: "RecyRouteAPI"
       Jwt__Audience: "RecyRouteClients"
@@ -48,7 +53,7 @@ services:
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:8080"
     depends_on:
-      sqlserver:
+      postgres:
         condition: service_healthy
     restart: unless-stopped
 
@@ -60,9 +65,12 @@ services:
       - "8081:80"
     volumes:
       - ./proyectosena/wwwroot:/usr/share/nginx/html:ro   # ← Bind Mount: lee directo del host, sin rebuild
+      # Sin este archivo Nginx no manda Cache-Control y el navegador sirve
+      # versiones viejas: el panel del administrador salia en blanco y sin guardia.
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - api
     restart: unless-stopped
 
 volumes:
-  sqlserver_data:
+  postgres_data:

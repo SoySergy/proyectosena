@@ -1,13 +1,28 @@
 ﻿/**
  * roleGuard.js
  * Maneja el enrutamiento y protección de páginas según el rol del usuario.
- * Roles válidos: "Citizen" | "Manager"
+ * Los nombres de rol se exportan en ROLES: usarlos en vez de escribirlos.
  */
 
+// ── Nombres de rol ────────────────────────────────────────────
+// Los mismos tres que envía el backend en user.roleName. Allí viven en
+// Models/RoleNames.cs, y por la misma razón: escritos a mano, un dedazo no
+// rompe nada visible —requireRole("Citizien") simplemente echa a la persona
+// a otro panel, en silencio—.
+export const ROLES = {
+    CITIZEN: "Citizen",
+    MANAGER: "Manager",
+    ADMIN: "Administrator",
+};
+
 // ── Rutas por rol ─────────────────────────────────────────────
+// Si falta una entrada, quien tenga ese rol entra en un bucle: cae en la rama
+// de «rol desconocido», que manda al login, y el login vuelve a llamar a
+// redirectByRole porque el token sigue guardado.
 const ROLE_DASHBOARDS = {
-    Citizen: "/pages/citizen/dashboard.html",
-    Manager: "/pages/manager/dashboard.html",
+    [ROLES.CITIZEN]: "/pages/citizen/dashboard.html",
+    [ROLES.MANAGER]: "/pages/manager/dashboard.html",
+    [ROLES.ADMIN]: "/pages/admin/dashboard.html",
 };
 
 const LOGIN_URL = "/pages/auth/login.html";
@@ -73,11 +88,11 @@ export function redirectByRole() {
  *
  * Llamar al inicio de cada página protegida.
  *
- * @param {string} allowedRole - "Citizen" o "Manager"
+ * @param {string} allowedRole - uno de ROLES (ROLES.CITIZEN, ROLES.MANAGER, ROLES.ADMIN)
  *
  * @example
- * import { requireRole } from "../../utils/roleGuard.js";
- * requireRole("Manager");
+ * import { requireRole, ROLES } from "../../utils/roleGuard.js";
+ * requireRole(ROLES.MANAGER);
  */
 export function requireRole(allowedRole) {
     const role = getCurrentRole();
