@@ -1,4 +1,21 @@
-export const API_BASE = "http://localhost:8080/api";
+﻿export const API_BASE = "http://localhost:8080/api";
+
+// ── Cabeceras de las peticiones con sesión ────────────────────────
+
+/**
+ * Cabeceras para pedir algo que exige haber iniciado sesión.
+ *
+ * El token se lee aquí dentro y no se recibe por parámetro: así ninguna
+ * pantalla tiene que acordarse de sacarlo de localStorage ni de escribir
+ * bien la palabra "Bearer". Estaba copiado igual en el panel del ciudadano
+ * y en el del gestor; con el del administrador iban a ser tres.
+ */
+export function authHeaders() {
+    return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+    };
+}
 
 // ── Lectura de las respuestas del backend ─────────────────────────
 //
