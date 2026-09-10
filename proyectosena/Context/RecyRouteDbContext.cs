@@ -170,7 +170,20 @@ namespace proyectosena.Context
                     .HasDefaultValueSql("gen_random_uuid()");
                 entity.Property(s => s.IdUser)
                     .IsRequired();
+                // Sin zona horaria a propósito. Esto no es un instante: es el día
+                // del calendario que la persona eligió para que le recojan.
+                //
+                // Con "timestamp with time zone" pasaban dos cosas, y las dos malas.
+                // La primera, que no se podía guardar: PostgreSQL solo acepta UTC en
+                // esa columna y la fecha llega del navegador sin zona, así que crear
+                // una solicitud terminaba en error 500.
+                //
+                // La segunda es más silenciosa. Si se hubiera forzado a UTC para que
+                // entrara, alguien en Colombia (UTC-5) que pidiera el 25 vería el 24
+                // en su pantalla: medianoche en UTC es la tarde del día anterior aquí.
+                // Se comprobó con la misma función de fecha que usa el frontend.
                 entity.Property(s => s.CollectionDate)
+                    .HasColumnType("timestamp without time zone")
                     .IsRequired();
                 entity.Property(s => s.CollectionTime)
                     .IsRequired()

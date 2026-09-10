@@ -9,9 +9,11 @@ services:
     image: postgres:16-alpine
     container_name: recyroute_db
     environment:
-      POSTGRES_DB: "RecyRoute"
-      POSTGRES_USER: "recyroute"
-      POSTGRES_PASSWORD: "RecyRoute@2024"
+      # Los valores viven en .env, que no se sube al repositorio. Antes
+      # estaban escritos aquí y quedaron en cinco commits del historial.
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     ports:
       - "5432:5432"
     volumes:
@@ -20,7 +22,7 @@ services:
     # reabrir Docker la API arrancaba sin base de datos.
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U recyroute -d RecyRoute"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -37,16 +39,19 @@ services:
     ports:
       - "8080:8080"
     environment:
-      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=RecyRoute;Username=recyroute;Password=RecyRoute@2024"
-      Jwt__Key: "TuClaveSecretaSuperSeguraDeAlMenos32Caracteres!"
-      Jwt__Issuer: "RecyRouteAPI"
-      Jwt__Audience: "RecyRouteClients"
-      Jwt__TokenExpirationMinutes: "120"
-      EmailSettings__Host: "smtp.gmail.com"
-      EmailSettings__Port: "587"
-      EmailSettings__SenderEmail: "therecyroute@gmail.com"
-      EmailSettings__SenderName: "RecyRoute"
-      EmailSettings__Password: "qvfpjcoxvjtiodfr"
+      # Ningún valor real vive en este archivo: todos salen de .env, que
+      # se queda en cada equipo y no se versiona. Los que había antes
+      # quedaron publicados en el historial y hubo que rotarlos todos.
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      Jwt__Key: "${JWT_KEY}"
+      Jwt__Issuer: "${JWT_ISSUER}"
+      Jwt__Audience: "${JWT_AUDIENCE}"
+      Jwt__TokenExpirationMinutes: "${JWT_EXPIRATION_MINUTES}"
+      EmailSettings__Host: "${EMAIL_HOST}"
+      EmailSettings__Port: "${EMAIL_PORT}"
+      EmailSettings__SenderEmail: "${EMAIL_SENDER}"
+      EmailSettings__SenderName: "${EMAIL_SENDER_NAME}"
+      EmailSettings__Password: "${EMAIL_PASSWORD}"
       # true: la API aplica las migraciones al arrancar (comodo en desarrollo).
       # false: se aplican como paso explicito del despliegue, sin carrera entre replicas.
       Database__MigrateOnStartup: "true"
