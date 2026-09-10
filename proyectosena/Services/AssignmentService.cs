@@ -39,10 +39,24 @@ namespace proyectosena.Services
 
             try
             {
-                // 1. Buscamos la solicitud con un bloqueo pesimista
-                // El bloqueo evita que otro gestor modifique el registro mientras lo procesamos
+                // 1. Buscamos la solicitud con un bloqueo pesimista.
+                // El bloqueo evita que otro gestor modifique el registro mientras lo
+                // procesamos: quien llegue segundo espera aquí hasta que el primero
+                // termine, y entonces ya lee el estado "Assigned" y se retira.
+                //
+                // Esta consulta estaba escrita para SQL Server y no funcionaba contra
+                // PostgreSQL, así que aceptar una solicitud fallaba siempre. Dos cosas
+                // la rompían:
+                //
+                //   · WITH (UPDLOCK, ROWLOCK) no existe en PostgreSQL. Su equivalente
+                //     es FOR UPDATE, que va al final de la consulta.
+                //   · Sin comillas, PostgreSQL pasa los nombres a minúsculas y busca
+                //     "collectionrequest", que no existe: las tablas se crearon con
+                //     mayúsculas. Se comprobó consultando el catálogo.
                 var request = await _context.CollectionRequests
-                    .FromSqlRaw("SELECT * FROM CollectionRequest WITH (UPDLOCK, ROWLOCK) WHERE IdRequest = {0}", idRequest)
+                    .FromSqlRaw(
+                        "SELECT * FROM \"CollectionRequest\" WHERE \"IdRequest\" = {0} FOR UPDATE",
+                        idRequest)
                     .FirstOrDefaultAsync();
 
                 // 2. Verifica que la solicitud exista
