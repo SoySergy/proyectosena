@@ -3,6 +3,8 @@ import { requireRole, ROLES } from "../../utils/roleGuard.js";
 import { API_BASE } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
+import { initUserMenu } from "../../utils/userMenu.js";
+import { initTabs } from "../../utils/tabs.js";
 // /js/pages/citizen/dashboard.js
 // ============================================================
 // INICIALIZACIÓN
@@ -17,70 +19,24 @@ requireRole(ROLES.CITIZEN);
 // Campana de avisos sin leer, la misma que en los otros paneles.
 initNotificaciones();
 
-// 👤 Leer usuario desde localStorage (guardado en login)
-const user = JSON.parse(localStorage.getItem("user"));
+// ============================================================
+// CABECERA Y NAVEGACIÓN
+// ============================================================
+
+// El saludo, el correo del desplegable y el cierre de sesión son iguales en
+// los tres paneles, así que viven en utils/userMenu.js. Devuelve el usuario
+// ya leído de localStorage, que es el que usa el resto de esta pantalla.
+//
+// Antes esto estaba copiado aquí. Al centralizarlo se arreglan dos cosas de
+// paso: el correo del desplegable, que se quedaba en «cargando...» porque
+// nadie lo rellenaba, y el cierre de sesión, que ahora avisa al servidor
+// para que el token quede anulado y no siga sirviendo una hora más.
+const user = initUserMenu();
 const token = localStorage.getItem("token");
 
-// Mostrar nombre de bienvenida en el header
-if (user) {
-    document.getElementById("welcomeMsg").textContent = `Hola, ${user.name} ${user.lastName}`;
-}
-
-// ============================================================
-// DROPDOWN DE USUARIO
-// ============================================================
-
-const trigger = document.getElementById("userMenuTrigger");
-const dropdown = document.getElementById("userDropdown");
-
-trigger.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = dropdown.classList.toggle("is-open");
-    trigger.setAttribute("aria-expanded", isOpen);
-});
-
-// Cerrar al hacer clic fuera
-document.addEventListener("click", () => {
-    dropdown.classList.remove("is-open");
-    trigger.setAttribute("aria-expanded", "false");
-});
-
-// Evitar que clics dentro del dropdown lo cierren
-dropdown.addEventListener("click", (e) => e.stopPropagation());
-
-// ============================================================
-// NAVEGACIÓN ENTRE SECCIONES
-// ============================================================
-
-const navButtons = document.querySelectorAll(".nav-btn");
-const sections = document.querySelectorAll(".section");
-
-navButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-        const targetSection = btn.dataset.section;
-
-        // Desactivar todos los botones y secciones
-        navButtons.forEach(b => b.classList.remove("active"));
-        sections.forEach(s => s.classList.remove("active"));
-
-        // Activar el botón y sección seleccionados
-        btn.classList.add("active");
-        document.getElementById(targetSection).classList.add("active");
-
-        // Cargar datos al cambiar de sección
-        if (targetSection === "mis-solicitudes") loadMyRequests();
-        if (targetSection === "historial") loadHistory();
-    });
-});
-
-// ============================================================
-// LOGOUT
-// ============================================================
-
-document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/pages/auth/login.html";
+initTabs({
+    "mis-solicitudes": loadMyRequests,
+    "historial": loadHistory,
 });
 
 // ============================================================
