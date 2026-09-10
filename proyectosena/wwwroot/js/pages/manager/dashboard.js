@@ -3,6 +3,8 @@ import { requireRole, ROLES } from "../../utils/roleGuard.js";
 import { API_BASE } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
+import { initUserMenu } from "../../utils/userMenu.js";
+import { initTabs } from "../../utils/tabs.js";
 //js/pages / manager / dashboard.js
 // ============================================================
 // INICIALIZACIÓN
@@ -14,66 +16,23 @@ requireRole(ROLES.MANAGER);
 // Campana de avisos sin leer, la misma que en los otros paneles.
 initNotificaciones();
 
-const user = JSON.parse(localStorage.getItem("user"));
+// ============================================================
+// CABECERA Y NAVEGACIÓN
+// ============================================================
+
+// El saludo, el correo del desplegable y el cierre de sesión son iguales en
+// los tres paneles, así que viven en utils/userMenu.js. Devuelve el usuario
+// ya leído de localStorage, que es el que usa el resto de esta pantalla.
+//
+// Al centralizarlo, el cierre de sesión pasa a avisar al servidor: antes solo
+// borraba el token de este navegador y seguía sirviendo hasta que caducara.
+const user = initUserMenu();
 const token = localStorage.getItem("token");
 
-// ============================================================
-// HEADER — BIENVENIDA
-// ============================================================
-
-if (user) {
-    document.getElementById("welcomeMsg").textContent = `Hola, ${user.name} ${user.lastName}`;
-    document.getElementById("userEmail").textContent = user.email ?? "";
-}
-
-// ============================================================
-// HEADER — DROPDOWN DE USUARIO
-// ============================================================
-
-const trigger = document.getElementById("userMenuTrigger");
-const dropdown = document.getElementById("userDropdown");
-
-trigger.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = dropdown.classList.toggle("is-open");
-    trigger.setAttribute("aria-expanded", isOpen);
-});
-
-document.addEventListener("click", () => {
-    dropdown.classList.remove("is-open");
-    trigger.setAttribute("aria-expanded", "false");
-});
-
-dropdown.addEventListener("click", (e) => e.stopPropagation());
-
-// ============================================================
-// HEADER — LOGOUT
-// ============================================================
-
-document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/pages/auth/login.html";
-});
-
-// ============================================================
-// NAVEGACIÓN ENTRE SECCIONES
-// ============================================================
-
-document.querySelectorAll(".nav-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const target = btn.dataset.section;
-
-        document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-
-        btn.classList.add("active");
-        document.getElementById(target).classList.add("active");
-
-        if (target === "solicitudes-disponibles") loadPendingRequests();
-        if (target === "mis-asignaciones") loadMyAssignments();
-        if (target === "todas-solicitudes") loadAllRequests();
-    });
+initTabs({
+    "solicitudes-disponibles": loadPendingRequests,
+    "mis-asignaciones": loadMyAssignments,
+    "todas-solicitudes": loadAllRequests,
 });
 
 // ============================================================
