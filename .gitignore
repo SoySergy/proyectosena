@@ -363,3 +363,13 @@ MigrationBackup/
 FodyWeavers.xsd
 /proyectosena/Modelos/Usuario.cs
 /proyectosena/Modelos/Usuario.cs
+
+# ── Secretos: nunca se suben al repositorio ──────────────────
+# Las contraseñas, la clave de firma de los tokens y la del correo
+# vivían escritas en docker-compose.yml, que sí se versiona: quedaron
+# en cinco commits y hubo que rotarlas todas. Ahora van en .env, que
+# se queda en cada equipo. La plantilla .env.example sí se sube, pero
+# solo con los nombres de las variables, nunca con sus valores.
+.env
+.env.*
+!.env.example

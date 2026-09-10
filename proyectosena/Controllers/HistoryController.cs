@@ -61,7 +61,27 @@ namespace proyectosena.Controllers
             if (startDate > endDate)
                 return BadRequest("startDate must be earlier than or equal to endDate.");
 
-            return Ok(await _historyService.GetByDateRange(startDate, endDate, page, pageSize));
+            // Aquí sí se comparan instantes: las fechas del historial se guardan en
+            // UTC. Las que llegan por la URL vienen sin zona, y PostgreSQL rechaza
+            // compararlas contra una columna con zona. Se interpretan como UTC, que
+            // es lo que el administrador espera de un informe del sistema.
+            return Ok(await _historyService.GetByDateRange(
+                AsUtc(startDate), AsUtc(endDate), page, pageSize));
         }
+
+        /// <summary>
+        /// Marca como UTC una fecha que llegó sin zona horaria.
+        /// </summary>
+        /// <remarks>
+        /// El enlazador de ASP.NET devuelve <c>Kind=Unspecified</c> para una fecha
+        /// escrita en la URL, y Npgsql se niega a compararla contra una columna
+        /// con zona. Si ya viene con zona se respeta: solo se rellena lo que falta.
+        /// </remarks>
+        private static DateTime AsUtc(DateTime fecha) => fecha.Kind switch
+        {
+            DateTimeKind.Utc => fecha,
+            DateTimeKind.Local => fecha.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(fecha, DateTimeKind.Utc)
+        };
     }
 }
