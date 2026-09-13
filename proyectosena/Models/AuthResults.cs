@@ -1,20 +1,9 @@
 namespace proyectosena.Models
 {
-    // Resultados posibles al registrar un usuario nuevo
-    public enum RegisterResult
-    {
-        Success,
-
-        EmailAlreadyUsed,
-
-        // Ese número ya existe con ese mismo tipo de documento
-        DocumentAlreadyUsed,
-
-        // La base rechazó el INSERT por índice único. Ocurre cuando dos personas
-        // registran el mismo correo o documento a la vez: ambas pasan la
-        // comprobación previa y la base es la que decide.
-        DuplicateOnSave
-    }
+    // Register ya no devuelve un resultado distinto según el motivo (WA-03):
+    // que el correo ya exista, que el documento ya exista o que se cree de
+    // verdad responden exactamente igual, para no confirmarle a quien llama
+    // qué cuentas existen. Ver AuthService.Register.
 
     // Resultados posibles al iniciar sesión.
     // Solo hay un motivo de fallo a propósito: distinguir «no existe» de

@@ -123,6 +123,40 @@ namespace proyectosena.Services
             await SendAsync(message);
         }
 
+        public async Task SendAlreadyRegisteredNoticeAsync(string toEmail, string name)
+        {
+            var settings = _config.GetSection("EmailSettings");
+
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(
+                settings["SenderName"],
+                settings["SenderEmail"]
+            ));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = "Ya tienes una cuenta en RecyRoute";
+
+            message.Body = new TextPart("html")
+            {
+                Text = $@"
+                    <div style='font-family:sans-serif;max-width:480px;margin:auto'>
+                        <h2 style='color:#2E7D32'>RecyRoute</h2>
+                        <p>Hola {name},</p>
+                        <p>Alguien acaba de intentar crear una cuenta nueva en RecyRoute
+                           con tu correo o tu número de documento. Ya tienes una cuenta
+                           con nosotros, así que no se creó ninguna cuenta adicional.</p>
+                        <p>Si fuiste tú y solo olvidaste que ya estabas registrado,
+                           inicia sesión normalmente o usa <em>¿Olvidaste tu
+                           contraseña?</em> si no la recuerdas.</p>
+                        <p style='color:#777;font-size:0.9rem'>
+                            Si no fuiste tú, no hace falta que hagas nada: tu cuenta
+                            sigue siendo tuya y esta persona no obtuvo ningún acceso.
+                        </p>
+                    </div>"
+            };
+
+            await SendAsync(message);
+        }
+
         // Entrega compartida para todos los mensajes de este servicio.
         //
         // No relanza la excepción a propósito. Un fallo de envío no puede tumbar la

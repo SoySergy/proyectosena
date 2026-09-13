@@ -132,9 +132,16 @@ namespace proyectosena.Context
                     .HasDefaultValueSql("NOW()");
 
                 // ── Unique Constraints ─────────────
-                entity.HasIndex(u => u.Email)
-                    .IsUnique()
-                    .HasDatabaseName("UQ_User_Email");
+                // El correo NO se declara aquí como índice único: la búsqueda
+                // (GetUserByEmail) compara en minúsculas, pero un índice sobre
+                // la columna tal cual distingue mayúsculas en PostgreSQL. Dos
+                // registros simultáneos con "Ana@x.com" y "ana@x.com" pasarían
+                // los dos la comprobación de "no existe" y el índice no los
+                // frenaría, porque para Postgres son valores distintos
+                // (WA-04). El índice de verdad es sobre LOWER("Email") y vive
+                // como SQL crudo en la migración CorreoUnicoSinMayusculas,
+                // fuera del modelo, para que EF no intente "corregirlo" de
+                // vuelta a uno sobre la columna sin transformar.
                 entity.HasIndex(u => new { u.IdDocumentType, u.DocumentNumber })
                     .IsUnique()
                     .HasDatabaseName("UQ_User_Document");

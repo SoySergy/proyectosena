@@ -37,6 +37,21 @@ namespace proyectosena.Services
 
         private int _desdeLaUltimaLimpieza;
 
+        // Clave: el usuario | Valor: se invalida todo lo suyo emitido ANTES de
+        // este instante. Cubre lo que un solo jti no puede: a alguien se le
+        // puede dar de baja, o cambiar su contraseña, desde OTRA sesión que no
+        // conoce el jti del token que hay que anular —el de logout sí lo
+        // conoce, porque es el mismo que hace la petición—.
+        private readonly ConcurrentDictionary<Guid, DateTime> _revocadosPorUsuario = new();
+
+        // Igual que arriba pero para este segundo diccionario. Una entrada dejó
+        // de servir para algo en cuanto pasó el tiempo de vida más largo que
+        // pueda tener un token; veinticuatro horas es generoso de sobra frente
+        // a los minutos que dura hoy una sesión.
+        private const int RevocacionesDeUsuarioEntreLimpiezas = 50;
+        private static readonly TimeSpan VentanaDeLimpiezaPorUsuario = TimeSpan.FromHours(24);
+        private int _desdeLaUltimaLimpiezaPorUsuario;
+
         public void Revoke(string tokenId, DateTime expiraEn)
         {
             if (string.IsNullOrWhiteSpace(tokenId))
@@ -70,6 +85,25 @@ namespace proyectosena.Services
             return true;
         }
 
+        public void RevokeAllForUser(Guid idUser)
+        {
+            _revocadosPorUsuario[idUser] = DateTime.UtcNow;
+
+            if (Interlocked.Increment(ref _desdeLaUltimaLimpiezaPorUsuario) >= RevocacionesDeUsuarioEntreLimpiezas)
+            {
+                Interlocked.Exchange(ref _desdeLaUltimaLimpiezaPorUsuario, 0);
+                LimpiarCortesViejos();
+            }
+        }
+
+        public bool IsRevokedForUser(Guid idUser, DateTime issuedAt)
+        {
+            if (!_revocadosPorUsuario.TryGetValue(idUser, out var invalidarAntesDe))
+                return false;
+
+            return issuedAt < invalidarAntesDe;
+        }
+
         private void LimpiarCaducados()
         {
             var ahora = DateTime.UtcNow;
@@ -78,6 +112,17 @@ namespace proyectosena.Services
             {
                 if (expiraEn <= ahora)
                     _revocados.TryRemove(tokenId, out _);
+            }
+        }
+
+        private void LimpiarCortesViejos()
+        {
+            var limite = DateTime.UtcNow - VentanaDeLimpiezaPorUsuario;
+
+            foreach (var (idUser, invalidarAntesDe) in _revocadosPorUsuario)
+            {
+                if (invalidarAntesDe <= limite)
+                    _revocadosPorUsuario.TryRemove(idUser, out _);
             }
         }
     }

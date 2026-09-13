@@ -13,6 +13,7 @@ namespace proyectosena.DTOs.Requests
         [Required]
         public Guid IdRequest { get; set; }
 
+        [FechaNoPasada]
         public DateTime? CollectionDate { get; set; }
 
         [MaxLength(20)]

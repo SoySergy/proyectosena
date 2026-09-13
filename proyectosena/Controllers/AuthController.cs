@@ -26,24 +26,29 @@ namespace proyectosena.Controllers
 
         // -------------------- POST: api/auth/Register --------------------
         // AllowAnonymous permite registrarse sin token
+        //
+        // Email y no Auth: este endpoint también manda un correo —el código
+        // de confirmación— a una dirección que elige quien llama, igual que
+        // forgot-password y resend-verification. Con Auth (10/min por IP)
+        // alguien podía registrar diez cuentas por minuto con documentos
+        // falsos, cada una apuntando a un correo ajeno distinto: diez
+        // buzones ocupados por minuto, sin que el destinatario pidiera nada.
+        //
+        // Ya no distingue con un 400 si el correo o el documento ya existían
+        // (WA-03): antes de esto, probar registrarse con un correo ajeno
+        // servía para averiguar si esa persona tenía cuenta. Los cuatro
+        // caminos posibles —cuenta nueva, correo repetido, documento
+        // repetido, carrera en el guardado— responden exactamente igual;
+        // AuthService.Register decide qué correo avisar en cada caso.
         [AllowAnonymous]
-        [EnableRateLimiting(RateLimitPolicies.Auth)]
+        [EnableRateLimiting(RateLimitPolicies.Email)]
         [HttpPost("Register")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            var (result, pending) = await _authService.Register(dto);
-
-            if (result == RegisterResult.EmailAlreadyUsed)
-                return BadRequest("Ya existe un usuario con este correo.");
-
-            if (result == RegisterResult.DocumentAlreadyUsed)
-                return BadRequest("El número de documento ya se encuentra registrado con este tipo de documento.");
-
-            if (result == RegisterResult.DuplicateOnSave)
-                return BadRequest("El número de identificación ya se encuentra registrado.");
+            var pending = await _authService.Register(dto);
 
             // Ya no se devuelve token: la cuenta existe pero no sirve hasta que
             // confirme el correo con el código que acaba de recibir.

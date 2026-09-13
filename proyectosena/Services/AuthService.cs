@@ -48,17 +48,34 @@ namespace proyectosena.Services
             _configuration = configuration;
         }
 
-        public async Task<(RegisterResult Result, RegistrationPendingDto? Pending)> Register(RegisterDto dto)
+        public async Task<RegistrationPendingDto> Register(RegisterDto dto)
         {
+            var normalizado = Normalize(dto.Email);
+
             var existingEmail = await _userLookup.GetUserByEmail(dto.Email);
             if (existingEmail != null)
-                return (RegisterResult.EmailAlreadyUsed, null);
+            {
+                // No se crea una cuenta duplicada, pero tampoco se le dice a
+                // quien llama que este correo ya tiene cuenta (WA-03): eso le
+                // confirmaría a un atacante qué direcciones están registradas
+                // con solo probar registrarse con ellas. A la dueña real del
+                // correo sí se le avisa, por si fue ella la que olvidó que ya
+                // se había registrado.
+                await _emailService.SendAlreadyRegisteredNoticeAsync(existingEmail.Email, existingEmail.Name);
+                return RespuestaDeRegistro(normalizado);
+            }
 
             // Un mismo número puede existir con otro tipo de documento; solo es
             // duplicado si coinciden los dos campos a la vez.
             var existingDoc = await _userLookup.GetUserByDocument(dto.DocumentNumber, dto.IdDocumentType);
             if (existingDoc != null)
-                return (RegisterResult.DocumentAlreadyUsed, null);
+            {
+                // Mismo trato, y el aviso va al correo REAL de quien tiene ese
+                // documento —no al que escribió quien llama, que puede ser el
+                // de cualquiera—.
+                await _emailService.SendAlreadyRegisteredNoticeAsync(existingDoc.Email, existingDoc.Name);
+                return RespuestaDeRegistro(normalizado);
+            }
 
             var user = new User
             {
@@ -94,7 +111,11 @@ namespace proyectosena.Services
             // sube al manejador global.
             catch (DbUpdateException ex) when (ex.IsDuplicateKey())
             {
-                return (RegisterResult.DuplicateOnSave, null);
+                // Carrera: dos personas registrando el mismo correo o
+                // documento en el mismo instante. Mismo trato otra vez: no
+                // hay forma barata de saber cuál de los dos campos chocó sin
+                // arriesgarse a delatarlo.
+                return RespuestaDeRegistro(normalizado);
             }
 
             // Sin sesión: la cuenta existe pero no sirve hasta que confirme el
@@ -102,13 +123,19 @@ namespace proyectosena.Services
             // comprobaba que la dirección fuera real.
             await EnviarCodigoDeConfirmacion(created.Email, created.Name);
 
-            return (RegisterResult.Success, new RegistrationPendingDto
-            {
-                Message = "Cuenta creada. Te enviamos un código para confirmar tu correo.",
-                Email = created.Email,
-                ExpiresInMinutes = EmailVerificationExpiryMinutes
-            });
+            return RespuestaDeRegistro(created.Email);
         }
+
+        // Misma forma de respuesta para los cuatro caminos de Register: cuenta
+        // nueva, correo ya existente, documento ya existente y carrera en el
+        // guardado. Es justamente el punto (WA-03): que no se distinga una de
+        // otra desde afuera.
+        private RegistrationPendingDto RespuestaDeRegistro(string email) => new()
+        {
+            Message = "Cuenta creada. Te enviamos un código para confirmar tu correo.",
+            Email = email,
+            ExpiresInMinutes = EmailVerificationExpiryMinutes
+        };
 
         public async Task<(LoginResult Result, AuthResponseDto? Response)> Login(LoginDto dto)
         {
@@ -267,6 +294,11 @@ namespace proyectosena.Services
 
             var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
 
+            // Un solo instante para "ahora": que emisión y caducidad cuenten
+            // desde el mismo punto, sin los milisegundos que separarían dos
+            // DateTime.UtcNow escritos por separado.
+            var ahora = DateTime.UtcNow;
+
             var tokenOptions = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
@@ -276,6 +308,13 @@ namespace proyectosena.Services
                     // poder anularlo al cerrar sesión: sin él, todos los tokens de
                     // una persona son indistinguibles y no hay cuál revocar.
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    // Cuándo se emitió. Sin esto no hay forma de saber si ESTE
+                    // token es de antes o de después de que a alguien lo dieran
+                    // de baja o le cambiaran la contraseña desde otro sitio: el
+                    // logout puede anular el suyo propio porque conoce su jti,
+                    // pero una baja hecha por un administrador no.
+                    new Claim(JwtRegisteredClaimNames.Iat,
+                        EpochTime.GetIntDate(ahora).ToString(), ClaimValueTypes.Integer64),
                     // IdUser en el token — el frontend lo usa para identificar al usuario
                     new Claim(ClaimTypes.NameIdentifier, user.IdUser.ToString()),
                     // El email hace de nombre de usuario
@@ -283,7 +322,7 @@ namespace proyectosena.Services
                     // El rol permite aplicar las políticas de autorización
                     new Claim(ClaimTypes.Role, user.Role?.RoleName ?? RoleNames.Citizen)
                 },
-                expires: DateTime.UtcNow.AddMinutes(TokenLifetimeMinutes),
+                expires: ahora.AddMinutes(TokenLifetimeMinutes),
                 signingCredentials: signinCredentials
             );
 
