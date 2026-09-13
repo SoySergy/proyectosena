@@ -1,6 +1,6 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole, ROLES } from "../../utils/roleGuard.js";
-import { API_BASE } from "../../services/api.js";
+import { API_BASE, fetchAllItems } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
 import { initUserMenu } from "../../utils/userMenu.js";
@@ -100,16 +100,11 @@ async function loadPendingRequests() {
     showMessage("pending-message", "");
 
     try {
-        const res = await fetch(`${API_BASE}/collectionrequest/GetPendingRequests`, {
+        const requests = await fetchAllItems(`${API_BASE}/collectionrequest/GetPendingRequests`, {
             headers: authHeaders()
-        });
+        }, "Error al obtener solicitudes pendientes");
 
         loading.style.display = "none";
-
-        if (!res.ok) throw new Error("Error al obtener solicitudes pendientes");
-
-        // La API responde { items, page, pageSize, totalItems, totalPages }
-        const { items: requests } = await res.json();
 
         if (!requests?.length) {
             list.innerHTML = "<p class='empty-msg'>No hay solicitudes pendientes.</p>";
@@ -190,16 +185,12 @@ async function loadMyAssignments() {
     showMessage("assigned-message", "");
 
     try {
-        const res = await fetch(`${API_BASE}/collectionrequest/GetMyAssignments?idManager=${user.idUser}`, {
+        const all = await fetchAllItems(`${API_BASE}/collectionrequest/GetMyAssignments?idManager=${user.idUser}`, {
             headers: authHeaders()
-        });
+        }, "Error al obtener asignaciones");
 
         loading.style.display = "none";
 
-        if (!res.ok) throw new Error("Error al obtener asignaciones");
-
-        // La API responde { items, page, pageSize, totalItems, totalPages }
-        const { items: all } = await res.json();
         const mine = all.filter(r =>
             r.currentStatus === "Assigned" || r.currentStatus === "InProgress"
         );
@@ -264,16 +255,12 @@ async function loadAllRequests() {
     showMessage("all-message", "");
 
     try {
-        const res = await fetch(`${API_BASE}/collectionrequest/GetCollectionRequests`, {
+        const items = await fetchAllItems(`${API_BASE}/collectionrequest/GetCollectionRequests`, {
             headers: authHeaders()
-        });
+        }, "Error al obtener todas las solicitudes");
 
         loading.style.display = "none";
 
-        if (!res.ok) throw new Error("Error al obtener todas las solicitudes");
-
-        // La API responde { items, page, pageSize, totalItems, totalPages }
-        const { items } = await res.json();
         allRequests = items;
         allRequests.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
         renderFilteredList();

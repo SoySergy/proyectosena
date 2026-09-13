@@ -172,6 +172,7 @@ namespace proyectosena.Services
                 return ResetPasswordResult.UserNotFound;
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            user.IsEmailVerified = true;
             await _userWrite.UpdateUser(user);
 
             // El código se quema para que no pueda reutilizarse

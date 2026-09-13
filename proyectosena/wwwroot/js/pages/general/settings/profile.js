@@ -1,36 +1,12 @@
 ﻿import { checkAuth } from "/js/utils/authGuard.js";
-import { API_BASE } from "/js/services/api.js";
+import { API_BASE, authHeaders, leerCuerpo, mensajeDeError } from "/js/services/api.js";
+import { initUserMenu } from "/js/utils/userMenu.js";
 
 // ── Proteger acceso ───────────────────────────────────────────
 checkAuth();
 
-const user = JSON.parse(localStorage.getItem("user"));
-const token = localStorage.getItem("token");
-
-// ── Header dropdown ───────────────────────────────────────────
-if (user) {
-    document.getElementById("welcomeMsg").textContent = `${user.name} ${user.lastName}`;
-    document.getElementById("userEmail").textContent = user.email ?? "";
-}
-
-const trigger = document.getElementById("userMenuTrigger");
-const dropdown = document.getElementById("userDropdown");
-trigger.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = dropdown.classList.toggle("is-open");
-    trigger.setAttribute("aria-expanded", open);
-});
-document.addEventListener("click", () => {
-    dropdown.classList.remove("is-open");
-    trigger.setAttribute("aria-expanded", "false");
-});
-dropdown.addEventListener("click", (e) => e.stopPropagation());
-
-document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/pages/auth/login.html";
-});
+// Header dropdown y cierre de sesión con revocación en servidor
+const user = initUserMenu();
 
 // ── Botón volver ───────────────────────────────────────────────
 document.getElementById("settingsBackLink").addEventListener("click", (e) => {
@@ -73,22 +49,26 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
             `${API_BASE}/user/UpdateUser?idUser=${user.idUser}`,
             {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: authHeaders(),
                 body: JSON.stringify(dto)
             }
         );
 
-        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+            showMessage("Tu sesión caducó. Vuelve a iniciar sesión.", "error");
+            return;
+        }
 
-        if (!res.ok) throw new Error(data.message || "No se pudo actualizar el perfil.");
+        const data = await leerCuerpo(res);
+
+        if (!res.ok) throw new Error(mensajeDeError(data, "No se pudo actualizar el perfil."));
 
         // Actualizar datos en localStorage para que el header refleje los cambios
         const updatedUser = { ...user, ...data };
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        document.getElementById("welcomeMsg").textContent = `${updatedUser.name} ${updatedUser.lastName}`;
+        // Mismo formato que pone userMenu.js al cargar la página: sin el
+        // "Hola, " se veía distinto justo después de guardar.
+        document.getElementById("welcomeMsg").textContent = `Hola, ${updatedUser.name} ${updatedUser.lastName}`;
 
         showMessage("✅ Perfil actualizado correctamente.", "success");
 
