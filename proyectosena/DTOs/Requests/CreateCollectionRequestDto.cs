@@ -11,7 +11,7 @@ namespace proyectosena.DTOs.Requests
         // IdUser no viaja en el cuerpo a propósito: sale del token. Cuando venía
         // aquí, un ciudadano podía crear solicitudes a nombre de otro.
 
-        [Required]
+        [Required, FechaNoPasada]
         public DateTime CollectionDate { get; set; }
 
         [Required, MaxLength(20)]

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.OpenApi;
@@ -10,6 +11,7 @@ using proyectosena.Middleware;
 using proyectosena.Models;
 using proyectosena.Services;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -56,7 +58,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var tokenId = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 
                 if (revocados.IsRevoked(tokenId ?? string.Empty))
+                {
                     context.Fail("El token fue anulado al cerrar sesión.");
+                    return Task.CompletedTask;
+                }
+
+                // Segunda comprobación, para lo que un jti suelto no cubre: que
+                // a esta persona la hayan dado de baja o le hayan cambiado la
+                // contraseña desde OTRA sesión, que no conoce el jti de esta.
+                //
+                // Un token de antes de este cambio no trae "iat" y no hay con
+                // qué compararlo: se deja pasar, igual que ya se hace en
+                // Logout con el jti que falta. Caducará solo, como mucho, en
+                // el tiempo de vida configurado.
+                var idUserRaw = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var iatRaw = context.Principal?.FindFirst(JwtRegisteredClaimNames.Iat)?.Value;
+
+                if (Guid.TryParse(idUserRaw, out var idUser) && long.TryParse(iatRaw, out var iatSegundos))
+                {
+                    var emitidoEn = DateTimeOffset.FromUnixTimeSeconds(iatSegundos).UtcDateTime;
+
+                    if (revocados.IsRevokedForUser(idUser, emitidoEn))
+                        context.Fail("El token fue anulado: la cuenta cambió después de emitirse.");
+                }
 
                 return Task.CompletedTask;
             }
@@ -73,11 +97,17 @@ builder.Services.AddAuthorization(options =>
 });
 
 // ── 5. CORS ───────────────────────────────────────────
+// En producción la propia API sirve el frontend (mismo origen, ver
+// api.js), así que CORS de verdad solo hace falta para el Docker local:
+// ahí Nginx sirve las páginas en el 8081 y la API escucha en el 8080,
+// dos orígenes distintos. Antes esto aceptaba cualquier origen
+// (I-1 · WA-02): cualquier sitio web podía llamar a la API desde el
+// navegador de quien tuviera un token.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("RecyRoutePolicy", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:8081")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -132,7 +162,7 @@ builder.Services.AddRateLimiter(options =>
     // pedir códigos para mil direcciones distintas: cada una estrenaría sus cinco.
     // Este tope cuenta TODOS los envíos juntos, sin mirar a quién van.
     //
-    // Alcanza solo a los dos endpoints que mandan correo. El resto de la
+    // Alcanza solo a los tres endpoints que mandan correo. El resto de la
     // aplicación pasa sin tope, para no frenar el uso normal.
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
         EsEndpointDeCorreo(http)
@@ -172,11 +202,12 @@ static string ClientKey(HttpContext http)
 static string ClaveDeDestinatario(HttpContext http)
     => http.Items[ClientEmailMiddleware.ItemKey] as string ?? ClientKey(http);
 
-// Los dos endpoints que mandan un correo a una dirección que elige quien llama.
-// Son los únicos con tope general: los demás no envían nada.
+// Los tres endpoints que mandan un correo a una dirección que elige quien
+// llama. Son los únicos con tope general: los demás no envían nada.
 static bool EsEndpointDeCorreo(HttpContext http)
     => http.Request.Path.StartsWithSegments("/api/auth/forgot-password", StringComparison.OrdinalIgnoreCase)
-    || http.Request.Path.StartsWithSegments("/api/auth/resend-verification", StringComparison.OrdinalIgnoreCase);
+    || http.Request.Path.StartsWithSegments("/api/auth/resend-verification", StringComparison.OrdinalIgnoreCase)
+    || http.Request.Path.StartsWithSegments("/api/auth/Register", StringComparison.OrdinalIgnoreCase);
 
 // ── 6. SWAGGER ────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
@@ -234,6 +265,25 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
 }
 
 // ── 8. MIDDLEWARE PIPELINE ────────────────────────────
+
+// Debe ir primero: reescribe el esquema (http/https) y la IP remota ANTES de
+// que nada más los lea —el límite de peticiones por IP, CORS, la redirección
+// a HTTPS—. Sin esto, detrás del proxy de Render todas las peticiones llegan
+// con la IP interna del proxy, y el cupo por IP termina siendo compartido por
+// todo el mundo (BL-09).
+//
+// KnownNetworks/KnownProxies se limpian a propósito: Render no publica una IP
+// fija para su proxy, y el contenedor no es alcanzable por nadie más que ese
+// proxy. Confiar en la cabecera aquí equivale a confiar en que Render es la
+// única puerta de entrada.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
+
 // Swagger disponible en /swagger en cualquier entorno (incluido Docker/Production)
 if (app.Environment.IsDevelopment())
 {

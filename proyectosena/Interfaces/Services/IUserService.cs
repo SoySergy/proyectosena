@@ -27,7 +27,10 @@ namespace proyectosena.Interfaces.Services
         // coincide. User viene en null salvo que el resultado sea Success.
         Task<(UserUpdateResult Result, UserInfoDto? User)> UpdateUser(Guid idUser, UpdateUserDto dto);
 
-        // Baja lógica: la fila se conserva para auditoría. False si no existe.
-        Task<bool> Deactivate(Guid idUser);
+        // Baja lógica: la fila se conserva para auditoría. Rechaza dar de
+        // baja al único administrador activo (WA-16): sin eso, el sistema
+        // se queda sin nadie que pueda gestionar roles, usuarios ni
+        // postulaciones, y no hay forma de crear un administrador por API.
+        Task<UserDeactivationResult> Deactivate(Guid idUser);
     }
 }

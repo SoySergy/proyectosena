@@ -104,6 +104,7 @@ namespace proyectosena.Controllers
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> UpdateStatus(
@@ -112,14 +113,21 @@ namespace proyectosena.Controllers
             string? comment = null)
         {
             // Quién hace el cambio sale del token: antes un gestor podía mover una
-            // solicitud firmando el historial con el nombre de otro.
-            var result = await _requestService.UpdateStatus(idRequest, newStatus, User.GetUserId(), comment);
+            // solicitud firmando el historial con el nombre de otro. Y solo un
+            // administrador se salta la comprobación de asignación: un gestor
+            // corriente solo mueve la solicitud que tiene a su cargo.
+            var result = await _requestService.UpdateStatus(
+                idRequest, newStatus, User.GetUserId(), comment, User.IsAdministrator());
 
             if (result == StatusUpdateResult.InvalidStatus)
                 return BadRequest($"Invalid status. Valid values: {string.Join(", ", CollectionRequestStatus.ValidStatuses)}");
 
             if (result == StatusUpdateResult.RequestNotFound)
                 return NotFound("Collection request not found.");
+
+            if (result == StatusUpdateResult.NotAssigned)
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "You can only update requests assigned to you.");
 
             if (result == StatusUpdateResult.InvalidTransition)
                 return Conflict($"Cannot change status to '{newStatus}' from the current state.");
