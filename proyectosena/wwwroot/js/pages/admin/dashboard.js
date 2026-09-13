@@ -3,7 +3,7 @@ import { requireRole, ROLES } from "../../utils/roleGuard.js";
 import { initUserMenu } from "../../utils/userMenu.js";
 import { initTabs } from "../../utils/tabs.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
-import { API_BASE, authHeaders, leerCuerpo, mensajeDeError } from "../../services/api.js";
+import { API_BASE, authHeaders, leerCuerpo, mensajeDeError, fetchAllItems } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { icon, formatDate } from "../../utils/format.js";
 // /js/pages/admin/dashboard.js
@@ -139,23 +139,33 @@ const DATOS_DEL_SOLICITANTE = [
 ];
 
 async function cargarSolicitudes() {
-    const { ok, datos } = await pedirAlServidor(
-        "/ManagerApplication/GetPending",
-        { aviso: "applications-message", cargando: "applications-loading" },
-        "No se pudieron cargar las solicitudes."
-    );
+    mostrarMensaje("applications-message", "");
+    alternarCargando("applications-loading", true);
 
-    if (!ok) return;
+    try {
+        // pedirAlServidor solo trae una página, y esta bandeja no puede
+        // perderse solicitudes por quedarse en la primera: con más de veinte
+        // pendientes, la administradora dejaría de ver las demás sin ningún
+        // aviso. fetchAllItems pide página tras página hasta traerlas todas.
+        const solicitudes = await fetchAllItems(
+            `${API_BASE}/ManagerApplication/GetPending`,
+            { headers: authHeaders() },
+            "No se pudieron cargar las solicitudes."
+        );
 
-    // El servidor contesta {items, page, pageSize, totalItems, totalPages}.
-    // Si no viene la lista, mejor decirlo que pintar una bandeja vacía y
-    // hacer creer que nadie ha solicitado nada.
-    if (!Array.isArray(datos?.items)) {
-        mostrarMensaje("applications-message", "El servidor devolvió una respuesta inesperada.");
-        return;
+        pintarSolicitudes(solicitudes);
+    } catch (error) {
+        // Mismo aviso que pedirAlServidor para un 401: la sesión caducó, no
+        // es un fallo del servidor, y así se le dice a la persona qué hacer.
+        mostrarMensaje(
+            "applications-message",
+            error.status === 401
+                ? "Tu sesión caducó. Vuelve a iniciar sesión."
+                : (error.message || "No se pudieron cargar las solicitudes.")
+        );
+    } finally {
+        alternarCargando("applications-loading", false);
     }
-
-    pintarSolicitudes(datos.items);
 }
 
 function pintarSolicitudes(solicitudes) {

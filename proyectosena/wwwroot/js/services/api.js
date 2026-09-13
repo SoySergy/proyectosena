@@ -72,3 +72,46 @@ export function mensajeDeError(cuerpo, porDefecto) {
 
     return porDefecto;
 }
+
+/**
+ * Consulta endpoints paginados iterando sobre todas las páginas existentes (pageSize=100)
+ * para asegurar que el cliente obtenga el universo completo de registros antes de filtrar o renderizar.
+ *
+ * @param {string} mensajeError - lo que se muestra si el servidor no da un
+ * mensaje propio. Antes cada pantalla escribía el suyo en su propio
+ * `if (!res.ok) throw`; al pasar a esta función todas caían en el mismo
+ * "Error al consultar los datos" genérico, así que aquí también se puede
+ * decir qué se estaba pidiendo.
+ */
+export async function fetchAllItems(url, options = {}, mensajeError = "Error al consultar los datos") {
+    const separator = url.includes("?") ? "&" : "?";
+    let page = 1;
+    let allItems = [];
+    let totalPages = 1;
+
+    do {
+        const fullUrl = `${url}${separator}page=${page}&pageSize=100`;
+        const res = await fetch(fullUrl, options);
+        if (!res.ok) {
+            const body = await leerCuerpo(res);
+            const error = new Error(mensajeDeError(body, mensajeError));
+            // El código va aparte del mensaje: un 401 aquí es la sesión caducada,
+            // no un fallo del servidor, y quien llama necesita distinguirlos.
+            error.status = res.status;
+            throw error;
+        }
+        const data = await res.json();
+        if (Array.isArray(data)) {
+            return data;
+        }
+        if (data && Array.isArray(data.items)) {
+            allItems = allItems.concat(data.items);
+            totalPages = data.totalPages || 1;
+        } else {
+            break;
+        }
+        page++;
+    } while (page <= totalPages);
+
+    return allItems;
+}

@@ -47,6 +47,28 @@ form.addEventListener("submit", async (e) => {
         }, 1000);
 
     } catch (error) {
+        // Falta confirmar el correo, no es un fallo de credenciales.
+        //
+        // Antes esto solo mostraba el aviso y ahí terminaba: a la pantalla de
+        // confirmación únicamente se llegaba en el instante de registrarse, así
+        // que quien cerraba la pestaña y volvía al día siguiente quedaba sin
+        // salida —le pedían confirmar y no había dónde—.
+        if (error.correoSinConfirmar) {
+            message.style.color = "red";
+            message.textContent = error.message;
+
+            // Mismo respaldo que deja el registro, por si el enlace pierde la
+            // dirección por el camino.
+            localStorage.setItem("pendingVerificationEmail", data.email);
+
+            setTimeout(() => {
+                window.location.href =
+                    `verify-email.html?email=${encodeURIComponent(data.email)}`;
+            }, 1500);
+
+            return;
+        }
+
         showError(error.message || "Credenciales inválidas");
     } finally {
         btn.disabled = false;

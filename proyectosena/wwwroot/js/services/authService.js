@@ -38,8 +38,17 @@ export async function loginUser(data) {
     // 👇 Leer como texto primero, luego intentar parsear JSON
     const result = await leerCuerpo(response);
 
-    if (!response.ok)
-        throw new Error(mensajeDeError(result, "Error en login"));
+    if (!response.ok) {
+        const error = new Error(mensajeDeError(result, "Error en login"));
+
+        // El 403 de login significa una sola cosa, y el backend lo distingue del
+        // 401 a propósito: la cuenta existe y la contraseña es correcta, pero
+        // falta confirmar el correo. Se marca aquí para que la pantalla pueda
+        // llevar a confirmarlo; el código de estado no sobrevive al Error.
+        error.correoSinConfirmar = response.status === 403;
+
+        throw error;
+    }
 
     return result;
 }
@@ -87,4 +96,28 @@ export async function resetPassword(email, code, newPassword) {
 
     if (!res.ok)
         throw new Error(mensajeDeError(await leerCuerpo(res), "Error al restablecer la contraseña."));
+}
+
+export async function verifyEmail(email, code) {
+    const res = await fetch(`${API_BASE}/auth/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+    });
+    const result = await leerCuerpo(res);
+    if (!res.ok)
+        throw new Error(mensajeDeError(result, "Código inválido o expirado."));
+    return result;
+}
+
+export async function resendVerification(email) {
+    const res = await fetch(`${API_BASE}/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+    });
+    const result = await leerCuerpo(res);
+    if (!res.ok)
+        throw new Error(mensajeDeError(result, "Error al reenviar el código."));
+    return result;
 }
