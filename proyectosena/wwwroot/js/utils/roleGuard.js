@@ -4,6 +4,8 @@
  * Los nombres de rol se exportan en ROLES: usarlos en vez de escribirlos.
  */
 
+import { volverAlLogin } from "../services/api.js";
+
 // ── Nombres de rol ────────────────────────────────────────────
 // Los mismos tres que envía el backend en user.roleName. Allí viven en
 // Models/RoleNames.cs, y por la misma razón: escritos a mano, un dedazo no
@@ -65,8 +67,11 @@ function getCurrentRole() {
 export function redirectByRole() {
     const role = getCurrentRole();
 
+    // Mismo camino que checkAuth() para "sin sesión": si los dos corrieran
+    // en la misma página, dos redirecciones distintas se pisarían y la de
+    // checkAuth (que sí explica el motivo) perdería la carrera.
     if (!role) {
-        window.location.href = LOGIN_URL;
+        volverAlLogin("caducada");
         return;
     }
 
@@ -97,9 +102,12 @@ export function redirectByRole() {
 export function requireRole(allowedRole) {
     const role = getCurrentRole();
 
-    // Sin sesión → login
+    // Sin sesión → login. Misma función que checkAuth(): las páginas llaman
+    // a las dos seguidas, y si cada una redirigiera a su manera, la segunda
+    // asignación a location.href pisaría a la primera y el motivo del aviso
+    // se perdía (se comprobó: un token vencido llegaba al login sin mensaje).
     if (!role) {
-        window.location.href = LOGIN_URL;
+        volverAlLogin("caducada");
         return;
     }
 

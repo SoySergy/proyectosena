@@ -13,5 +13,19 @@ namespace proyectosena.Interfaces.Services
 
         /// <summary>Devuelve true si el token fue revocado y ya no debe aceptarse.</summary>
         bool IsRevoked(string tokenId);
+
+        /// <summary>
+        /// Invalida de golpe todos los tokens de un usuario, sin importar cuántos
+        /// tenga sueltos por ahí. Se usa cuando algo hace que confiar en un token
+        /// viejo ya no sea seguro: lo dieron de baja, o cambió su contraseña.
+        /// </summary>
+        void RevokeAllForUser(Guid idUser);
+
+        /// <summary>
+        /// Devuelve true si este token de este usuario se emitió antes de la
+        /// última vez que se llamó a <see cref="RevokeAllForUser"/> para él, y
+        /// por tanto ya no debe aceptarse aunque su firma y su fecha sigan bien.
+        /// </summary>
+        bool IsRevokedForUser(Guid idUser, DateTime issuedAt);
     }
 }

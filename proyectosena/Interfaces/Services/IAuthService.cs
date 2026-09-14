@@ -18,8 +18,13 @@ namespace proyectosena.Interfaces.Services
     public interface IAuthService
     {
         // Crea la cuenta SIN sesión: queda pendiente de confirmar el correo.
-        // Pending viene en null salvo que el resultado sea Success.
-        Task<(RegisterResult Result, RegistrationPendingDto? Pending)> Register(RegisterDto dto);
+        //
+        // Devuelve siempre la misma forma de respuesta, exista ya o no el
+        // correo o el documento (WA-03): decirlo distinto le confirmaría a
+        // quien llama qué cuentas existen. Si ya existían, no se crea nada
+        // nuevo y se avisa por correo a quien de verdad es dueño de esa
+        // cuenta, no a quien llamó al registro.
+        Task<RegistrationPendingDto> Register(RegisterDto dto);
 
         // Valida credenciales y emite el token.
         // Response viene en null salvo que el resultado sea Success.

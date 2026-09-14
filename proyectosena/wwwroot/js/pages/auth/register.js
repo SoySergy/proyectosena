@@ -1,9 +1,24 @@
 ﻿import { registerUser } from "../../services/authService.js";
 import { isEmailValid, isMinLength } from "../../utils/validators.js";
+import { API_BASE } from "../../services/api.js";
 
 const form = document.getElementById("registerForm");
 const message = document.getElementById("message");
 const btn = document.getElementById("submitBtn");
+const docTypeSelect = document.getElementById("documentType");
+
+// Cargar tipos de documento
+(async () => {
+    try {
+        const res = await fetch(`${API_BASE}/DocumentType/GetDocumentTypes`);
+        if (!res.ok) throw new Error();
+        const tipos = await res.json();
+        docTypeSelect.innerHTML = '<option value="">Selecciona...</option>' + 
+            tipos.map(t => `<option value="${t.idDocumentType}">${t.documentName}</option>`).join("");
+    } catch {
+        docTypeSelect.innerHTML = '<option value="">Error al cargar</option>';
+    }
+})();
 
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -69,7 +84,9 @@ form.addEventListener("submit", async (e) => {
         message.textContent = result.message
             || "Cuenta creada. Te enviamos un código para confirmar tu correo.";
 
-        form.reset();
+        setTimeout(() => {
+            window.location.href = `verify-email.html?email=${encodeURIComponent(result.email)}`;
+        }, 1500);
 
     } catch (error) {
         showError(error.message || "Error al registrarse");

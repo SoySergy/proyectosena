@@ -3,7 +3,7 @@ import { requireRole, ROLES } from "../../utils/roleGuard.js";
 import { initUserMenu } from "../../utils/userMenu.js";
 import { initTabs } from "../../utils/tabs.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
-import { API_BASE, authHeaders, leerCuerpo, mensajeDeError } from "../../services/api.js";
+import { API_BASE, authHeaders, leerCuerpo, mensajeDeError, fetchAllItems, fetchConSesion } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { icon, formatDate } from "../../utils/format.js";
 // /js/pages/admin/dashboard.js
@@ -139,23 +139,26 @@ const DATOS_DEL_SOLICITANTE = [
 ];
 
 async function cargarSolicitudes() {
-    const { ok, datos } = await pedirAlServidor(
-        "/ManagerApplication/GetPending",
-        { aviso: "applications-message", cargando: "applications-loading" },
-        "No se pudieron cargar las solicitudes."
-    );
+    mostrarMensaje("applications-message", "");
+    alternarCargando("applications-loading", true);
 
-    if (!ok) return;
+    try {
+        // pedirAlServidor solo trae una página, y esta bandeja no puede
+        // perderse solicitudes por quedarse en la primera: con más de veinte
+        // pendientes, la administradora dejaría de ver las demás sin ningún
+        // aviso. fetchAllItems pide página tras página hasta traerlas todas.
+        const solicitudes = await fetchAllItems(
+            `${API_BASE}/ManagerApplication/GetPending`,
+            { headers: authHeaders() },
+            "No se pudieron cargar las solicitudes."
+        );
 
-    // El servidor contesta {items, page, pageSize, totalItems, totalPages}.
-    // Si no viene la lista, mejor decirlo que pintar una bandeja vacía y
-    // hacer creer que nadie ha solicitado nada.
-    if (!Array.isArray(datos?.items)) {
-        mostrarMensaje("applications-message", "El servidor devolvió una respuesta inesperada.");
-        return;
+        pintarSolicitudes(solicitudes);
+    } catch (error) {
+        mostrarMensaje("applications-message", error.message || "No se pudieron cargar las solicitudes.");
+    } finally {
+        alternarCargando("applications-loading", false);
     }
-
-    pintarSolicitudes(datos.items);
 }
 
 function pintarSolicitudes(solicitudes) {
@@ -455,32 +458,19 @@ document.getElementById("createManagerForm")?.addEventListener("submit", crearGe
  * nada» de «falló». Con ok esa duda desaparece.
  *
  * Así cada sección se ocupa solo de lo suyo —mirar que los datos tengan
- * sentido y pintarlos— sin repetir el mismo bloque de sesión caducada,
- * error del servidor y falta de red en cada una.
+ * sentido y pintarlos— sin repetir el mismo bloque de error del servidor y
+ * falta de red en cada una. La sesión anulada la resuelve fetchConSesion.
  */
 async function pedirAlServidor(ruta, { aviso, cargando = null, metodo = "GET", cuerpo = null }, textoDeFallo) {
     mostrarMensaje(aviso, "");
     if (cargando) alternarCargando(cargando, true);
 
     try {
-        const respuesta = await fetch(`${API_BASE}${ruta}`, {
+        const respuesta = await fetchConSesion(`${API_BASE}${ruta}`, {
             method: metodo,
             headers: authHeaders(),
             body: cuerpo ? JSON.stringify(cuerpo) : undefined,
         });
-
-        // La sesión caduca a las dos horas. Sin este caso el aviso era el
-        // genérico, que no le dice a nadie que lo que tiene que hacer es
-        // volver a entrar. Se comprobó: un 401 llega sin cuerpo, así que no
-        // hay ningún mensaje del servidor que rescatar.
-        // La sesión caduca a las dos horas. Sin este caso el aviso era el
-        // genérico, que no le dice a nadie que lo que tiene que hacer es
-        // volver a entrar. Se comprobó: un 401 llega sin cuerpo, así que no
-        // hay ningún mensaje del servidor que rescatar.
-        if (respuesta.status === 401) {
-            mostrarMensaje(aviso, "Tu sesión caducó. Vuelve a iniciar sesión.");
-            return { ok: false };
-        }
 
         const respondio = await leerCuerpo(respuesta);
 

@@ -16,14 +16,20 @@ namespace proyectosena.Services
         // Cambia el estado, escribe el historial y notifica al ciudadano
         private readonly ICollectionStatusService _statusService;
 
+        // Quién tiene asignada cada solicitud, para que un gestor solo
+        // pueda mover la suya
+        private readonly ICollectionManagementRepository _managementRepository;
+
         public CollectionRequestService(
             ICollectionRequestRepository requestRepository,
             IAssignmentService assignmentService,
-            ICollectionStatusService statusService)
+            ICollectionStatusService statusService,
+            ICollectionManagementRepository managementRepository)
         {
             _requestRepository = requestRepository;
             _assignmentService = assignmentService;
             _statusService = statusService;
+            _managementRepository = managementRepository;
         }
 
         // ── Consultas ───────────────────────────────────────────────────
@@ -121,11 +127,25 @@ namespace proyectosena.Services
         }
 
         public async Task<StatusUpdateResult> UpdateStatus(
-            Guid idRequest, string newStatus, Guid idManager, string? comment)
+            Guid idRequest, string newStatus, Guid idManager, string? comment, bool isAdmin)
         {
             // Primero: ¿ese estado existe siquiera?
             if (!CollectionRequestStatus.ValidStatuses.Contains(newStatus))
                 return StatusUpdateResult.InvalidStatus;
+
+            // Un administrador puede mover cualquier solicitud —ya puede
+            // reasignarlas—; un gestor solo la que tiene asignada. Antes
+            // bastaba el rol: cualquier gestor con sesión válida cerraba la
+            // solicitud de otro tomando su id de la lista general, y el
+            // historial quedaba firmado con su propio nombre. Se comprobó
+            // exactamente así: un gestor sin ninguna asignación movió la
+            // solicitud de otro y el historial lo firmó él.
+            if (!isAdmin)
+            {
+                var management = await _managementRepository.GetByRequest(idRequest);
+                if (management == null || management.IdManager != idManager)
+                    return StatusUpdateResult.NotAssigned;
+            }
 
             // Después: ¿se puede llegar a él desde el actual? Eso lo decide la
             // máquina de estados dentro de UpdateStatusAsync.

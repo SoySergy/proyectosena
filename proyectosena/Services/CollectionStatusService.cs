@@ -1,4 +1,5 @@
-﻿using proyectosena.Interfaces.Repositories;
+﻿using proyectosena.Context;
+using proyectosena.Interfaces.Repositories;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
 using proyectosena.Repositories;
@@ -13,14 +14,21 @@ namespace proyectosena.Services
         private readonly IHistoryRepository _historyRepository;
         private readonly INotificationRepository _notificationRepository;
 
+        // Solo para abrir la transacción que envuelve a los tres repositorios
+        // de arriba. Todos comparten el mismo DbContext (con alcance de
+        // petición), así que sus SaveChangesAsync quedan dentro de ella.
+        private readonly RecyRouteDbContext _context;
+
         public CollectionStatusService(
             ICollectionRequestRepository requestRepository,
             IHistoryRepository historyRepository,
-            INotificationRepository notificationRepository)
+            INotificationRepository notificationRepository,
+            RecyRouteDbContext context)
         {
             _requestRepository = requestRepository;
             _historyRepository = historyRepository;
             _notificationRepository = notificationRepository;
+            _context = context;
         }
 
         public async Task<StatusUpdateResult> UpdateStatusAsync(
@@ -40,38 +48,53 @@ namespace proyectosena.Services
             if (!CollectionRequestStatus.CanTransition(previousStatus, newStatus))
                 return StatusUpdateResult.InvalidTransition;
 
-            // 3. Actualiza el estado de la solicitud
-            request.CurrentStatus = newStatus;
-            await _requestRepository.UpdateCollectionRequest(request);
-
-            // 4. Registra el cambio en el historial
-            var history = new History
+            // Las tres escrituras de abajo (estado, historial, notificación) tienen
+            // que quedar todas o ninguna. Antes cada repositorio hacía su propio
+            // SaveChangesAsync por separado: si el segundo fallaba —por ejemplo, un
+            // corte de conexión—, la solicitud ya había cambiado de estado sin dejar
+            // rastro en el historial ni avisar al ciudadano (BL-13).
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                IdRequest = idRequest,
-                IdUser = idManager,
-                PreviousStatus = previousStatus,
-                NewStatus = newStatus,
-                ChangeDate = DateTime.UtcNow,
-                Comment = comment
-            };
-            await _historyRepository.Create(history);
+                // 3. Actualiza el estado de la solicitud
+                request.CurrentStatus = newStatus;
+                await _requestRepository.UpdateCollectionRequest(request);
 
-            // 5. Crea una notificación para el ciudadano dueño de la solicitud
-            var template = NotificationTemplates.For(newStatus);
+                // 4. Registra el cambio en el historial
+                var history = new History
+                {
+                    IdRequest = idRequest,
+                    IdUser = idManager,
+                    PreviousStatus = previousStatus,
+                    NewStatus = newStatus,
+                    ChangeDate = DateTime.UtcNow,
+                    Comment = comment
+                };
+                await _historyRepository.Create(history);
 
-            var notification = new Notification
+                // 5. Crea una notificación para el ciudadano dueño de la solicitud
+                var template = NotificationTemplates.For(newStatus);
+
+                var notification = new Notification
+                {
+                    IdUser = request.IdUser,
+                    IdRequest = idRequest,
+                    Title = template.Title,
+                    Message = template.Message,
+                    Type = template.Type,
+                    IsRead = false,
+                    CreationDate = DateTime.UtcNow
+                };
+                await _notificationRepository.CreateNotification(notification);
+
+                await transaction.CommitAsync();
+                return StatusUpdateResult.Success;
+            }
+            catch
             {
-                IdUser = request.IdUser,
-                IdRequest = idRequest,
-                Title = template.Title,
-                Message = template.Message,
-                Type = template.Type,
-                IsRead = false,
-                CreationDate = DateTime.UtcNow
-            };
-            await _notificationRepository.CreateNotification(notification);
-
-            return StatusUpdateResult.Success;
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

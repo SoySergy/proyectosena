@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Repositories;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
@@ -24,7 +25,7 @@ namespace proyectosena.Repositories
         }
 
         // Obtiene un tipo de documento específico por su ID
-        public async Task<DocumentType> GetDocumentType(Guid idDocumentType)
+        public async Task<DocumentType?> GetDocumentType(Guid idDocumentType)
         {
             return await _context.DocumentTypes
                                  .FirstOrDefaultAsync(t => t.IdDocumentType == idDocumentType);
@@ -39,24 +40,36 @@ namespace proyectosena.Repositories
         }
 
         // Actualiza un tipo de documento existente y guarda los cambios en la base de datos
-        public async Task<DocumentType> UpdateDocumentType(DocumentType documentType)
+        public async Task<(CatalogMutationResult Result, DocumentType? DocumentType)> UpdateDocumentType(DocumentType documentType)
         {
-            _context.DocumentTypes.Update(documentType);
+            var existing = await _context.DocumentTypes.FirstOrDefaultAsync(t => t.IdDocumentType == documentType.IdDocumentType);
+            if (existing == null)
+                return (CatalogMutationResult.NotFound, null);
+
+            existing.DocumentName = documentType.DocumentName;
+            existing.Abbreviation = documentType.Abbreviation;
             await _context.SaveChangesAsync();
-            return documentType;
+            return (CatalogMutationResult.Success, existing);
         }
 
-        // Elimina un tipo de documento por su ID, retorna false si no existe
-        public async Task<bool> DeleteDocumentType(Guid idDocumentType)
+        // Elimina un tipo de documento por su ID
+        public async Task<CatalogMutationResult> DeleteDocumentType(Guid idDocumentType)
         {
             var documentType = await _context.DocumentTypes
                                              .FirstOrDefaultAsync(t => t.IdDocumentType == idDocumentType);
             if (documentType == null)
-                return false;
+                return CatalogMutationResult.NotFound;
 
             _context.DocumentTypes.Remove(documentType);
-            await _context.SaveChangesAsync();
-            return true;
+            try
+            {
+                await _context.SaveChangesAsync();
+                return CatalogMutationResult.Success;
+            }
+            catch (DbUpdateException ex) when (ex.IsForeignKeyViolation())
+            {
+                return CatalogMutationResult.InUse;
+            }
         }
     }
 }

@@ -109,17 +109,50 @@ namespace proyectosena.Repositories
                                                         && u.IdDocumentType == idDocumentType);
         }
 
-        // Inactiva un usuario por su ID, retorna false si no existe
-        // Soft delete: the row stays for audit purposes, the user just stops being active
-        public async Task<bool> DeleteUser(Guid idUser)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.IdUser == idUser);
-            if (user == null)
-                return false;
+        // Candado de asesoría propio para esta operación, distinto del que usa
+        // MigrationExtensions (202609140001) para no competir con él por nada.
+        private const long CandadoBajaDeUsuario = 202609140002;
 
-            user.IsActive = false;
-            await _context.SaveChangesAsync();
-            return true;
+        // Inactiva un usuario por su ID de forma atómica: bajo un candado de
+        // Postgres, comprueba que no sea el último administrador activo y
+        // aplica la baja lógica en el mismo tramo bloqueado (WA-16). El
+        // candado cubre cualquier baja, no solo la de administradores, pero
+        // dar de baja usuarios no es una ruta de alto tráfico.
+        public async Task<UserDeactivationResult> DeactivateWithLastAdminGuard(Guid idUser, string administratorRoleName)
+        {
+            await _context.Database.OpenConnectionAsync();
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_lock({0})", CandadoBajaDeUsuario);
+                try
+                {
+                    var user = await _context.Users
+                                             .Include(u => u.Role)
+                                             .FirstOrDefaultAsync(u => u.IdUser == idUser);
+                    if (user == null)
+                        return UserDeactivationResult.UserNotFound;
+
+                    if (user.Role?.RoleName == administratorRoleName)
+                    {
+                        var activeAdmins = await _context.Users
+                            .CountAsync(u => u.Role!.RoleName == administratorRoleName && u.IsActive);
+                        if (activeAdmins <= 1)
+                            return UserDeactivationResult.LastAdministrator;
+                    }
+
+                    user.IsActive = false;
+                    await _context.SaveChangesAsync();
+                    return UserDeactivationResult.Success;
+                }
+                finally
+                {
+                    await _context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_unlock({0})", CandadoBajaDeUsuario);
+                }
+            }
+            finally
+            {
+                await _context.Database.CloseConnectionAsync();
+            }
         }
     }
 }

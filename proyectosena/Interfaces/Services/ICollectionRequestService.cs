@@ -31,9 +31,12 @@ namespace proyectosena.Interfaces.Services
         Task<(RequestUpdateResult Result, CollectionRequestResponseDto? Request)> Update(
             UpdateCollectionRequestDto dto, Guid idUser);
 
-        // Cambia el estado validando primero que el valor exista y luego que la
-        // transición sea legal según la máquina de estados.
-        Task<StatusUpdateResult> UpdateStatus(Guid idRequest, string newStatus, Guid idManager, string? comment);
+        // Cambia el estado validando primero que el valor exista, luego —si
+        // quien llama no es administrador— que la solicitud sea la que tiene
+        // asignada, y por último que la transición sea legal según la máquina
+        // de estados.
+        Task<StatusUpdateResult> UpdateStatus(
+            Guid idRequest, string newStatus, Guid idManager, string? comment, bool isAdmin);
 
         // Un gestor toma una solicitud pendiente. La concurrencia la resuelve
         // IAssignmentService con un bloqueo pesimista.

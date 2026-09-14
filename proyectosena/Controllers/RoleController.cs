@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.User;
 using proyectosena.Interfaces.Services;
+using proyectosena.Models;
 
 namespace proyectosena.Controllers
 {
@@ -65,13 +66,24 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateRole([FromBody] RoleDto role)
         {
             if (role == null)
                 return BadRequest("Role data cannot be null.");
 
-            return Ok(await _roleService.Update(role));
+            var (result, updated) = await _roleService.Update(role);
+
+            if (result == CatalogMutationResult.NotFound)
+                return NotFound("The requested role was not found.");
+
+            // Renombrar Administrator, Manager o Citizen dejaría fuera en
+            // silencio a quien inicie sesión después: las políticas de
+            // autorización comparan por ese nombre, escrito en el código.
+            if (result == CatalogMutationResult.NombreDelSistema)
+                return BadRequest("This role's name can't be changed: the authorization policies depend on it.");
+
+            return Ok(updated);
         }
 
         // -------------------- DELETE: api/role/DeleteRole --------------------
@@ -79,15 +91,17 @@ namespace proyectosena.Controllers
         [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> DeleteRole(Guid idRole)
         {
-            var deleted = await _roleService.Delete(idRole);
+            var result = await _roleService.Delete(idRole);
 
-            // Retorna false si el rol no existe en la base de datos
-            if (!deleted)
-                return BadRequest("Could not delete the role. Please verify it exists.");
+            if (result == CatalogMutationResult.NotFound)
+                return NotFound("The requested role was not found.");
+
+            if (result == CatalogMutationResult.InUse)
+                return Conflict("This role is still assigned to at least one user.");
 
             return Ok("Role deleted successfully.");
         }

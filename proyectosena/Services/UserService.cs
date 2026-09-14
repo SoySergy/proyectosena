@@ -13,14 +13,21 @@ namespace proyectosena.Services
         private readonly IUserDirectoryRepository _userDirectory;
         private readonly IUserWriteRepository _userWrite;
 
+        // Para que dar de baja o cambiar la contraseña cierre de golpe
+        // cualquier sesión abierta de esa persona, no solo la que hace la
+        // petición
+        private readonly IRevokedTokenService _revokedTokens;
+
         public UserService(
             IUserLookupRepository userLookup,
             IUserDirectoryRepository userDirectory,
-            IUserWriteRepository userWrite)
+            IUserWriteRepository userWrite,
+            IRevokedTokenService revokedTokens)
         {
             _userLookup = userLookup;
             _userDirectory = userDirectory;
             _userWrite = userWrite;
+            _revokedTokens = revokedTokens;
         }
 
         public async Task<PagedResult<UserInfoDto>> GetUsers(int page, int pageSize)
@@ -84,10 +91,31 @@ namespace proyectosena.Services
 
             var updated = await _userWrite.UpdateUser(user);
 
+            // La contraseña nueva no sirve de nada si una sesión robada con la
+            // vieja sigue funcionando. Incluye a la sesión que hizo este mismo
+            // cambio: vuelve a entrar con la contraseña que acaba de poner.
+            if (!string.IsNullOrEmpty(dto.NewPassword))
+                _revokedTokens.RevokeAllForUser(idUser);
+
             return (UserUpdateResult.Success, updated.ToInfoDto());
         }
 
-        public Task<bool> Deactivate(Guid idUser)
-            => _userWrite.DeleteUser(idUser);
+        public async Task<UserDeactivationResult> Deactivate(Guid idUser)
+        {
+            // El freno del último administrador y la baja misma van juntos,
+            // bajo un candado, en DeactivateWithLastAdminGuard: separados
+            // (como antes) dos bajas simultáneas de administradores distintos
+            // podían leer "quedan 2" antes de que ninguna escribiera, y las
+            // dos pasaban el freno a la vez, dejando el sistema en cero (WA-16).
+            var result = await _userWrite.DeactivateWithLastAdminGuard(idUser, RoleNames.Administrator);
+            if (result != UserDeactivationResult.Success)
+                return result;
+
+            // De nada sirve la baja si el token que ya tenía sigue sirviendo
+            // los minutos que le quedaban de vida.
+            _revokedTokens.RevokeAllForUser(idUser);
+
+            return UserDeactivationResult.Success;
+        }
     }
 }

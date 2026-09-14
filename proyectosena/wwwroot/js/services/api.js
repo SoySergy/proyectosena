@@ -30,6 +30,34 @@ export function authHeaders() {
     };
 }
 
+// ── Sesión anulada o vencida ──────────────────────────────────────
+
+const LOGIN_URL = "/pages/auth/login.html";
+
+/** Borra la sesión de este navegador y lleva al login con el motivo: "caducada" o "contrasena". */
+export function volverAlLogin(motivo) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = `${LOGIN_URL}?sesion=${motivo}`;
+}
+
+/**
+ * fetch para peticiones con sesión. Un 401 con un token vigente por fecha es
+ * una sesión que el servidor anuló (logout en otra pestaña, cambio de
+ * contraseña, baja): todas las pantallas salen al login igual.
+ */
+export async function fetchConSesion(url, options = {}) {
+    const respuesta = await fetch(url, options);
+
+    if (respuesta.status === 401) {
+        volverAlLogin("caducada");
+        // Nunca se resuelve: la página ya se va y nadie debe pintar un error encima.
+        return new Promise(() => {});
+    }
+
+    return respuesta;
+}
+
 // ── Lectura de las respuestas del backend ─────────────────────────
 //
 // El backend contesta de tres formas distintas y hay que entenderlas todas:
@@ -71,4 +99,43 @@ export function mensajeDeError(cuerpo, porDefecto) {
     if (cuerpo?.title) return cuerpo.title;
 
     return porDefecto;
+}
+
+/**
+ * Consulta endpoints paginados iterando sobre todas las páginas existentes (pageSize=100)
+ * para asegurar que el cliente obtenga el universo completo de registros antes de filtrar o renderizar.
+ *
+ * @param {string} mensajeError - lo que se muestra si el servidor no da un
+ * mensaje propio. Antes cada pantalla escribía el suyo en su propio
+ * `if (!res.ok) throw`; al pasar a esta función todas caían en el mismo
+ * "Error al consultar los datos" genérico, así que aquí también se puede
+ * decir qué se estaba pidiendo.
+ */
+export async function fetchAllItems(url, options = {}, mensajeError = "Error al consultar los datos") {
+    const separator = url.includes("?") ? "&" : "?";
+    let page = 1;
+    let allItems = [];
+    let totalPages = 1;
+
+    do {
+        const fullUrl = `${url}${separator}page=${page}&pageSize=100`;
+        const res = await fetchConSesion(fullUrl, options);
+        if (!res.ok) {
+            const body = await leerCuerpo(res);
+            throw new Error(mensajeDeError(body, mensajeError));
+        }
+        const data = await res.json();
+        if (Array.isArray(data)) {
+            return data;
+        }
+        if (data && Array.isArray(data.items)) {
+            allItems = allItems.concat(data.items);
+            totalPages = data.totalPages || 1;
+        } else {
+            break;
+        }
+        page++;
+    } while (page <= totalPages);
+
+    return allItems;
 }

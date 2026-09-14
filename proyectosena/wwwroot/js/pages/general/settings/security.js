@@ -1,36 +1,12 @@
 ﻿import { checkAuth } from "/js/utils/authGuard.js";
-import { API_BASE } from "/js/services/api.js";
+import { API_BASE, authHeaders, fetchConSesion, leerCuerpo, mensajeDeError, volverAlLogin } from "/js/services/api.js";
+import { initUserMenu } from "/js/utils/userMenu.js";
 
 // ── Proteger acceso ───────────────────────────────────────────
 checkAuth();
 
-const user = JSON.parse(localStorage.getItem("user"));
-const token = localStorage.getItem("token");
-
-// ── Header dropdown ───────────────────────────────────────────
-if (user) {
-    document.getElementById("welcomeMsg").textContent = `${user.name} ${user.lastName}`;
-    document.getElementById("userEmail").textContent = user.email ?? "";
-}
-
-const trigger = document.getElementById("userMenuTrigger");
-const dropdown = document.getElementById("userDropdown");
-trigger.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = dropdown.classList.toggle("is-open");
-    trigger.setAttribute("aria-expanded", open);
-});
-document.addEventListener("click", () => {
-    dropdown.classList.remove("is-open");
-    trigger.setAttribute("aria-expanded", "false");
-});
-dropdown.addEventListener("click", (e) => e.stopPropagation());
-
-document.getElementById("logoutBtn").addEventListener("click", () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/pages/auth/login.html";
-});
+// Header dropdown y cierre de sesión con revocación en servidor
+const user = initUserMenu();
 
 // ── Botón volver ───────────────────────────────────────────────
 document.getElementById("settingsBackLink").addEventListener("click", (e) => {
@@ -115,27 +91,21 @@ document.getElementById("securityForm").addEventListener("submit", async (e) => 
     };
 
     try {
-        const res = await fetch(
+        const res = await fetchConSesion(
             `${API_BASE}/user/UpdateUser?idUser=${user.idUser}`,
             {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: authHeaders(),
                 body: JSON.stringify(dto)
             }
         );
 
-        const data = await res.json().catch(() => ({}));
+        const data = await leerCuerpo(res);
 
-        if (!res.ok) throw new Error(data.message || "No se pudo cambiar la contraseña.");
+        if (!res.ok) throw new Error(mensajeDeError(data, "No se pudo cambiar la contraseña."));
 
-        showMessage("✅ Contraseña actualizada correctamente. Por seguridad, vuelve a iniciar sesión.", "success");
-
-        // Limpiar el formulario
-        document.getElementById("securityForm").reset();
-        matchHint.textContent = "";
+        // El servidor ya anuló esta sesión al cambiar la contraseña (BL-07): el token de aquí no sirve.
+        volverAlLogin("contrasena");
 
     } catch (err) {
         showMessage(err.message || "Error al cambiar la contraseña.", "error");

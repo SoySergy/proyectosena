@@ -1,6 +1,6 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole, ROLES } from "../../utils/roleGuard.js";
-import { API_BASE } from "../../services/api.js";
+import { API_BASE, fetchAllItems, fetchConSesion, mensajeDeError } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
 import { initUserMenu } from "../../utils/userMenu.js";
@@ -37,6 +37,7 @@ const token = localStorage.getItem("token");
 initTabs({
     "mis-solicitudes": loadMyRequests,
     "historial": loadHistory,
+    "postularme": cargarMiPostulacion,
 });
 
 // ============================================================
@@ -153,7 +154,7 @@ createForm.addEventListener("submit", async (e) => {
     };
 
     try {
-        const response = await fetch(`${API_BASE}/collectionrequest/CreateCollectionRequest`, {
+        const response = await fetchConSesion(`${API_BASE}/collectionrequest/CreateCollectionRequest`, {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify(dto)
@@ -164,7 +165,7 @@ createForm.addEventListener("submit", async (e) => {
         try { result = JSON.parse(text); } catch { result = text; }
 
         if (!response.ok) {
-            throw new Error(result.message || result || "Error al crear la solicitud");
+            throw new Error(mensajeDeError(result, "Error al crear la solicitud"));
         }
 
         // Éxito: limpiar formulario y mostrar confirmación
@@ -184,11 +185,6 @@ createForm.addEventListener("submit", async (e) => {
 // ============================================================
 
 document.getElementById("refreshRequestsBtn").addEventListener("click", loadMyRequests);
-// ============================================================
-// SECCIÓN 2 — MIS SOLICITUDES ACTUALES
-// ============================================================
-
-document.getElementById("refreshRequestsBtn").addEventListener("click", loadMyRequests);
 
 async function loadMyRequests() {
     const listEl = document.getElementById("requests-list");
@@ -199,17 +195,13 @@ async function loadMyRequests() {
     showMessage("requests-message", "");
 
     try {
-        const res = await fetch(
+        const requests = await fetchAllItems(
             `${API_BASE}/collectionrequest/GetRequestsByUser?idUser=${user.idUser}`,
-            { headers: authHeaders() }
+            { headers: authHeaders() },
+            "Error al obtener solicitudes"
         );
 
         loadingEl.style.display = "none";
-
-        if (!res.ok) throw new Error("Error al obtener solicitudes");
-
-        // La API responde { items, page, pageSize, totalItems, totalPages }
-        const { items: requests } = await res.json();
 
         const activeRequests = requests.filter(r =>
             r.currentStatus === "Pending" ||
@@ -235,11 +227,56 @@ async function loadMyRequests() {
             });
         });
 
+        listEl.querySelectorAll(".cancel-btn").forEach(btn => {
+            btn.addEventListener("click", () => cancelRequest(btn.dataset.id, btn));
+        });
+
     } catch (error) {
         loadingEl.style.display = "none";
         showMessage("requests-message", "Error al cargar tus solicitudes.", "error");
     }
 }
+
+/**
+ * Cancela una solicitud propia. El botón que la llama solo existe mientras
+ * la solicitud sigue en Pending; el backend igual lo comprueba de nuevo
+ * (RequestCancelResult.NotCancellable) por si llegó a tomarla un gestor
+ * justo en este instante.
+ */
+async function cancelRequest(idRequest, btn) {
+    if (!window.confirm("¿Seguro que quieres cancelar esta solicitud? No se puede deshacer.")) {
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Cancelando...";
+
+    try {
+        const response = await fetchConSesion(
+            `${API_BASE}/collectionrequest/CancelRequest?idRequest=${idRequest}`,
+            { method: "PATCH", headers: authHeaders() }
+        );
+
+        // CancelRequest devuelve texto plano en sus errores (403, 404, 409),
+        // no JSON, así que se lee igual que en el resto de este archivo.
+        const text = await response.text();
+        let result;
+        try { result = JSON.parse(text); } catch { result = text; }
+
+        if (!response.ok) {
+            throw new Error(mensajeDeError(result, "No se pudo cancelar la solicitud."));
+        }
+
+        showMessage("requests-message", "Solicitud cancelada.", "success");
+        setTimeout(loadMyRequests, 1500);
+
+    } catch (error) {
+        showMessage("requests-message", error.message || "No se pudo cancelar la solicitud.", "error");
+        btn.disabled = false;
+        btn.textContent = "Cancelar";
+    }
+}
+
 //async function loadMyRequests() {
 //    const listEl = document.getElementById("requests-list");
 //    const loadingEl = document.getElementById("requests-loading");
@@ -348,6 +385,23 @@ function renderRequestCard(req) {
         ? `<button class="edit-btn" data-id="${escapeHtml(req.idRequest)}">${icon("lapiz")} Editar</button>`
         : `<button class="edit-btn" disabled title="Solo se pueden editar solicitudes pendientes">${icon("lapiz")} Editar</button>`;
 
+    // Cancelar solo es posible desde Pending —lo decide la misma máquina de
+    // estados del backend que decide si se puede editar—, así que comparte
+    // la condición con editBtn.
+    //
+    // Sin clase de estilo propia a propósito: no hay ninguna definida para
+    // esto en el CSS del panel. Se ve con el botón por defecto del navegador
+    // hasta que se le dé una.
+    const cancelBtn = isPending
+        ? `<button class="cancel-btn" data-id="${escapeHtml(req.idRequest)}">Cancelar</button>`
+        : `<button class="cancel-btn" disabled title="Solo se pueden cancelar solicitudes pendientes">Cancelar</button>`;
+
+    // El chat exige un gestor asignado (lo comprueba IsParticipant en el
+    // backend): mientras la solicitud esté Pending no hay con quién hablar.
+    const chatBtn = !isPending
+        ? `<a class="btn btn-secondary" href="/pages/general/chat.html?idRequest=${encodeURIComponent(req.idRequest)}">${icon("mensaje")} Chat</a>`
+        : "";
+
     return `
         <div class="request-card">
             <div class="card-header">
@@ -363,7 +417,9 @@ function renderRequestCard(req) {
                 ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Observaciones:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
             </div>
             <div class="card-actions">
+                ${chatBtn}
                 ${editBtn}
+                ${cancelBtn}
             </div>
         </div>
     `;
@@ -438,7 +494,7 @@ document.getElementById("editRequestForm").addEventListener("submit", async (e) 
     if (obs) dto.citizenObservations = obs;
 
     try {
-        const response = await fetch(`${API_BASE}/collectionrequest/UpdateCollectionRequest`, {
+        const response = await fetchConSesion(`${API_BASE}/collectionrequest/UpdateCollectionRequest`, {
             method: "PUT",
             headers: authHeaders(),
             body: JSON.stringify(dto)
@@ -449,7 +505,7 @@ document.getElementById("editRequestForm").addEventListener("submit", async (e) 
         try { result = JSON.parse(text); } catch { result = text; }
 
         if (!response.ok) {
-            throw new Error(result.message || result || "Error al actualizar la solicitud");
+            throw new Error(mensajeDeError(result, "Error al actualizar la solicitud"));
         }
 
         showMessage("edit-message", "✅ Solicitud actualizada correctamente.", "success");
@@ -483,20 +539,13 @@ async function loadHistory() {
     showMessage("history-message", "");
 
     try {
-        // GET api/history/GetMyHistory?idUser={idUser}
-        const response = await fetch(
+        const histories = await fetchAllItems(
             `${API_BASE}/history/GetMyHistory?idUser=${user.idUser}`,
-            { headers: authHeaders() }
+            { headers: authHeaders() },
+            "Error al obtener el historial"
         );
 
         loadingEl.style.display = "none";
-
-        if (!response.ok) {
-            throw new Error("Error al obtener el historial");
-        }
-
-        // La API responde { items, page, pageSize, totalItems, totalPages }
-        const { items: histories } = await response.json();
 
         if (!histories || histories.length === 0) {
             listEl.innerHTML = "<p class='empty-msg'>No tienes historial de recolecciones aún.</p>";
@@ -536,3 +585,135 @@ function renderHistoryRow(h) {
         </div>
     `;
 }
+
+// ============================================================
+// SECCIÓN 4 — POSTULARME A GESTOR
+// ============================================================
+
+const applyForm = document.getElementById("applyForm");
+const applyStatusEl = document.getElementById("apply-status");
+
+/**
+ * Consulta en qué va la última postulación de este ciudadano y decide si el
+ * formulario para enviar una nueva se muestra: no tiene sentido dejar
+ * mandar otra mientras hay una en revisión, ni si ya se la aprobaron —el
+ * backend rechaza los dos casos con 409, esto es solo comodidad.
+ */
+async function cargarMiPostulacion() {
+    const loadingEl = document.getElementById("apply-loading");
+
+    showMessage("apply-message", "");
+    applyStatusEl.innerHTML = "";
+    loadingEl.style.display = "block";
+
+    try {
+        const response = await fetchConSesion(`${API_BASE}/ManagerApplication/GetMyApplication`, {
+            headers: authHeaders()
+        });
+
+        loadingEl.style.display = "none";
+
+        // 404 no es un error aquí: significa que nunca ha postulado, y el
+        // formulario vacío es justo lo que corresponde mostrar.
+        if (response.status === 404) {
+            applyForm.style.display = "";
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("Error al consultar tu postulación.");
+        }
+
+        pintarEstadoPostulacion(await response.json());
+
+    } catch (error) {
+        loadingEl.style.display = "none";
+        showMessage("apply-message", error.message || "Error al consultar tu postulación.", "error");
+    }
+}
+
+/**
+ * Pinta el estado de la última postulación y muestra u oculta el
+ * formulario según corresponda.
+ */
+function pintarEstadoPostulacion(app) {
+    const estados = {
+        Pending: { etiqueta: "En revisión", clase: "status-pending" },
+        Approved: { etiqueta: "Aprobada", clase: "status-completed" },
+        Rejected: { etiqueta: "Rechazada", clase: "status-rejected" },
+    };
+    const estado = estados[app.status] || { etiqueta: app.status, clase: "status-none" };
+
+    let aviso = "";
+    if (app.status === "Pending") {
+        aviso = "<p>Tu postulación está en revisión. Te avisaremos por notificación cuando el administrador decida.</p>";
+    } else if (app.status === "Approved") {
+        aviso = "<p>¡Tu postulación fue aprobada! Cierra sesión y vuelve a entrar para ver las opciones de gestor.</p>";
+    } else if (app.status === "Rejected" && app.reviewComment) {
+        aviso = `<p>Tu postulación no fue aprobada. Motivo: ${escapeHtml(app.reviewComment)}</p>`;
+    }
+
+    applyStatusEl.innerHTML = `
+        <div class="request-card">
+            <div class="card-header">
+                <span class="status-badge ${estado.clase}">${estado.etiqueta}</span>
+                <span class="card-date">Enviada: ${formatDate(app.requestDate)}</span>
+            </div>
+            <div class="card-body">
+                <p><strong>Tu motivación:</strong> ${escapeHtml(app.motivation)}</p>
+                ${aviso}
+            </div>
+        </div>
+    `;
+
+    // Solo tiene sentido volver a postular tras un rechazo. Pendiente o
+    // Aprobada: nada que ganar con enviar otra.
+    applyForm.style.display = (app.status === "Rejected") ? "" : "none";
+}
+
+applyForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const motivationInput = document.getElementById("motivation");
+    const motivation = motivationInput.value.trim();
+
+    if (motivation.length < 20) {
+        showMessage("apply-message", "Cuéntanos un poco más: al menos 20 caracteres.", "error");
+        return;
+    }
+
+    const btn = document.getElementById("submitApplyBtn");
+    btn.disabled = true;
+    btn.textContent = "Enviando...";
+    showMessage("apply-message", "");
+
+    try {
+        const response = await fetchConSesion(`${API_BASE}/ManagerApplication/Apply`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ motivation })
+        });
+
+        const text = await response.text();
+        let result;
+        try { result = JSON.parse(text); } catch { result = text; }
+
+        if (!response.ok) {
+            throw new Error(mensajeDeError(result, "No se pudo enviar la postulación."));
+        }
+
+        motivationInput.value = "";
+
+        // Se recarga ANTES de mostrar el aviso: cargarMiPostulacion empieza
+        // por limpiar el mensaje de la sección, así que ponerlo primero se
+        // borraría solo apenas terminara de cargar.
+        await cargarMiPostulacion();
+        showMessage("apply-message", "Postulación enviada. Te avisaremos cuando el administrador decida.", "success");
+
+    } catch (error) {
+        showMessage("apply-message", error.message || "No se pudo enviar la postulación.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Enviar postulación";
+    }
+});

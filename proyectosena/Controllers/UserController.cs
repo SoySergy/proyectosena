@@ -145,9 +145,12 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> DeleteUser(Guid idUser)
         {
-            var deactivated = await _userService.Deactivate(idUser);
+            var result = await _userService.Deactivate(idUser);
 
-            if (!deactivated)
+            if (result == UserDeactivationResult.LastAdministrator)
+                return BadRequest("You can't deactivate the only active administrator.");
+
+            if (result == UserDeactivationResult.UserNotFound)
                 return BadRequest("Could not delete the user. Please verify it exists.");
 
             return Ok("User deleted successfully.");
