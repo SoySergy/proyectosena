@@ -1,4 +1,4 @@
-﻿import { API_BASE, authHeaders } from "../services/api.js";
+﻿import { API_BASE, authHeaders, fetchConSesion } from "../services/api.js";
 import { escapeHtml } from "./html.js";
 import { formatDate } from "./format.js";
 import { traducirTitulo, traducirMensaje } from "./notificacionesTextos.js";
@@ -86,7 +86,7 @@ async function cargarLista() {
     lista.innerHTML = `<p class="notificaciones__vacio">Cargando...</p>`;
 
     try {
-        const respuesta = await fetch(
+        const respuesta = await fetchConSesion(
             `${API_BASE}/Notification/GetMyNotifications?pageSize=${CUANTAS_MOSTRAR}`,
             { headers: authHeaders() }
         );
@@ -126,7 +126,7 @@ async function marcarComoLeido(elemento, alHacerClic) {
     if (!id) return;
 
     try {
-        const respuesta = await fetch(`${API_BASE}/Notification/MarkAsRead?idNotification=${id}`, {
+        const respuesta = await fetchConSesion(`${API_BASE}/Notification/MarkAsRead?idNotification=${id}`, {
             method: "PATCH",
             headers: authHeaders(),
         });
@@ -169,13 +169,15 @@ async function actualizarContador() {
     if (!contador) return;
 
     try {
-        const respuesta = await fetch(`${API_BASE}/Notification/GetUnreadCount`, {
+        // Se pide al cargar cada panel, así que también es lo primero que
+        // detecta una sesión anulada: fetchConSesion saca al login.
+        const respuesta = await fetchConSesion(`${API_BASE}/Notification/GetUnreadCount`, {
             headers: authHeaders(),
         });
 
-        // Si la sesión caducó o el servidor falla, la campana se queda sin
-        // numerito y ya está: un aviso rojo en la cabecera por no poder
-        // contar notificaciones sería más molesto que útil.
+        // Si el servidor falla, la campana se queda sin numerito y ya está: un
+        // aviso rojo en la cabecera por no poder contar notificaciones sería
+        // más molesto que útil.
         if (!respuesta.ok) {
             ocultar(contador);
             return;

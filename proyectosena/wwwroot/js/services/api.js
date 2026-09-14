@@ -30,6 +30,34 @@ export function authHeaders() {
     };
 }
 
+// ── Sesión anulada o vencida ──────────────────────────────────────
+
+const LOGIN_URL = "/pages/auth/login.html";
+
+/** Borra la sesión de este navegador y lleva al login con el motivo: "caducada" o "contrasena". */
+export function volverAlLogin(motivo) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = `${LOGIN_URL}?sesion=${motivo}`;
+}
+
+/**
+ * fetch para peticiones con sesión. Un 401 con un token vigente por fecha es
+ * una sesión que el servidor anuló (logout en otra pestaña, cambio de
+ * contraseña, baja): todas las pantallas salen al login igual.
+ */
+export async function fetchConSesion(url, options = {}) {
+    const respuesta = await fetch(url, options);
+
+    if (respuesta.status === 401) {
+        volverAlLogin("caducada");
+        // Nunca se resuelve: la página ya se va y nadie debe pintar un error encima.
+        return new Promise(() => {});
+    }
+
+    return respuesta;
+}
+
 // ── Lectura de las respuestas del backend ─────────────────────────
 //
 // El backend contesta de tres formas distintas y hay que entenderlas todas:
@@ -91,14 +119,10 @@ export async function fetchAllItems(url, options = {}, mensajeError = "Error al 
 
     do {
         const fullUrl = `${url}${separator}page=${page}&pageSize=100`;
-        const res = await fetch(fullUrl, options);
+        const res = await fetchConSesion(fullUrl, options);
         if (!res.ok) {
             const body = await leerCuerpo(res);
-            const error = new Error(mensajeDeError(body, mensajeError));
-            // El código va aparte del mensaje: un 401 aquí es la sesión caducada,
-            // no un fallo del servidor, y quien llama necesita distinguirlos.
-            error.status = res.status;
-            throw error;
+            throw new Error(mensajeDeError(body, mensajeError));
         }
         const data = await res.json();
         if (Array.isArray(data)) {

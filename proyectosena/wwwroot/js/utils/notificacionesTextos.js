@@ -25,6 +25,7 @@ const TITULOS = {
     "New Collection Request Available": "Nueva solicitud disponible",
     "Manager Application Approved": "Solicitud de gestor aprobada",
     "Manager Application Rejected": "Solicitud de gestor rechazada",
+    "New Chat Message": "Nuevo mensaje",
 };
 
 // ── Mensajes que siempre dicen lo mismo ───────────────────────
@@ -62,6 +63,10 @@ const PATRONES = [
     {
         en: "A new collection request is available at: {0}. Be the first to accept it!",
         es: "Hay una nueva solicitud disponible en: {0}. ¡Sé el primero en aceptarla!",
+    },
+    {
+        en: "{0} sent you a new message.",
+        es: "{0} te envió un mensaje nuevo.",
     },
 ];
 

@@ -3,7 +3,7 @@ import { requireRole, ROLES } from "../../utils/roleGuard.js";
 import { initUserMenu } from "../../utils/userMenu.js";
 import { initTabs } from "../../utils/tabs.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
-import { API_BASE, authHeaders, leerCuerpo, mensajeDeError, fetchAllItems } from "../../services/api.js";
+import { API_BASE, authHeaders, leerCuerpo, mensajeDeError, fetchAllItems, fetchConSesion } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { icon, formatDate } from "../../utils/format.js";
 // /js/pages/admin/dashboard.js
@@ -155,14 +155,7 @@ async function cargarSolicitudes() {
 
         pintarSolicitudes(solicitudes);
     } catch (error) {
-        // Mismo aviso que pedirAlServidor para un 401: la sesión caducó, no
-        // es un fallo del servidor, y así se le dice a la persona qué hacer.
-        mostrarMensaje(
-            "applications-message",
-            error.status === 401
-                ? "Tu sesión caducó. Vuelve a iniciar sesión."
-                : (error.message || "No se pudieron cargar las solicitudes.")
-        );
+        mostrarMensaje("applications-message", error.message || "No se pudieron cargar las solicitudes.");
     } finally {
         alternarCargando("applications-loading", false);
     }
@@ -465,32 +458,19 @@ document.getElementById("createManagerForm")?.addEventListener("submit", crearGe
  * nada» de «falló». Con ok esa duda desaparece.
  *
  * Así cada sección se ocupa solo de lo suyo —mirar que los datos tengan
- * sentido y pintarlos— sin repetir el mismo bloque de sesión caducada,
- * error del servidor y falta de red en cada una.
+ * sentido y pintarlos— sin repetir el mismo bloque de error del servidor y
+ * falta de red en cada una. La sesión anulada la resuelve fetchConSesion.
  */
 async function pedirAlServidor(ruta, { aviso, cargando = null, metodo = "GET", cuerpo = null }, textoDeFallo) {
     mostrarMensaje(aviso, "");
     if (cargando) alternarCargando(cargando, true);
 
     try {
-        const respuesta = await fetch(`${API_BASE}${ruta}`, {
+        const respuesta = await fetchConSesion(`${API_BASE}${ruta}`, {
             method: metodo,
             headers: authHeaders(),
             body: cuerpo ? JSON.stringify(cuerpo) : undefined,
         });
-
-        // La sesión caduca a las dos horas. Sin este caso el aviso era el
-        // genérico, que no le dice a nadie que lo que tiene que hacer es
-        // volver a entrar. Se comprobó: un 401 llega sin cuerpo, así que no
-        // hay ningún mensaje del servidor que rescatar.
-        // La sesión caduca a las dos horas. Sin este caso el aviso era el
-        // genérico, que no le dice a nadie que lo que tiene que hacer es
-        // volver a entrar. Se comprobó: un 401 llega sin cuerpo, así que no
-        // hay ningún mensaje del servidor que rescatar.
-        if (respuesta.status === 401) {
-            mostrarMensaje(aviso, "Tu sesión caducó. Vuelve a iniciar sesión.");
-            return { ok: false };
-        }
 
         const respondio = await leerCuerpo(respuesta);
 

@@ -1,6 +1,6 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole, ROLES } from "../../utils/roleGuard.js";
-import { API_BASE, fetchAllItems } from "../../services/api.js";
+import { API_BASE, fetchAllItems, fetchConSesion } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
 import { initUserMenu } from "../../utils/userMenu.js";
@@ -152,7 +152,7 @@ async function acceptRequest(idRequest, btn) {
     btn.textContent = "Aceptando...";
 
     try {
-        const res = await fetch(
+        const res = await fetchConSesion(
             `${API_BASE}/collectionrequest/AcceptRequest?idRequest=${idRequest}&idManager=${user.idUser}`,
             { method: "POST", headers: authHeaders() }
         );
@@ -230,6 +230,7 @@ function renderAssignedCard(req) {
                 ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Notas:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
             </div>
             <div class="card-actions">
+                <a class="btn btn-secondary" href="/pages/general/chat.html?idRequest=${encodeURIComponent(req.idRequest)}">${icon("mensaje")} Chat</a>
                 <button class="btn-status" data-id="${escapeHtml(req.idRequest)}" data-status="${escapeHtml(req.currentStatus)}">
                     Cambiar estado
                 </button>
@@ -364,7 +365,7 @@ document.getElementById("saveStatusBtn").addEventListener("click", async () => {
             ...(comment ? { comment } : {})
         });
 
-        const res = await fetch(
+        const res = await fetchConSesion(
             `${API_BASE}/collectionrequest/UpdateStatus?${params.toString()}`,
             { method: "PATCH", headers: authHeaders() }
         );
