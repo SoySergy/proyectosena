@@ -85,7 +85,7 @@ form.addEventListener("submit", async (e) => {
             || "Cuenta creada. Te enviamos un código para confirmar tu correo.";
 
         setTimeout(() => {
-            window.location.href = `verify-email.html?email=${encodeURIComponent(result.email)}`;
+            window.location.href = `/verify-email?email=${encodeURIComponent(result.email)}`;
         }, 1500);
 
     } catch (error) {

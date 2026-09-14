@@ -22,12 +22,12 @@ export const ROLES = {
 // de «rol desconocido», que manda al login, y el login vuelve a llamar a
 // redirectByRole porque el token sigue guardado.
 const ROLE_DASHBOARDS = {
-    [ROLES.CITIZEN]: "/pages/citizen/dashboard.html",
-    [ROLES.MANAGER]: "/pages/manager/dashboard.html",
-    [ROLES.ADMIN]: "/pages/admin/dashboard.html",
+    [ROLES.CITIZEN]: "/citizen",
+    [ROLES.MANAGER]: "/manager",
+    [ROLES.ADMIN]: "/admin",
 };
 
-const LOGIN_URL = "/pages/auth/login.html";
+const LOGIN_URL = "/login";
 
 // ── Función privada: obtener rol actual ───────────────────────
 function getCurrentRole() {

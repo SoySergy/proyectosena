@@ -1,10 +1,11 @@
-using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
+using proyectosena.Context;
 using proyectosena.Interfaces.Services;
 
 namespace proyectosena.Services
 {
     /// <summary>
-    /// Tokens que dejaron de valer antes de su fecha, guardados en memoria.
+    /// Tokens que dejaron de valer antes de su fecha, guardados en la base.
     /// </summary>
     /// <remarks>
     /// Existe porque cerrar sesión no cerraba nada. El botón solo borraba el
@@ -13,117 +14,85 @@ namespace proyectosena.Services
     /// sesión y volviendo a usarlo, y respondía 200 igual que antes.
     ///
     /// <para>
-    /// Se registra como Singleton en DependencyInjection.cs, igual que
-    /// <see cref="VerificationCodeService"/>: como Scoped, cada petición
-    /// recibiría una lista vacía y ningún token quedaría revocado.
-    /// </para>
-    ///
-    /// <para>
-    /// Guardar esto en memoria tiene un límite que conviene saber: si la API
-    /// se reinicia, la lista se vacía y los tokens revocados vuelven a valer
-    /// hasta que caduquen solos. Aguantarlo entre reinicios pediría una tabla
-    /// en la base de datos y una consulta en cada petición.
+    /// Antes la lista vivía en memoria (B-6 · WA-12): al reiniciar la API se
+    /// vaciaba y los tokens anulados volvían a valer hasta caducar solos, y con
+    /// dos réplicas un cierre de sesión en una no se veía en la otra. El precio
+    /// de tenerla en la base es una o dos consultas más en cada petición
+    /// autenticada: <c>OnTokenValidated</c>, en Program.cs, llama a
+    /// <see cref="IsRevoked"/> y a <see cref="IsRevokedForUser"/> siempre.
     /// </para>
     /// </remarks>
     public class RevokedTokenService : IRevokedTokenService
     {
-        // Clave: el "jti" del token | Valor: cuándo habría caducado por su cuenta.
-        private readonly ConcurrentDictionary<string, DateTime> _revocados = new();
+        private readonly RecyRouteDbContext _context;
 
-        // Cada tantas revocaciones se barren las caducadas. Sin esto, la lista
-        // solo crecería: un token revocado hace una semana ya no le estorba a
-        // nadie, pero seguiría ocupando sitio.
+        // Cada tantas revocaciones se borran las que ya habrían caducado solas.
+        // Sin esto la tabla solo crecería. Estático: el servicio es Scoped y cada
+        // petición recibe una instancia nueva.
         private const int RevocacionesEntreLimpiezas = 100;
+        private static int _desdeLaUltimaLimpieza;
 
-        private int _desdeLaUltimaLimpieza;
+        public RevokedTokenService(RecyRouteDbContext context)
+        {
+            _context = context;
+        }
 
-        // Clave: el usuario | Valor: se invalida todo lo suyo emitido ANTES de
-        // este instante. Cubre lo que un solo jti no puede: a alguien se le
-        // puede dar de baja, o cambiar su contraseña, desde OTRA sesión que no
-        // conoce el jti del token que hay que anular —el de logout sí lo
-        // conoce, porque es el mismo que hace la petición—.
-        private readonly ConcurrentDictionary<Guid, DateTime> _revocadosPorUsuario = new();
-
-        // Igual que arriba pero para este segundo diccionario. Una entrada dejó
-        // de servir para algo en cuanto pasó el tiempo de vida más largo que
-        // pueda tener un token; veinticuatro horas es generoso de sobra frente
-        // a los minutos que dura hoy una sesión.
-        private const int RevocacionesDeUsuarioEntreLimpiezas = 50;
-        private static readonly TimeSpan VentanaDeLimpiezaPorUsuario = TimeSpan.FromHours(24);
-        private int _desdeLaUltimaLimpiezaPorUsuario;
-
-        public void Revoke(string tokenId, DateTime expiraEn)
+        public async Task Revoke(string tokenId, DateTime expiraEn)
         {
             if (string.IsNullOrWhiteSpace(tokenId))
                 return;
 
-            _revocados[tokenId] = expiraEn;
+            // Cerrar sesión dos veces con el mismo token no es un error
+            await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                INSERT INTO ""RevokedToken"" (""TokenId"", ""ExpiresAt"")
+                VALUES ({tokenId}, {expiraEn})
+                ON CONFLICT (""TokenId"") DO NOTHING");
 
             if (Interlocked.Increment(ref _desdeLaUltimaLimpieza) >= RevocacionesEntreLimpiezas)
             {
                 Interlocked.Exchange(ref _desdeLaUltimaLimpieza, 0);
-                LimpiarCaducados();
+                var ahora = DateTime.UtcNow;
+                await _context.RevokedTokens
+                    .Where(t => t.ExpiresAt <= ahora)
+                    .ExecuteDeleteAsync();
             }
         }
 
-        public bool IsRevoked(string tokenId)
+        public async Task<bool> IsRevoked(string tokenId)
         {
             if (string.IsNullOrWhiteSpace(tokenId))
                 return false;
 
-            if (!_revocados.TryGetValue(tokenId, out var expiraEn))
-                return false;
-
-            // Si ya habría caducado por su cuenta, sobra tenerlo en la lista:
-            // el propio validador del token lo rechazará por vencido.
-            if (expiraEn <= DateTime.UtcNow)
-            {
-                _revocados.TryRemove(tokenId, out _);
-                return false;
-            }
-
-            return true;
+            // Si ya habría caducado por su cuenta, no cuenta como revocado: el
+            // propio validador del token lo rechaza por vencido.
+            var ahora = DateTime.UtcNow;
+            return await _context.RevokedTokens
+                .AnyAsync(t => t.TokenId == tokenId && t.ExpiresAt > ahora);
         }
 
-        public void RevokeAllForUser(Guid idUser)
-        {
-            _revocadosPorUsuario[idUser] = DateTime.UtcNow;
-
-            if (Interlocked.Increment(ref _desdeLaUltimaLimpiezaPorUsuario) >= RevocacionesDeUsuarioEntreLimpiezas)
-            {
-                Interlocked.Exchange(ref _desdeLaUltimaLimpiezaPorUsuario, 0);
-                LimpiarCortesViejos();
-            }
-        }
-
-        public bool IsRevokedForUser(Guid idUser, DateTime issuedAt)
-        {
-            if (!_revocadosPorUsuario.TryGetValue(idUser, out var invalidarAntesDe))
-                return false;
-
-            return issuedAt < invalidarAntesDe;
-        }
-
-        private void LimpiarCaducados()
+        public async Task RevokeAllForUser(Guid idUser)
         {
             var ahora = DateTime.UtcNow;
 
-            foreach (var (tokenId, expiraEn) in _revocados)
-            {
-                if (expiraEn <= ahora)
-                    _revocados.TryRemove(tokenId, out _);
-            }
+            // GREATEST: si dos revocaciones llegan desordenadas, la más vieja no
+            // puede adelantar el corte y devolverle la validez a lo emitido entre
+            // una y otra.
+            await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                INSERT INTO ""UserTokenRevocation"" (""IdUser"", ""RevokedBefore"")
+                VALUES ({idUser}, {ahora})
+                ON CONFLICT (""IdUser"") DO UPDATE
+                SET ""RevokedBefore"" = GREATEST(""UserTokenRevocation"".""RevokedBefore"", EXCLUDED.""RevokedBefore"")");
         }
 
-        private void LimpiarCortesViejos()
+        public async Task<bool> IsRevokedForUser(Guid idUser, DateTime issuedAt)
         {
-            var limite = DateTime.UtcNow - VentanaDeLimpiezaPorUsuario;
+            var invalidarAntesDe = await _context.UserTokenRevocations
+                .AsNoTracking()
+                .Where(r => r.IdUser == idUser)
+                .Select(r => (DateTime?)r.RevokedBefore)
+                .FirstOrDefaultAsync();
 
-            foreach (var (idUser, invalidarAntesDe) in _revocadosPorUsuario)
-            {
-                if (invalidarAntesDe <= limite)
-                    _revocadosPorUsuario.TryRemove(idUser, out _);
-            }
+            return invalidarAntesDe.HasValue && issuedAt < invalidarAntesDe.Value;
         }
     }
 }
