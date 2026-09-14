@@ -15,7 +15,7 @@ const email = sessionStorage.getItem("resetEmail");
 
 // Si no hay email en sesión, manda de vuelta a forgot-password
 if (!email) {
-    window.location.href = "forgot-password.html";
+    window.location.href = "/forgot-password";
 }
 
 // ── Referencias al DOM ────────────────────────────────────────
@@ -214,7 +214,7 @@ resetBtn.addEventListener("click", async () => {
 
 // ── PASO 3: ir al login ───────────────────────────────────────
 goToLoginBtn.addEventListener("click", () => {
-    window.location.href = "/pages/auth/login.html";
+    window.location.href = "/login";
 });
 
 // ── Muestra el paso 1 al cargar ───────────────────────────────

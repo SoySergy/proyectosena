@@ -108,12 +108,12 @@ namespace proyectosena.Controllers
         [HttpPost("verify-reset-code")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public IActionResult VerifyResetCode([FromBody] VerifyResetCodeDto dto)
+        public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Code))
                 return BadRequest("Correo y código son requeridos.");
 
-            if (!_authService.VerifyResetCode(dto.Email, dto.Code))
+            if (!await _authService.VerifyResetCode(dto.Email, dto.Code))
                 return BadRequest("Código inválido o expirado.");
 
             return Ok(new { message = "Código verificado correctamente." });
@@ -203,7 +203,7 @@ namespace proyectosena.Controllers
         // Se comprobó guardando un token, cerrando sesión y volviéndolo a usar.
         [HttpPost("Logout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
             // Ambos claims los pone el propio servidor al emitir el token, y
             // llegar aquí ya exige que la firma sea válida.
@@ -219,7 +219,7 @@ namespace proyectosena.Controllers
                 ? DateTimeOffset.FromUnixTimeSeconds(segundos).UtcDateTime
                 : DateTime.UtcNow.AddHours(1);
 
-            _revokedTokens.Revoke(tokenId, expiraEn);
+            await _revokedTokens.Revoke(tokenId, expiraEn);
 
             return Ok(new { message = "Sesión cerrada." });
         }

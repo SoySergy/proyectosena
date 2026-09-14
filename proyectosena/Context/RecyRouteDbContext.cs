@@ -24,6 +24,9 @@ namespace proyectosena.Context
         public DbSet<History> Histories { get; set; }
         public DbSet<ChatHistory> ChatHistories { get; set; }
         public DbSet<ManagerApplication> ManagerApplications { get; set; }
+        public DbSet<VerificationCode> VerificationCodes { get; set; }
+        public DbSet<RevokedToken> RevokedTokens { get; set; }
+        public DbSet<UserTokenRevocation> UserTokenRevocations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -424,6 +427,61 @@ namespace proyectosena.Context
                     .HasForeignKey(a => a.IdReviewer)
                     .OnDelete(DeleteBehavior.NoAction)
                     .HasConstraintName("FK_ManagerApplication_Reviewer");
+            });
+
+            // ══════════════════════════════════════
+            // TABLE: VerificationCode
+            // ══════════════════════════════════════
+            // Los nombres de tabla y columna se usan tal cual en el SQL crudo de
+            // VerificationCodeService y RevokedTokenService: cambiarlos aquí
+            // obliga a cambiarlos allí.
+            modelBuilder.Entity<VerificationCode>(entity =>
+            {
+                entity.ToTable("VerificationCode");
+                entity.HasKey(v => v.Key);
+                entity.Property(v => v.Key)
+                    .HasMaxLength(150);
+                entity.Property(v => v.Code)
+                    .IsRequired()
+                    .HasMaxLength(6);
+                entity.Property(v => v.Expiry)
+                    .IsRequired();
+                entity.Property(v => v.FailedAttempts)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+                entity.HasIndex(v => v.Expiry)
+                    .HasDatabaseName("IX_VerificationCode_Expiry");
+            });
+
+            // ══════════════════════════════════════
+            // TABLE: RevokedToken
+            // ══════════════════════════════════════
+            modelBuilder.Entity<RevokedToken>(entity =>
+            {
+                entity.ToTable("RevokedToken");
+                entity.HasKey(t => t.TokenId);
+                entity.Property(t => t.TokenId)
+                    .HasMaxLength(64);
+                entity.Property(t => t.ExpiresAt)
+                    .IsRequired();
+                entity.HasIndex(t => t.ExpiresAt)
+                    .HasDatabaseName("IX_RevokedToken_ExpiresAt");
+            });
+
+            // ══════════════════════════════════════
+            // TABLE: UserTokenRevocation
+            // ══════════════════════════════════════
+            modelBuilder.Entity<UserTokenRevocation>(entity =>
+            {
+                entity.ToTable("UserTokenRevocation");
+                entity.HasKey(r => r.IdUser);
+                entity.Property(r => r.RevokedBefore)
+                    .IsRequired();
+                entity.HasOne<User>()
+                    .WithOne()
+                    .HasForeignKey<UserTokenRevocation>(r => r.IdUser)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("FK_UserTokenRevocation_User");
             });
         }
 

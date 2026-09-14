@@ -98,5 +98,5 @@ form.addEventListener("submit", async (e) => {
 
 // ── Botón "Ingresar código" → redirige a reset-password.html ──
 goToVerifyBtn.addEventListener("click", () => {
-    window.location.href = "reset-password.html";
+    window.location.href = "/reset-password";
 });

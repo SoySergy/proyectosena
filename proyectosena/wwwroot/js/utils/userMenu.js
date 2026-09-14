@@ -13,7 +13,7 @@
  * correo los teclea la persona al registrarse y por ahí se colaba código.
  */
 
-const LOGIN_URL = "/pages/auth/login.html";
+const LOGIN_URL = "/login";
 
 /**
  * Conecta la cabecera de la página y devuelve el usuario guardado.

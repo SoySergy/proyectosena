@@ -399,7 +399,7 @@ function renderRequestCard(req) {
     // El chat exige un gestor asignado (lo comprueba IsParticipant en el
     // backend): mientras la solicitud esté Pending no hay con quién hablar.
     const chatBtn = !isPending
-        ? `<a class="btn btn-secondary" href="/pages/general/chat.html?idRequest=${encodeURIComponent(req.idRequest)}">${icon("mensaje")} Chat</a>`
+        ? `<a class="btn btn-secondary" href="/chat?idRequest=${encodeURIComponent(req.idRequest)}">${icon("mensaje")} Chat</a>`
         : "";
 
     return `

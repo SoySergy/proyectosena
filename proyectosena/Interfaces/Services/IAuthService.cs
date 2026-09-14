@@ -35,7 +35,7 @@ namespace proyectosena.Interfaces.Services
         Task RequestPasswordReset(string email);
 
         // True si el código sigue vigente. Solo comprueba; no consume el código.
-        bool VerifyResetCode(string email, string code);
+        Task<bool> VerifyResetCode(string email, string code);
 
         // Cambia la contraseña y quema el código.
         Task<ResetPasswordResult> ResetPassword(ResetPasswordDto dto);
