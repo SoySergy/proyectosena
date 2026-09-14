@@ -23,25 +23,33 @@
 
 .header-buttons {
     display: flex;
-    flex-wrap: wrap;
     gap: 2rem;
 }
 
 @media (max-width: 480px) {
     .header-buttons {
         width: 100%;
-        justify-content: center;
         gap: 1rem;
     }
 }
 
-.btn {
+.header-buttons .btn {
+    /* components/buttons.css pone width:100% pensado para formularios; aquí
+       los botones deben medir lo que pide su texto, no llenar la fila. */
+    width: auto;
     text-decoration: none;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     transition: background-color 0.3s;
     font-weight: 500;
     white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+    .header-buttons .btn {
+        flex: 1 1 0;
+        white-space: normal;
+    }
 }
 
 .btn-login {
