@@ -12,12 +12,23 @@ namespace proyectosena.Services
         // Necesario para saber quién pertenece a cada solicitud
         private readonly ICollectionRequestRepository _collectionRequestRepository;
 
+        // Para saber a quién avisar: el gestor asignado, si quien escribió es
+        // el ciudadano dueño
+        private readonly ICollectionManagementRepository _managementRepository;
+
+        // Avisa al otro participante cuando llega un mensaje nuevo
+        private readonly INotificationRepository _notificationRepository;
+
         public ChatHistoryService(
             IChatHistoryRepository chatHistoryRepository,
-            ICollectionRequestRepository collectionRequestRepository)
+            ICollectionRequestRepository collectionRequestRepository,
+            ICollectionManagementRepository managementRepository,
+            INotificationRepository notificationRepository)
         {
             _chatHistoryRepository = chatHistoryRepository;
             _collectionRequestRepository = collectionRequestRepository;
+            _managementRepository = managementRepository;
+            _notificationRepository = notificationRepository;
         }
 
         public async Task<(RequestAccessResult Result, ChatMessageResponseDto? Message)> SendMessage(
@@ -43,7 +54,42 @@ namespace proyectosena.Services
             // Se recarga para traer remitente y rol, que el DTO necesita
             var full = await _chatHistoryRepository.GetMessage(created.IdChatHistory);
 
+            // Un fallo aquí no debe impedir que el mensaje se haya enviado: la
+            // conversación ya quedó guardada, avisar es un extra.
+            await AvisarAlOtroParticipante(full!, idSender);
+
             return (RequestAccessResult.Success, MapToDto(full!));
+        }
+
+        // Sin esto, quien no tiene el chat abierto en pantalla no se entera de
+        // que le escribieron hasta que entra por su cuenta a revisar.
+        private async Task AvisarAlOtroParticipante(ChatHistory mensaje, Guid idSender)
+        {
+            var request = await _collectionRequestRepository.GetCollectionRequest(mensaje.IdRequest);
+            if (request == null)
+                return;
+
+            // Si escribió el ciudadano dueño, el destinatario es el gestor
+            // asignado —puede no haber ninguno todavía—. Si no, quien escribió
+            // es un gestor asignado (lo exige IsParticipant), y el destinatario
+            // es el ciudadano dueño.
+            Guid? destinatario = idSender == request.IdUser
+                ? (await _managementRepository.GetByRequest(mensaje.IdRequest))?.IdManager
+                : request.IdUser;
+
+            if (destinatario is null || destinatario == idSender)
+                return;
+
+            await _notificationRepository.CreateNotification(new Notification
+            {
+                IdUser = destinatario,
+                IdRequest = mensaje.IdRequest,
+                Title = "New Chat Message",
+                Message = $"{mensaje.Sender?.Name} sent you a new message.",
+                Type = "Info",
+                IsRead = false,
+                CreationDate = DateTime.UtcNow
+            });
         }
 
         public async Task<(RequestAccessResult Result, List<ChatMessageResponseDto> Messages)> GetMessagesByRequest(

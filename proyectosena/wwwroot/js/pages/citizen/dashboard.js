@@ -1,6 +1,6 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole, ROLES } from "../../utils/roleGuard.js";
-import { API_BASE, fetchAllItems, mensajeDeError } from "../../services/api.js";
+import { API_BASE, fetchAllItems, fetchConSesion, mensajeDeError } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
 import { initUserMenu } from "../../utils/userMenu.js";
@@ -154,7 +154,7 @@ createForm.addEventListener("submit", async (e) => {
     };
 
     try {
-        const response = await fetch(`${API_BASE}/collectionrequest/CreateCollectionRequest`, {
+        const response = await fetchConSesion(`${API_BASE}/collectionrequest/CreateCollectionRequest`, {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify(dto)
@@ -252,7 +252,7 @@ async function cancelRequest(idRequest, btn) {
     btn.textContent = "Cancelando...";
 
     try {
-        const response = await fetch(
+        const response = await fetchConSesion(
             `${API_BASE}/collectionrequest/CancelRequest?idRequest=${idRequest}`,
             { method: "PATCH", headers: authHeaders() }
         );
@@ -396,6 +396,12 @@ function renderRequestCard(req) {
         ? `<button class="cancel-btn" data-id="${escapeHtml(req.idRequest)}">Cancelar</button>`
         : `<button class="cancel-btn" disabled title="Solo se pueden cancelar solicitudes pendientes">Cancelar</button>`;
 
+    // El chat exige un gestor asignado (lo comprueba IsParticipant en el
+    // backend): mientras la solicitud esté Pending no hay con quién hablar.
+    const chatBtn = !isPending
+        ? `<a class="btn btn-secondary" href="/pages/general/chat.html?idRequest=${encodeURIComponent(req.idRequest)}">${icon("mensaje")} Chat</a>`
+        : "";
+
     return `
         <div class="request-card">
             <div class="card-header">
@@ -411,6 +417,7 @@ function renderRequestCard(req) {
                 ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Observaciones:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
             </div>
             <div class="card-actions">
+                ${chatBtn}
                 ${editBtn}
                 ${cancelBtn}
             </div>
@@ -487,7 +494,7 @@ document.getElementById("editRequestForm").addEventListener("submit", async (e) 
     if (obs) dto.citizenObservations = obs;
 
     try {
-        const response = await fetch(`${API_BASE}/collectionrequest/UpdateCollectionRequest`, {
+        const response = await fetchConSesion(`${API_BASE}/collectionrequest/UpdateCollectionRequest`, {
             method: "PUT",
             headers: authHeaders(),
             body: JSON.stringify(dto)
@@ -600,7 +607,7 @@ async function cargarMiPostulacion() {
     loadingEl.style.display = "block";
 
     try {
-        const response = await fetch(`${API_BASE}/ManagerApplication/GetMyApplication`, {
+        const response = await fetchConSesion(`${API_BASE}/ManagerApplication/GetMyApplication`, {
             headers: authHeaders()
         });
 
@@ -681,7 +688,7 @@ applyForm.addEventListener("submit", async (e) => {
     showMessage("apply-message", "");
 
     try {
-        const response = await fetch(`${API_BASE}/ManagerApplication/Apply`, {
+        const response = await fetchConSesion(`${API_BASE}/ManagerApplication/Apply`, {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify({ motivation })

@@ -1,5 +1,5 @@
 ﻿import { checkAuth } from "/js/utils/authGuard.js";
-import { API_BASE, authHeaders, leerCuerpo, mensajeDeError } from "/js/services/api.js";
+import { API_BASE, authHeaders, fetchConSesion, leerCuerpo, mensajeDeError } from "/js/services/api.js";
 import { initUserMenu } from "/js/utils/userMenu.js";
 
 // ── Proteger acceso ───────────────────────────────────────────
@@ -45,7 +45,7 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     };
 
     try {
-        const res = await fetch(
+        const res = await fetchConSesion(
             `${API_BASE}/user/UpdateUser?idUser=${user.idUser}`,
             {
                 method: "PUT",
@@ -53,11 +53,6 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
                 body: JSON.stringify(dto)
             }
         );
-
-        if (res.status === 401) {
-            showMessage("Tu sesión caducó. Vuelve a iniciar sesión.", "error");
-            return;
-        }
 
         const data = await leerCuerpo(res);
 

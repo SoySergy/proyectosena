@@ -10,6 +10,20 @@ const form = document.getElementById("loginForm");
 const message = document.getElementById("message");
 const btn = document.getElementById("submitBtn");
 
+// Las otras pantallas mandan aquí con ?sesion=... cuando la sesión se cerró sin que la persona lo pidiera.
+const AVISOS_DE_SESION = new Map([
+    ["caducada", { texto: "Tu sesión caducó. Vuelve a iniciar sesión.", color: "red" }],
+    ["contrasena", { texto: "Contraseña actualizada. Entra con tu nueva contraseña.", color: "green" }],
+]);
+
+const avisoDeSesion = AVISOS_DE_SESION.get(new URLSearchParams(window.location.search).get("sesion"));
+if (avisoDeSesion) {
+    message.style.color = avisoDeSesion.color;
+    message.textContent = avisoDeSesion.texto;
+    // Que recargar el login no repita el aviso.
+    history.replaceState(null, "", window.location.pathname);
+}
+
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
 

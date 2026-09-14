@@ -1,5 +1,5 @@
 ﻿import { checkAuth } from "/js/utils/authGuard.js";
-import { API_BASE, authHeaders, leerCuerpo, mensajeDeError } from "/js/services/api.js";
+import { API_BASE, authHeaders, fetchConSesion, leerCuerpo, mensajeDeError, volverAlLogin } from "/js/services/api.js";
 import { initUserMenu } from "/js/utils/userMenu.js";
 
 // ── Proteger acceso ───────────────────────────────────────────
@@ -91,7 +91,7 @@ document.getElementById("securityForm").addEventListener("submit", async (e) => 
     };
 
     try {
-        const res = await fetch(
+        const res = await fetchConSesion(
             `${API_BASE}/user/UpdateUser?idUser=${user.idUser}`,
             {
                 method: "PUT",
@@ -100,20 +100,12 @@ document.getElementById("securityForm").addEventListener("submit", async (e) => 
             }
         );
 
-        if (res.status === 401) {
-            showMessage("Tu sesión caducó. Vuelve a iniciar sesión.", "error");
-            return;
-        }
-
         const data = await leerCuerpo(res);
 
         if (!res.ok) throw new Error(mensajeDeError(data, "No se pudo cambiar la contraseña."));
 
-        showMessage("✅ Contraseña actualizada correctamente.", "success");
-
-        // Limpiar el formulario
-        document.getElementById("securityForm").reset();
-        matchHint.textContent = "";
+        // El servidor ya anuló esta sesión al cambiar la contraseña (BL-07): el token de aquí no sirve.
+        volverAlLogin("contrasena");
 
     } catch (err) {
         showMessage(err.message || "Error al cambiar la contraseña.", "error");

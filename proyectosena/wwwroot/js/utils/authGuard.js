@@ -1,4 +1,6 @@
-﻿export function checkAuth() {
+﻿import { volverAlLogin } from "../services/api.js";
+
+export function checkAuth() {
     const token = localStorage.getItem("token");
 
     // ❌ Si no hay token → fuera
@@ -16,17 +18,11 @@
 
         if (now > exp) {
             // token expirado
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-
-            window.location.href = "/pages/auth/login.html";
+            volverAlLogin("caducada");
         }
 
     } catch (error) {
         // token inválido
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-
-        window.location.href = "/pages/auth/login.html";
+        volverAlLogin("caducada");
     }
 }
