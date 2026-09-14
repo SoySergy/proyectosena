@@ -89,7 +89,7 @@ namespace proyectosena.Services
             }
 
             // Mismo mecanismo de código que el flujo de recuperación, con más vida
-            var code = _codeService.GenerateAndStoreCode(email, CodePurpose.AccountAccess, InvitationExpiryMinutes);
+            var code = await _codeService.GenerateAndStoreCode(email, CodePurpose.AccountAccess, InvitationExpiryMinutes);
             await _emailService.SendManagerInvitationAsync(email, dto.Name, code, InvitationExpiryMinutes);
 
             return (CreateManagerResult.Success, created.IdUser, created.Email, InvitationExpiryMinutes);

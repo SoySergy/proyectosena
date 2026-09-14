@@ -52,17 +52,14 @@ namespace proyectosena
             services.AddScoped<ICollectionManagementService, CollectionManagementService>();
             services.AddScoped<IManagerApplicationService, ManagerApplicationService>();
 
-            // Singleton a propósito: VerificationCodeService guarda los códigos en un
-            // diccionario en memoria. Como Scoped, cada petición recibiría uno vacío y
-            // ningún código validaría nunca. EmailService no guarda estado, así que con
-            // una sola instancia basta.
+            // EmailService no guarda estado, así que con una sola instancia basta.
             services.AddSingleton<IEmailService, EmailService>();
-            services.AddSingleton<IVerificationCodeService, VerificationCodeService>();
 
-            // Singleton por lo mismo: la lista de tokens anulados al cerrar sesión
-            // tiene que ser la misma para todas las peticiones. Como Scoped, cada
-            // una recibiría una lista vacía y no se revocaría nada.
-            services.AddSingleton<IRevokedTokenService, RevokedTokenService>();
+            // Scoped, no Singleton: los códigos y los tokens anulados viven en la base
+            // (B-6 · WA-12) y estos servicios usan el DbContext, que es Scoped. Un
+            // Singleton se quedaría con el DbContext de la primera petición.
+            services.AddScoped<IVerificationCodeService, VerificationCodeService>();
+            services.AddScoped<IRevokedTokenService, RevokedTokenService>();
 
             return services;
         }

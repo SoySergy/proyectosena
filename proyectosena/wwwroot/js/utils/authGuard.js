@@ -5,7 +5,7 @@ export function checkAuth() {
 
     // ❌ Si no hay token → fuera
     if (!token) {
-        window.location.href = "/pages/auth/login.html";
+        window.location.href = "/login";
         return;
     }
 

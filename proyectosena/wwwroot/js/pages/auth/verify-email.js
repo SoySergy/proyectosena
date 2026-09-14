@@ -5,7 +5,7 @@ const params = new URLSearchParams(window.location.search);
 const email = params.get("email") || localStorage.getItem("pendingVerificationEmail");
 
 if (!email) {
-    window.location.href = "login.html";
+    window.location.href = "/login";
 }
 
 const userEmailLabel = document.getElementById("userEmailLabel");

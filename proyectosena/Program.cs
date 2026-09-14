@@ -50,17 +50,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // endpoint pueda saltárselo: todo lo que exige [Authorize] pasa por aquí.
         options.Events = new JwtBearerEvents
         {
-            OnTokenValidated = context =>
+            OnTokenValidated = async context =>
             {
                 var revocados = context.HttpContext.RequestServices
                     .GetRequiredService<IRevokedTokenService>();
 
                 var tokenId = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 
-                if (revocados.IsRevoked(tokenId ?? string.Empty))
+                if (await revocados.IsRevoked(tokenId ?? string.Empty))
                 {
                     context.Fail("El token fue anulado al cerrar sesión.");
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 // Segunda comprobación, para lo que un jti suelto no cubre: que
@@ -78,11 +78,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 {
                     var emitidoEn = DateTimeOffset.FromUnixTimeSeconds(iatSegundos).UtcDateTime;
 
-                    if (revocados.IsRevokedForUser(idUser, emitidoEn))
+                    if (await revocados.IsRevokedForUser(idUser, emitidoEn))
                         context.Fail("El token fue anulado: la cuenta cambió después de emitirse.");
                 }
-
-                return Task.CompletedTask;
             }
         };
     });
@@ -310,6 +308,10 @@ if (app.Environment.IsDevelopment())
 // further down the pipeline lands in GlobalExceptionHandler.
 app.UseExceptionHandler();
 
+// Las rutas antiguas (/pages/auth/login.html) redirigen a la limpia (/login)
+// antes de que nada más las toque. Tabla en Extensions/PageRouteExtensions.cs.
+app.UseLegacyPageRedirects();
+
 app.UseCors("RecyRoutePolicy");
 
 // Antes del limitador: deja el correo del cuerpo en HttpContext.Items para que
@@ -328,4 +330,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapControllers();
+// /login, /chat, … sirven su HTML sin cambiar la URL. Van como fallback: ceden
+// ante cualquier endpoint de la API.
+app.MapCleanPageRoutes();
 app.Run();

@@ -32,7 +32,7 @@ export function authHeaders() {
 
 // ── Sesión anulada o vencida ──────────────────────────────────────
 
-const LOGIN_URL = "/pages/auth/login.html";
+const LOGIN_URL = "/login";
 
 /** Borra la sesión de este navegador y lleva al login con el motivo: "caducada" o "contrasena". */
 export function volverAlLogin(motivo) {

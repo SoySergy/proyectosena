@@ -230,7 +230,7 @@ function renderAssignedCard(req) {
                 ${req.citizenObservations ? `<p>${icon("observacion")}<strong>Notas:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
             </div>
             <div class="card-actions">
-                <a class="btn btn-secondary" href="/pages/general/chat.html?idRequest=${encodeURIComponent(req.idRequest)}">${icon("mensaje")} Chat</a>
+                <a class="btn btn-secondary" href="/chat?idRequest=${encodeURIComponent(req.idRequest)}">${icon("mensaje")} Chat</a>
                 <button class="btn-status" data-id="${escapeHtml(req.idRequest)}" data-status="${escapeHtml(req.currentStatus)}">
                     Cambiar estado
                 </button>

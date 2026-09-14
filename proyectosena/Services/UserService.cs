@@ -95,7 +95,7 @@ namespace proyectosena.Services
             // vieja sigue funcionando. Incluye a la sesión que hizo este mismo
             // cambio: vuelve a entrar con la contraseña que acaba de poner.
             if (!string.IsNullOrEmpty(dto.NewPassword))
-                _revokedTokens.RevokeAllForUser(idUser);
+                await _revokedTokens.RevokeAllForUser(idUser);
 
             return (UserUpdateResult.Success, updated.ToInfoDto());
         }
@@ -113,7 +113,7 @@ namespace proyectosena.Services
 
             // De nada sirve la baja si el token que ya tenía sigue sirviendo
             // los minutos que le quedaban de vida.
-            _revokedTokens.RevokeAllForUser(idUser);
+            await _revokedTokens.RevokeAllForUser(idUser);
 
             return UserDeactivationResult.Success;
         }

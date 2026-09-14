@@ -77,7 +77,7 @@ form.addEventListener("submit", async (e) => {
 
             setTimeout(() => {
                 window.location.href =
-                    `verify-email.html?email=${encodeURIComponent(data.email)}`;
+                    `/verify-email?email=${encodeURIComponent(data.email)}`;
             }, 1500);
 
             return;
