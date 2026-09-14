@@ -65,6 +65,10 @@ services:
       # true: la API aplica las migraciones al arrancar (comodo en desarrollo).
       # false: se aplican como paso explicito del despliegue, sin carrera entre replicas.
       Database__MigrateOnStartup: "true"
+      # false: la API no le cree a X-Forwarded-For. Aqui no hay proxy delante del
+      # puerto 8080, y creerle dejaba saltarse el limite de intentos del login.
+      # En Render va en "true" (panel Environment): alli la cabecera la pone su proxy.
+      ForwardedHeaders__Enabled: "false"
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:8080"
     depends_on:

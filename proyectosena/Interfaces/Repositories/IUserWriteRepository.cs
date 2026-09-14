@@ -18,7 +18,11 @@ namespace proyectosena.Interfaces.Repositories
 
         Task<User> UpdateUser(User user);
 
-        // Baja lógica: la fila se conserva para auditoría. False si no existe.
-        Task<bool> DeleteUser(Guid idUser);
+        // Baja lógica atómica: bajo un candado de Postgres, comprueba que no
+        // sea el último administrador activo y aplica la baja en el mismo
+        // tramo bloqueado. Sin el candado, dos bajas simultáneas de
+        // administradores distintos pueden leer "quedan 2" antes de que
+        // ninguna escriba, y las dos pasan el freno a la vez (WA-16).
+        Task<UserDeactivationResult> DeactivateWithLastAdminGuard(Guid idUser, string administratorRoleName);
     }
 }

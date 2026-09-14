@@ -165,7 +165,7 @@ createForm.addEventListener("submit", async (e) => {
         try { result = JSON.parse(text); } catch { result = text; }
 
         if (!response.ok) {
-            throw new Error(result.message || result || "Error al crear la solicitud");
+            throw new Error(mensajeDeError(result, "Error al crear la solicitud"));
         }
 
         // Éxito: limpiar formulario y mostrar confirmación
@@ -264,7 +264,7 @@ async function cancelRequest(idRequest, btn) {
         try { result = JSON.parse(text); } catch { result = text; }
 
         if (!response.ok) {
-            throw new Error(result.message || result || "No se pudo cancelar la solicitud.");
+            throw new Error(mensajeDeError(result, "No se pudo cancelar la solicitud."));
         }
 
         showMessage("requests-message", "Solicitud cancelada.", "success");
@@ -505,7 +505,7 @@ document.getElementById("editRequestForm").addEventListener("submit", async (e) 
         try { result = JSON.parse(text); } catch { result = text; }
 
         if (!response.ok) {
-            throw new Error(result.message || result || "Error al actualizar la solicitud");
+            throw new Error(mensajeDeError(result, "Error al actualizar la solicitud"));
         }
 
         showMessage("edit-message", "✅ Solicitud actualizada correctamente.", "success");

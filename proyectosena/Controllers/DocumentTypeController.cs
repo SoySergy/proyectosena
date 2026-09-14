@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using proyectosena.DTOs.User;
 using proyectosena.Interfaces.Services;
+using proyectosena.Models;
 
 namespace proyectosena.Controllers
 {
@@ -69,13 +70,18 @@ namespace proyectosena.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateDocumentType([FromBody] DocumentTypeDto documentType)
         {
             if (documentType == null)
                 return BadRequest("Document type data cannot be null.");
 
-            return Ok(await _documentTypeService.Update(documentType));
+            var (result, updated) = await _documentTypeService.Update(documentType);
+
+            if (result == CatalogMutationResult.NotFound)
+                return NotFound("The requested document type was not found.");
+
+            return Ok(updated);
         }
 
         // -------------------- DELETE: api/documenttype/DeleteDocumentType --------------------
@@ -83,15 +89,17 @@ namespace proyectosena.Controllers
         [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> DeleteDocumentType(Guid id)
         {
-            var deleted = await _documentTypeService.Delete(id);
+            var result = await _documentTypeService.Delete(id);
 
-            // Retorna false si el tipo de documento no existe en la base de datos
-            if (!deleted)
-                return BadRequest("Could not delete the document type. Please verify it exists.");
+            if (result == CatalogMutationResult.NotFound)
+                return NotFound("The requested document type was not found.");
+
+            if (result == CatalogMutationResult.InUse)
+                return Conflict("This document type is still assigned to at least one user.");
 
             return Ok("Document type deleted successfully.");
         }

@@ -32,13 +32,13 @@ namespace proyectosena.Services
             return MapToDto(created);
         }
 
-        public async Task<DocumentTypeDto> Update(DocumentTypeDto dto)
+        public async Task<(CatalogMutationResult Result, DocumentTypeDto? DocumentType)> Update(DocumentTypeDto dto)
         {
-            var updated = await _documentTypeRepository.UpdateDocumentType(MapToEntity(dto));
-            return MapToDto(updated);
+            var (result, type) = await _documentTypeRepository.UpdateDocumentType(MapToEntity(dto));
+            return (result, type == null ? null : MapToDto(type));
         }
 
-        public Task<bool> Delete(Guid idDocumentType)
+        public Task<CatalogMutationResult> Delete(Guid idDocumentType)
             => _documentTypeRepository.DeleteDocumentType(idDocumentType);
 
         // ── Mapeo ───────────────────────────────────────────────────────

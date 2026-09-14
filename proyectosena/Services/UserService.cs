@@ -102,21 +102,14 @@ namespace proyectosena.Services
 
         public async Task<UserDeactivationResult> Deactivate(Guid idUser)
         {
-            var user = await _userLookup.GetUser(idUser);
-            if (user == null)
-                return UserDeactivationResult.UserNotFound;
-
-            // Sin este freno, dar de baja al único administrador deja el
-            // sistema sin nadie que pueda gestionar roles, usuarios ni
-            // postulaciones — y BL-03 ya muestra que una base sin
-            // administrador no tiene forma de crear uno nuevo por API.
-            if (user.Role?.RoleName == RoleNames.Administrator &&
-                await _userDirectory.CountByRole(RoleNames.Administrator) <= 1)
-                return UserDeactivationResult.LastAdministrator;
-
-            var deactivated = await _userWrite.DeleteUser(idUser);
-            if (!deactivated)
-                return UserDeactivationResult.UserNotFound;
+            // El freno del último administrador y la baja misma van juntos,
+            // bajo un candado, en DeactivateWithLastAdminGuard: separados
+            // (como antes) dos bajas simultáneas de administradores distintos
+            // podían leer "quedan 2" antes de que ninguna escribiera, y las
+            // dos pasaban el freno a la vez, dejando el sistema en cero (WA-16).
+            var result = await _userWrite.DeactivateWithLastAdminGuard(idUser, RoleNames.Administrator);
+            if (result != UserDeactivationResult.Success)
+                return result;
 
             // De nada sirve la baja si el token que ya tenía sigue sirviendo
             // los minutos que le quedaban de vida.
