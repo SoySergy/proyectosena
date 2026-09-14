@@ -17,6 +17,11 @@ namespace proyectosena.Extensions
         // separaba la constraint del índice; PostgreSQL los junta en uno.
         private const string UniqueViolation = "23505";
 
+        // "foreign_key_violation": se intentó borrar una fila que otra tabla
+        // todavía referencia (WA-06) — un rol o un tipo de documento con
+        // usuarios asignados, por ejemplo.
+        private const string ForeignKeyViolation = "23503";
+
         /// <summary>
         /// True si el guardado falló porque el valor ya existe en la base.
         /// </summary>
@@ -29,5 +34,12 @@ namespace proyectosena.Extensions
         public static bool IsDuplicateKey(this DbUpdateException ex)
             => ex.InnerException is PostgresException pgEx
                && pgEx.SqlState == UniqueViolation;
+
+        /// <summary>
+        /// True si el borrado falló porque otra fila todavía la referencia.
+        /// </summary>
+        public static bool IsForeignKeyViolation(this DbUpdateException ex)
+            => ex.InnerException is PostgresException pgEx
+               && pgEx.SqlState == ForeignKeyViolation;
     }
 }

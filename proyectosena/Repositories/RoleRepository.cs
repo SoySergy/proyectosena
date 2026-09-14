@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using proyectosena.Context;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Repositories;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
@@ -41,24 +42,36 @@ namespace proyectosena.Repositories
         }
 
         // Actualiza un rol existente y guarda los cambios en la base de datos
-        public async Task<Role> UpdateRole(Role role)
+        public async Task<(CatalogMutationResult Result, Role? Role)> UpdateRole(Role role)
         {
-            _context.Roles.Update(role);
+            var existing = await _context.Roles.FirstOrDefaultAsync(r => r.IdRole == role.IdRole);
+            if (existing == null)
+                return (CatalogMutationResult.NotFound, null);
+
+            existing.RoleName = role.RoleName;
+            existing.RoleDescription = role.RoleDescription;
             await _context.SaveChangesAsync();
-            return role;
+            return (CatalogMutationResult.Success, existing);
         }
 
-        // Elimina un rol por su ID, retorna false si no existe
-        public async Task<bool> DeleteRole(Guid idRole)
+        // Elimina un rol por su ID
+        public async Task<CatalogMutationResult> DeleteRole(Guid idRole)
         {
             var role = await _context.Roles
                                      .FirstOrDefaultAsync(r => r.IdRole == idRole);
             if (role == null)
-                return false;
+                return CatalogMutationResult.NotFound;
 
             _context.Roles.Remove(role);
-            await _context.SaveChangesAsync();
-            return true;
+            try
+            {
+                await _context.SaveChangesAsync();
+                return CatalogMutationResult.Success;
+            }
+            catch (DbUpdateException ex) when (ex.IsForeignKeyViolation())
+            {
+                return CatalogMutationResult.InUse;
+            }
         }
     }
 }

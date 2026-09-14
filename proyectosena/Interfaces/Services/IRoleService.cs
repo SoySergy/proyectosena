@@ -1,4 +1,5 @@
 using proyectosena.DTOs.User;
+using proyectosena.Models;
 
 namespace proyectosena.Interfaces.Services
 {
@@ -19,9 +20,15 @@ namespace proyectosena.Interfaces.Services
 
         Task<RoleDto> Create(RoleDto dto);
 
-        Task<RoleDto> Update(RoleDto dto);
+        // NotFound si el id no existe. NombreDelSistema si intenta cambiar el
+        // nombre de Administrator, Manager o Citizen (WA-07): las políticas de
+        // autorización y el rol que se graba en el token al iniciar sesión
+        // comparan contra ese nombre escrito en el código, no contra el id —
+        // renombrarlo aquí no cambiaría el código, y dejaría fuera en silencio
+        // a todo el que inicie sesión después del cambio.
+        Task<(CatalogMutationResult Result, RoleDto? Role)> Update(RoleDto dto);
 
-        // False si no existe
-        Task<bool> Delete(Guid idRole);
+        // NotFound si no existe. InUse si algún usuario todavía lo tiene asignado.
+        Task<CatalogMutationResult> Delete(Guid idRole);
     }
 }

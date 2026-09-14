@@ -7,6 +7,8 @@
     z-index: 10;
     justify-content: space-between; /* Centra el contenido horizontalmente */
     align-items: center;
+    flex-wrap: wrap;
+    row-gap: 0.75rem;
     padding: 1.5rem 2rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Línea divisoria casi invisible */
     box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* Sombra sutil para dar profundidad */
@@ -24,13 +26,30 @@
     gap: 2rem;
 }
 
-.btn {
+@media (max-width: 480px) {
+    .header-buttons {
+        width: 100%;
+        gap: 1rem;
+    }
+}
+
+.header-buttons .btn {
+    /* components/buttons.css pone width:100% pensado para formularios; aquí
+       los botones deben medir lo que pide su texto, no llenar la fila. */
+    width: auto;
     text-decoration: none;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     transition: background-color 0.3s;
     font-weight: 500;
     white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+    .header-buttons .btn {
+        flex: 1 1 0;
+        white-space: normal;
+    }
 }
 
 .btn-login {

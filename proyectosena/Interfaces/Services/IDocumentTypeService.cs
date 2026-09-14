@@ -1,4 +1,5 @@
 using proyectosena.DTOs.User;
+using proyectosena.Models;
 
 namespace proyectosena.Interfaces.Services
 {
@@ -18,9 +19,10 @@ namespace proyectosena.Interfaces.Services
 
         Task<DocumentTypeDto> Create(DocumentTypeDto dto);
 
-        Task<DocumentTypeDto> Update(DocumentTypeDto dto);
+        // NotFound si el id no existe (WA-06).
+        Task<(CatalogMutationResult Result, DocumentTypeDto? DocumentType)> Update(DocumentTypeDto dto);
 
-        // False si no existe
-        Task<bool> Delete(Guid idDocumentType);
+        // NotFound si no existe. InUse si algún usuario todavía lo tiene (WA-06).
+        Task<CatalogMutationResult> Delete(Guid idDocumentType);
     }
 }

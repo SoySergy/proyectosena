@@ -42,9 +42,7 @@ namespace proyectosena.Extensions
                     using var scope = app.Services.CreateScope();
                     var dbContext = scope.ServiceProvider.GetRequiredService<RecyRouteDbContext>();
 
-                    await dbContext.Database.MigrateAsync();
-
-                    await SeedAdminUserAsync(dbContext, app.Configuration, logger);
+                    await MigrarYSembrarConCandadoAsync(dbContext, app.Configuration, logger);
 
                     logger.LogInformation(
                         "Migraciones aplicadas correctamente (intento {Intento} de {Maximo}).",
@@ -70,6 +68,44 @@ namespace proyectosena.Extensions
                         MaxAttempts, MaxAttempts * DelayBetweenAttempts.TotalSeconds);
                     throw;
                 }
+            }
+        }
+
+        // Identifica el candado de migraciones en PostgreSQL. Vale cualquier número
+        // que nadie más use en esta base.
+        private const long CandadoDeMigraciones = 202609140001;
+
+        /// <summary>
+        /// Migra y siembra dentro de un candado de PostgreSQL (B-7).
+        /// </summary>
+        /// <remarks>
+        /// Sin él, dos copias de la API arrancando a la vez contra una base vacía
+        /// creaban las mismas tablas: una fallaba con 42P07 o 23505 y solo salía
+        /// adelante porque el reintento la relanzaba cinco segundos después. Con el
+        /// candado, la segunda espera a que la primera termine y ya no encuentra
+        /// nada pendiente. Es de sesión: la conexión queda abierta hasta soltarlo, y
+        /// si el proceso muere PostgreSQL lo suelta solo al cerrarse la conexión.
+        /// </remarks>
+        private static async Task MigrarYSembrarConCandadoAsync(
+            RecyRouteDbContext dbContext, IConfiguration configuration, ILogger logger)
+        {
+            await dbContext.Database.OpenConnectionAsync();
+            try
+            {
+                await dbContext.Database.ExecuteSqlRawAsync("SELECT pg_advisory_lock({0})", CandadoDeMigraciones);
+                try
+                {
+                    await dbContext.Database.MigrateAsync();
+                    await SeedAdminUserAsync(dbContext, configuration, logger);
+                }
+                finally
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("SELECT pg_advisory_unlock({0})", CandadoDeMigraciones);
+                }
+            }
+            finally
+            {
+                await dbContext.Database.CloseConnectionAsync();
             }
         }
 

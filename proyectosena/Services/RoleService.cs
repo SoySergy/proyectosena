@@ -32,14 +32,29 @@ namespace proyectosena.Services
             return MapToDto(created);
         }
 
-        public async Task<RoleDto> Update(RoleDto dto)
+        public async Task<(CatalogMutationResult Result, RoleDto? Role)> Update(RoleDto dto)
         {
-            var updated = await _roleRepository.UpdateRole(MapToEntity(dto));
-            return MapToDto(updated);
+            if (EsRolDelSistema(dto.IdRole))
+            {
+                var actual = await _roleRepository.GetRole(dto.IdRole);
+                if (actual != null && actual.RoleName != dto.RoleName)
+                    return (CatalogMutationResult.NombreDelSistema, null);
+            }
+
+            var (result, role) = await _roleRepository.UpdateRole(MapToEntity(dto));
+            return (result, role == null ? null : MapToDto(role));
         }
 
-        public Task<bool> Delete(Guid idRole)
+        public Task<CatalogMutationResult> Delete(Guid idRole)
             => _roleRepository.DeleteRole(idRole);
+
+        // Administrator, Manager y Citizen: los tres que las políticas de
+        // autorización (AdminOnly, ManagerOnly...) y el login comparan por
+        // nombre. Ver SeedIds.Roles y el comentario en IRoleService.Update.
+        private static bool EsRolDelSistema(Guid idRole)
+            => idRole == SeedIds.Roles.Administrator
+            || idRole == SeedIds.Roles.Manager
+            || idRole == SeedIds.Roles.Citizen;
 
         // ── Mapeo ───────────────────────────────────────────────────────
         // Deja fuera la colección de usuarios: no sale de esta capa

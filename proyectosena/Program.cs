@@ -127,10 +127,10 @@ builder.Services.AddCors(options =>
 //   3. El tope general de envíos: impide pedir códigos para mil direcciones
 //      distintas, que con la capa 2 sola estrenarían sus cinco cada una.
 //
-// La política Auth sigue repartiendo por IP, y eso es un problema conocido:
-// detrás de Docker todos los clientes llegan con la misma dirección, así que
-// son diez por minuto para toda la instalación y dos personas probando a la
-// vez se estorban. Pendiente de decidir (AL-02).
+// La política Auth reparte por IP. En Docker local todos los clientes llegan
+// con la misma dirección, así que son diez por minuto para toda la instalación
+// y dos personas probando a la vez se estorban. En Render, con
+// ForwardedHeaders__Enabled=true, cada persona tiene su propio cupo.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -190,10 +190,10 @@ builder.Services.AddRateLimiter(options =>
 
 // Quién es «el que llama», por dirección IP.
 //
-// Ojo: detrás de Docker TODOS los clientes llegan con la misma IP. Se comprobó
+// Ojo: en Docker local TODOS los clientes llegan con la misma IP. Se comprobó
 // gastando el cupo desde la terminal y viendo al navegador recibir 429 sin haber
-// pedido nada. Por eso esto ya no vale para separar personas: sirve solo como
-// tope general.
+// pedido nada. Ahí esto no separa personas: sirve solo como tope general. En
+// Render, con ForwardedHeaders__Enabled=true, es la IP real de cada persona.
 static string ClientKey(HttpContext http)
     => http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
 
@@ -255,10 +255,11 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // ── MIGRACIONES DE EF CORE ────────────────────────────
-// Aplicarlas al arrancar es cómodo en desarrollo y en Docker. En producción,
-// con varias réplicas levantándose a la vez, hay carrera sobre el esquema: por
-// eso está detrás de un interruptor. Se pone en false y las migraciones pasan a
-// ser un paso explícito del despliegue (dotnet ef database update).
+// Se aplican al arrancar, con la siembra del administrador inicial (BL-03)
+// dentro. Varias réplicas arrancando a la vez no chocan: ApplyMigrationsAsync
+// migra dentro de un candado de PostgreSQL (B-7). Ponerlo en false apaga
+// también la siembra, y la imagen final no trae `dotnet ef`: no se apaga sin
+// dejar antes otro camino para migrar.
 if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
 {
     await app.ApplyMigrationsAsync();
@@ -272,17 +273,21 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
 // con la IP interna del proxy, y el cupo por IP termina siendo compartido por
 // todo el mundo (BL-09).
 //
-// KnownNetworks/KnownProxies se limpian a propósito: Render no publica una IP
-// fija para su proxy, y el contenedor no es alcanzable por nadie más que ese
-// proxy. Confiar en la cabecera aquí equivale a confiar en que Render es la
-// única puerta de entrada.
-var forwardedHeadersOptions = new ForwardedHeadersOptions
+// Apagado por defecto. Con KnownNetworks/KnownProxies vacíos se le cree a
+// X-Forwarded-For venga de quien venga, y eso solo es seguro cuando la única
+// puerta de entrada es un proxy que escribe esa cabecera él mismo. Sin proxy
+// delante, cualquiera cambiaba la cabecera en cada intento y nunca le llegaba
+// el 429 del login. Se enciende solo en Render: ForwardedHeaders__Enabled=true.
+if (app.Configuration.GetValue("ForwardedHeaders:Enabled", false))
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-};
-forwardedHeadersOptions.KnownNetworks.Clear();
-forwardedHeadersOptions.KnownProxies.Clear();
-app.UseForwardedHeaders(forwardedHeadersOptions);
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    };
+    forwardedHeadersOptions.KnownNetworks.Clear();
+    forwardedHeadersOptions.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+}
 
 // Swagger disponible en /swagger en cualquier entorno (incluido Docker/Production)
 if (app.Environment.IsDevelopment())
