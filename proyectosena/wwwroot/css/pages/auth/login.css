@@ -1,5 +1,9 @@
 ﻿body {
-    overflow: hidden;
+    /* auto y no hidden: con el teclado del móvil abierto la tarjeta no cabe
+       y el botón de entrar queda fuera de pantalla. Con hidden no había forma
+       de alcanzarlo —se midió: la rueda no movía nada—. Es el mismo valor que
+       ya usa register.css. */
+    overflow: auto;
 }
 
 /* Centra el card vertical y horizontalmente en la pantalla */

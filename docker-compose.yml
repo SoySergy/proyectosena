@@ -52,6 +52,16 @@ services:
       EmailSettings__SenderEmail: "${EMAIL_SENDER}"
       EmailSettings__SenderName: "${EMAIL_SENDER_NAME}"
       EmailSettings__Password: "${EMAIL_PASSWORD}"
+      # Administrador inicial. Solo se usa contra una base VACIA: si ya hay un
+      # administrador, la siembra no se ejecuta y estas variables se ignoran.
+      # El :- deja el valor vacio cuando la variable no esta en el .env, para no
+      # llenar de avisos cada 'docker compose up'. La API trata el vacio como
+      # ausente: sin ADMIN_PASSWORD genera una al azar y la escribe en el log.
+      Admin__Email: "${ADMIN_EMAIL:-}"
+      Admin__Password: "${ADMIN_PASSWORD:-}"
+      Admin__DocumentNumber: "${ADMIN_DOCUMENT_NUMBER:-}"
+      Admin__Name: "${ADMIN_NAME:-}"
+      Admin__LastName: "${ADMIN_LAST_NAME:-}"
       # true: la API aplica las migraciones al arrancar (comodo en desarrollo).
       # false: se aplican como paso explicito del despliegue, sin carrera entre replicas.
       Database__MigrateOnStartup: "true"

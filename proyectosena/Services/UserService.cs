@@ -13,14 +13,21 @@ namespace proyectosena.Services
         private readonly IUserDirectoryRepository _userDirectory;
         private readonly IUserWriteRepository _userWrite;
 
+        // Para que dar de baja o cambiar la contraseña cierre de golpe
+        // cualquier sesión abierta de esa persona, no solo la que hace la
+        // petición
+        private readonly IRevokedTokenService _revokedTokens;
+
         public UserService(
             IUserLookupRepository userLookup,
             IUserDirectoryRepository userDirectory,
-            IUserWriteRepository userWrite)
+            IUserWriteRepository userWrite,
+            IRevokedTokenService revokedTokens)
         {
             _userLookup = userLookup;
             _userDirectory = userDirectory;
             _userWrite = userWrite;
+            _revokedTokens = revokedTokens;
         }
 
         public async Task<PagedResult<UserInfoDto>> GetUsers(int page, int pageSize)
@@ -84,10 +91,38 @@ namespace proyectosena.Services
 
             var updated = await _userWrite.UpdateUser(user);
 
+            // La contraseña nueva no sirve de nada si una sesión robada con la
+            // vieja sigue funcionando. Incluye a la sesión que hizo este mismo
+            // cambio: vuelve a entrar con la contraseña que acaba de poner.
+            if (!string.IsNullOrEmpty(dto.NewPassword))
+                _revokedTokens.RevokeAllForUser(idUser);
+
             return (UserUpdateResult.Success, updated.ToInfoDto());
         }
 
-        public Task<bool> Deactivate(Guid idUser)
-            => _userWrite.DeleteUser(idUser);
+        public async Task<UserDeactivationResult> Deactivate(Guid idUser)
+        {
+            var user = await _userLookup.GetUser(idUser);
+            if (user == null)
+                return UserDeactivationResult.UserNotFound;
+
+            // Sin este freno, dar de baja al único administrador deja el
+            // sistema sin nadie que pueda gestionar roles, usuarios ni
+            // postulaciones — y BL-03 ya muestra que una base sin
+            // administrador no tiene forma de crear uno nuevo por API.
+            if (user.Role?.RoleName == RoleNames.Administrator &&
+                await _userDirectory.CountByRole(RoleNames.Administrator) <= 1)
+                return UserDeactivationResult.LastAdministrator;
+
+            var deactivated = await _userWrite.DeleteUser(idUser);
+            if (!deactivated)
+                return UserDeactivationResult.UserNotFound;
+
+            // De nada sirve la baja si el token que ya tenía sigue sirviendo
+            // los minutos que le quedaban de vida.
+            _revokedTokens.RevokeAllForUser(idUser);
+
+            return UserDeactivationResult.Success;
+        }
     }
 }

@@ -85,6 +85,10 @@
             <!--<span class="form-input-icon icon-calendario" aria-hidden="true"></span>-->
             Historial
         </button>
+        <button class="nav-btn" data-section="postularme">
+            <!--<span class="form-input-icon icon-usuario" aria-hidden="true"></span>-->
+            Postularme a Gestor
+        </button>
     </nav>
 
 
@@ -219,6 +223,36 @@
                     Cargando historial...
                 </div>
                 <div id="history-list"></div>
+            </div>
+        </section>
+
+
+        <section id="postularme" class="section">
+            <div class="card">
+                <h2 class="card__title">Postularme a Gestor</h2>
+                <p class="card__subtitle">
+                    Si quieres encargarte de recoger las solicitudes de otras personas, cuéntanos por qué.
+                </p>
+                <div id="apply-status"></div>
+                <div id="apply-message" class="form-hint form-hint--error" role="alert"></div>
+                <div id="apply-loading" class="loading-msg" style="display:none">
+                    Cargando tu postulación...
+                </div>
+                <form id="applyForm">
+                    <div class="form-group">
+                        <label class="form-label" for="motivation">Motivación *</label>
+                        <textarea id="motivation"
+                                  class="form-input form-textarea"
+                                  placeholder="Cuéntanos por qué quieres ser gestor (mínimo 20 caracteres)."
+                                  required
+                                  minlength="20"
+                                  maxlength="500"
+                                  rows="4"></textarea>
+                    </div>
+                    <button type="submit" id="submitApplyBtn" class="btn btn-primary">
+                        Enviar postulación
+                    </button>
+                </form>
             </div>
         </section>
 

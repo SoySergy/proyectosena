@@ -104,8 +104,42 @@ async function cargarLista() {
         }
 
         lista.innerHTML = items.map(pintarAviso).join("");
+        
+        // Conectar eventos de clic para marcar como leídas.
+        //
+        // Se guarda la función con nombre porque quitar un oyente exige pasarle
+        // la misma referencia que se puso: antes cada llamada creaba una función
+        // anónima nueva y removeEventListener(nueva) no quitaba nada. Se
+        // comprobó: un segundo clic sobre un aviso ya leído mandaba otro PATCH
+        // idéntico.
+        document.querySelectorAll(".notif-item--sin-leer").forEach(item => {
+            const alHacerClic = () => marcarComoLeido(item, alHacerClic);
+            item.addEventListener("click", alHacerClic);
+        });
     } catch {
         lista.innerHTML = `<p class="notificaciones__vacio">No se pudo conectar con el servidor.</p>`;
+    }
+}
+
+async function marcarComoLeido(elemento, alHacerClic) {
+    const id = elemento.dataset.id;
+    if (!id) return;
+
+    try {
+        const respuesta = await fetch(`${API_BASE}/Notification/MarkAsRead?idNotification=${id}`, {
+            method: "PATCH",
+            headers: authHeaders(),
+        });
+
+        if (respuesta.ok) {
+            elemento.classList.remove("notif-item--sin-leer");
+            elemento.removeEventListener("click", alHacerClic);
+            await actualizarContador();
+        }
+    } catch {
+        // Fallo silencioso: si no se puede marcar, no bloquear la experiencia.
+        // El oyente se deja puesto a propósito, para que un clic más tarde
+        // pueda reintentarlo.
     }
 }
 
@@ -119,7 +153,7 @@ function pintarAviso(aviso) {
     const sinLeer = aviso.isRead ? "" : " notif-item--sin-leer";
 
     return `
-        <div class="notif-item${sinLeer}">
+        <div class="notif-item${sinLeer}" data-id="${aviso.idNotification}">
             <span class="notif-item__punto ${punto}"></span>
             <div class="notif-item__cuerpo">
                 <p class="notif-item__titulo">${titulo}</p>
