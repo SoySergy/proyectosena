@@ -6,7 +6,16 @@ services:
   # Se cambió desde SQL Server porque los alojamientos gratuitos (Render y
   # compañía) ofrecen PostgreSQL, y SQL Server pedía una licencia de pago.
   postgres:
-    image: postgres:16-alpine
+    # 16 → 18-alpine (B-5c): Render corre Postgres 18.6. Con versiones
+    # mayores distintas, un pg_dump hecho aquí fallaba con "server version
+    # mismatch" contra Render y dejaba el archivo vacío sin avisar.
+    #
+    # El volumen cambió de nombre a propósito (postgres_data → postgres_data_pg18):
+    # los archivos de datos de Postgres 16 no los puede leer el binario de
+    # Postgres 18, así que reusar el volumen viejo habría impedido arrancar.
+    # El volumen "postgres_data" original queda intacto, sin borrar, con los
+    # datos en formato 16 como respaldo.
+    image: postgres:18-alpine
     container_name: recyroute_db
     environment:
       # Los valores viven en .env, que no se sube al repositorio. Antes
@@ -16,8 +25,12 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     ports:
       - "5432:5432"
+    # Desde la 18, la imagen oficial espera el volumen en /var/lib/postgresql
+    # a secas (sin /data): así reconoce que es una instalación nueva y no una
+    # carpeta de una versión anterior mal montada. Con /data se negaba a
+    # arrancar.
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_pg18:/var/lib/postgresql
     # Se reinicia solo, igual que los otros dos. Antes no lo hacía y al
     # reabrir Docker la API arrancaba sin base de datos.
     restart: unless-stopped
@@ -92,4 +105,9 @@ services:
     restart: unless-stopped
 
 volumes:
+  # Ya no la usa ningún servicio del archivo: es el respaldo en formato
+  # Postgres 16, de antes de B-5c. Se deja declarada para que "docker compose
+  # down" (sin -v) no la toque; borrarla es decisión de Tilin cuando confirme
+  # que postgres_data_pg18 tiene todo.
   postgres_data:
+  postgres_data_pg18:
