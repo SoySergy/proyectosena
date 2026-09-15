@@ -93,6 +93,27 @@ namespace proyectosena.Tests.Auth
             Assert.Equal(HttpStatusCode.BadRequest, reuse.StatusCode);
         }
 
+        // Quien recupera la contraseña muchas veces lo hace porque alguien más la
+        // conoce: una sesión abierta con la vieja no puede sobrevivir al cambio
+        [Fact]
+        public async Task ResetPassword_ClosesAllSessions()
+        {
+            var client = _api.NewClient();
+            var email = Api.NewEmail();
+            var first = await _api.ConfirmedCitizenAsync(client, email);
+            var second = await (await client.LoginAsync(email)).ReadSessionAsync();
+            var code = await RequestResetCodeAsync(client, email);
+
+            var reset = await client.PostAsJsonAsync("/api/auth/reset-password",
+                new { email, code, newPassword = NewPassword });
+
+            Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.ProbeTokenAsync(first.Token)).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.ProbeTokenAsync(second.Token)).StatusCode);
+
+            await LoginWithNewPasswordAsync(client, email);
+        }
+
         [Fact]
         public async Task ForgotPassword_RespondsTheSame_WhetherTheAccountExistsOrNot()
         {

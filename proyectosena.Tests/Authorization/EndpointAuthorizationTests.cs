@@ -94,7 +94,7 @@ namespace proyectosena.Tests.Authorization
             ("DELETE", "/api/DocumentType/DeleteDocumentType",            Access.Administrator),
 
             ("GET",    "/api/Role/GetRoles",                              Access.Administrator),
-            ("GET",    "/api/Role/GetRoleById",                           Access.AnySession),
+            ("GET",    "/api/Role/GetRoleById",                           Access.Administrator),
             ("POST",   "/api/Role/CreateRole",                            Access.Administrator),
             ("PUT",    "/api/Role/UpdateRole",                            Access.Administrator),
             ("DELETE", "/api/Role/DeleteRole",                            Access.Administrator),
