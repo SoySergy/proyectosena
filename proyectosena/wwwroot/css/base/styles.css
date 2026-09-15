@@ -152,3 +152,22 @@ input, button, select, textarea {
     font-size: var(--text-sm);
     margin-top: auto;
 }
+
+/* =============================
+   6. FOCO VISIBLE (M4)
+   Solo aparece al navegar con teclado (:focus-visible); con el ratón no se ve.
+   Mismo verde y grosor que ya usaba el botón de ver contraseña.
+   :where() le quita toda especificidad: los campos que ya tienen su propio
+   foco (.form-input, .filter-select) conservan el suyo.
+   ============================= */
+:where(:focus-visible) {
+    outline: 2px solid #1A5C3A;
+    outline-offset: 2px;
+}
+
+/* Sobre las cabeceras verdes, el mismo anillo en blanco */
+.header-principal .btn:focus-visible,
+.header-user__trigger:focus-visible,
+.notificaciones__boton:focus-visible {
+    outline-color: #FFFFFF;
+}

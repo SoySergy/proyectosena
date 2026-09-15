@@ -80,7 +80,7 @@ namespace proyectosena.Controllers
 
         // ─────────────────────────────────────────────────────────────────
         // POST: api/auth/forgot-password
-        // Genera el código OTP, lo guarda en memoria y envía el correo.
+        // Genera el código de un solo uso, lo guarda en la base y envía el correo.
         // ─────────────────────────────────────────────────────────────────
         [AllowAnonymous]
         [EnableRateLimiting(RateLimitPolicies.Email)]

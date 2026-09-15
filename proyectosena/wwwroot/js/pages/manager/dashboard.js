@@ -6,6 +6,7 @@ import { icon, formatDate, formatTime, translateStatus, statusClass, ESTADOS_SOL
 import { initNotificaciones } from "../../utils/notificaciones.js";
 import { initUserMenu } from "../../utils/userMenu.js";
 import { initTabs } from "../../utils/tabs.js";
+import { crearDialogo } from "../../utils/dialogo.js";
 //js/pages / manager / dashboard.js
 // ============================================================
 // INICIALIZACIÓN
@@ -306,6 +307,9 @@ function renderAllCard(req) {
 const statusModal = document.getElementById("statusModal");
 const statusModalOverlay = document.getElementById("statusModalOverlay");
 
+// Foco dentro, Escape para cerrar y vuelta al botón que lo abrió (utils/dialogo.js)
+const dialogoEstado = crearDialogo(statusModal, statusModalOverlay);
+
 function openStatusModal(idRequest, currentStatus) {
     document.getElementById("modalRequestId").value = idRequest;
     showMessage("status-modal-message", "");
@@ -315,13 +319,11 @@ function openStatusModal(idRequest, currentStatus) {
     const next = { Assigned: "InProgress", InProgress: "Completed" };
     select.value = next[currentStatus] ?? "Completed";
 
-    statusModal.style.display = "flex";
-    statusModalOverlay.style.display = "block";
+    dialogoEstado.abrir(select);
 }
 
 function closeStatusModal() {
-    statusModal.style.display = "none";
-    statusModalOverlay.style.display = "none";
+    dialogoEstado.cerrar();
 }
 
 document.getElementById("closeStatusModalBtn").addEventListener("click", closeStatusModal);
