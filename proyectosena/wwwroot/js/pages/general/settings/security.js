@@ -6,7 +6,7 @@ import { initUserMenu } from "/js/utils/userMenu.js";
 checkAuth();
 
 // Header dropdown y cierre de sesión con revocación en servidor
-const user = initUserMenu();
+initUserMenu();
 
 // ── Botón volver ───────────────────────────────────────────────
 document.getElementById("settingsBackLink").addEventListener("click", (e) => {
