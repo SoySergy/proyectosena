@@ -1,11 +1,14 @@
 ﻿/**
  * format.js
  * Cómo se muestran los datos dentro de las tarjetas: el iconito que va
- * delante de cada dato y las fechas en español.
+ * delante de cada dato, las fechas y horas, y la traducción de los estados
+ * de una solicitud.
  *
  * Estaban copiados en el panel del ciudadano y en el del gestor. Con el
- * del administrador iban a ser tres.
+ * del administrador iban a ser tres (M10 · M11).
  */
+
+import { escapeHtml } from "./html.js";
 
 /**
  * Iconito para poner delante de un dato dentro de una tarjeta.
@@ -35,4 +38,41 @@ export function formatDate(iso, { mesLargo = false } = {}) {
         month: mesLargo ? "long" : "short",
         day: "numeric",
     });
+}
+
+/** Solo la parte de hora de un string HH:mm o HH:mm:ss. */
+export function formatTime(timeString) {
+    if (!timeString) return "—";
+    return timeString.substring(0, 5);
+}
+
+// ── Estado de una solicitud (CollectionRequestStatus) ─────────────────
+//
+// El orden y las etiquetas viven en un solo sitio: antes cada panel tenía su
+// propia copia del mapa, y quien agregara un estado en el backend
+// (CollectionRequestController.cs, ValidStatuses) tenía que acordarse de
+// tocar hasta cuatro sitios de frontend para que se viera bien en todos.
+
+export const ESTADOS_SOLICITUD = ["Pending", "Assigned", "InProgress", "Completed", "Rejected"];
+
+const ETIQUETA_POR_ESTADO = {
+    Pending: "Pendiente",
+    Assigned: "Asignado",
+    InProgress: "En progreso",
+    Completed: "Completado",
+    Rejected: "Rechazado",
+};
+
+// Las dos reciben el estado tal como llega del servidor y su resultado va
+// directo a innerHTML: un estado que no esté en el mapa se escapa, igual que
+// cualquier otro dato del servidor.
+
+/** Traduce un estado del backend a español para mostrarlo. */
+export function translateStatus(status) {
+    return ETIQUETA_POR_ESTADO[status] ?? escapeHtml(status);
+}
+
+/** Clase CSS del badge de estado ("status-pending", "status-none" si falta). */
+export function statusClass(status) {
+    return `status-${escapeHtml((status || "none").toLowerCase())}`;
 }

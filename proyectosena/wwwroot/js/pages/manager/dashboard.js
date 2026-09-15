@@ -1,7 +1,8 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole, ROLES } from "../../utils/roleGuard.js";
-import { API_BASE, fetchAllItems, fetchConSesion } from "../../services/api.js";
+import { API_BASE, authHeaders, fetchAllItems, fetchConSesion, leerCuerpo, mensajeDeError } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
+import { icon, formatDate, formatTime, translateStatus, statusClass, ESTADOS_SOLICITUD } from "../../utils/format.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
 import { initUserMenu } from "../../utils/userMenu.js";
 import { initTabs } from "../../utils/tabs.js";
@@ -26,8 +27,7 @@ initNotificaciones();
 //
 // Al centralizarlo, el cierre de sesión pasa a avisar al servidor: antes solo
 // borraba el token de este navegador y seguía sirviendo hasta que caducara.
-const user = initUserMenu();
-const token = localStorage.getItem("token");
+initUserMenu();
 
 initTabs({
     "solicitudes-disponibles": loadPendingRequests,
@@ -39,13 +39,6 @@ initTabs({
 // UTILIDADES
 // ============================================================
 
-function authHeaders() {
-    return {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-    };
-}
-
 function showMessage(elementId, text, type = "error") {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -54,35 +47,6 @@ function showMessage(elementId, text, type = "error") {
     if (text) {
         setTimeout(() => { el.textContent = ""; el.className = "form-hint"; }, 4000);
     }
-}
-
-function translateStatus(status) {
-    const map = {
-        Pending: "Pendiente",
-        Assigned: "Asignado",
-        InProgress: "En progreso",
-        Completed: "Completado",
-        Rejected: "Rechazado"
-    };
-    return map[status] || status;
-}
-
-function statusClass(status) {
-    return `status-${(status || "none").toLowerCase()}`;
-}
-
-function formatDate(iso) {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" });
-}
-
-function formatTime(t) {
-    return t ? t.substring(0, 5) : "—";
-}
-
-/** Genera un <span> con ícono SVG para usar dentro de tarjetas */
-function icon(name) {
-    return `<span class="card-icon icon-${name}" aria-hidden="true"></span>`;
 }
 
 // ============================================================
@@ -128,7 +92,7 @@ function renderPendingCard(req) {
     return `
         <div class="request-card">
             <div class="card-header">
-                <span class="status-badge status-pending">Pendiente</span>
+                <span class="status-badge ${statusClass("Pending")}">${translateStatus("Pending")}</span>
                 <span class="card-date">Creada: ${formatDate(req.requestDate)}</span>
             </div>
             <div class="card-body">
@@ -157,9 +121,11 @@ async function acceptRequest(idRequest, btn) {
             { method: "POST", headers: authHeaders() }
         );
 
-        const data = await res.json().catch(() => ({}));
+        // AcceptRequest responde el motivo en texto plano: res.json() no lo
+        // podía leer y el gestor solo veía el mensaje genérico.
+        const data = await leerCuerpo(res);
 
-        if (!res.ok) throw new Error(data.message || "No se pudo aceptar la solicitud. Ya fue tomada.");
+        if (!res.ok) throw new Error(mensajeDeError(data, "No se pudo aceptar la solicitud. Ya fue tomada."));
 
         showMessage("pending-message", "Solicitud aceptada. Aparece ahora en 'Mis Asignaciones'.", "success");
         setTimeout(loadPendingRequests, 1500);
@@ -245,6 +211,21 @@ function renderAssignedCard(req) {
 
 document.getElementById("refreshAllBtn").addEventListener("click", loadAllRequests);
 document.getElementById("statusFilter").addEventListener("change", renderFilteredList);
+
+// Las opciones de los dos selectores de estado salen de la misma lista que
+// traduce las tarjetas (utils/format.js), en vez de estar escritas a mano en
+// el HTML. Al modal no va "Pending": nadie devuelve una solicitud a pendiente.
+function llenarOpcionesDeEstado(select, estados) {
+    select.insertAdjacentHTML("beforeend", estados
+        .map(estado => `<option value="${estado}">${translateStatus(estado)}</option>`)
+        .join(""));
+}
+
+llenarOpcionesDeEstado(document.getElementById("statusFilter"), ESTADOS_SOLICITUD);
+llenarOpcionesDeEstado(
+    document.getElementById("newStatusSelect"),
+    ESTADOS_SOLICITUD.filter(estado => estado !== "Pending")
+);
 
 let allRequests = [];
 
@@ -361,7 +342,6 @@ document.getElementById("saveStatusBtn").addEventListener("click", async () => {
         const params = new URLSearchParams({
             idRequest,
             newStatus,
-            idManager: user.idUser,
             ...(comment ? { comment } : {})
         });
 
@@ -370,9 +350,9 @@ document.getElementById("saveStatusBtn").addEventListener("click", async () => {
             { method: "PATCH", headers: authHeaders() }
         );
 
-        const data = await res.json().catch(() => ({}));
+        const data = await leerCuerpo(res);
 
-        if (!res.ok) throw new Error(data.message || "Error al actualizar el estado");
+        if (!res.ok) throw new Error(mensajeDeError(data, "Error al actualizar el estado"));
 
         showMessage("status-modal-message", "Estado actualizado correctamente.", "success");
 

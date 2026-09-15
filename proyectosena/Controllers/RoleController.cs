@@ -31,8 +31,13 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/role/GetRoleById --------------------
+        // Solo el administrador, igual que el resto de este controlador: los roles
+        // se gestionan desde su panel y ninguna pantalla de ciudadano o gestor
+        // los consulta.
         [HttpGet("GetRoleById")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetRoleById(Guid idRole)

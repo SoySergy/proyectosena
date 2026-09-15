@@ -1,7 +1,8 @@
 ﻿import { checkAuth } from "../../utils/authGuard.js";
 import { requireRole, ROLES } from "../../utils/roleGuard.js";
-import { API_BASE, fetchAllItems, fetchConSesion, mensajeDeError } from "../../services/api.js";
+import { API_BASE, authHeaders, fetchAllItems, fetchConSesion, leerCuerpo, mensajeDeError } from "../../services/api.js";
 import { escapeHtml } from "../../utils/html.js";
+import { icon, formatDate, formatTime, translateStatus, statusClass } from "../../utils/format.js";
 import { initNotificaciones } from "../../utils/notificaciones.js";
 import { initUserMenu } from "../../utils/userMenu.js";
 import { initTabs } from "../../utils/tabs.js";
@@ -31,8 +32,7 @@ initNotificaciones();
 // paso: el correo del desplegable, que se quedaba en «cargando...» porque
 // nadie lo rellenaba, y el cierre de sesión, que ahora avisa al servidor
 // para que el token quede anulado y no siga sirviendo una hora más.
-const user = initUserMenu();
-const token = localStorage.getItem("token");
+initUserMenu();
 
 initTabs({
     "mis-solicitudes": loadMyRequests,
@@ -43,16 +43,6 @@ initTabs({
 // ============================================================
 // UTILIDADES COMPARTIDAS
 // ============================================================
-
-/**
- * Construye los headers con el token JWT para todas las peticiones autenticadas
- */
-function authHeaders() {
-    return {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-    };
-}
 
 /**
  * Muestra un mensaje de éxito o error en un contenedor dado
@@ -78,43 +68,9 @@ function showMessage(elementId, text, type = "error") {
     }, 4000);
 }
 
-/**
- * Traduce los estados del backend a español para mostrar al usuario
- */
-function translateStatus(status) {
-    const map = {
-        Pending: "Pendiente",
-        Assigned: "Asignado",
-        InProgress: "En progreso",
-        Completed: "Completado",
-        Rejected: "Rechazado"
-    };
-    return map[status] || status;
-}
-
-/**
- * Formatea una fecha ISO a formato local legible
- */
-function formatDate(isoString) {
-    if (!isoString) return "—";
-    const date = new Date(isoString);
-    return date.toLocaleDateString("es-CO", {
-        year: "numeric", month: "long", day: "numeric"
-    });
-}
-
-/**
- * Formatea solo la parte de hora de un string HH:mm o HH:mm:ss
- */
-function formatTime(timeString) {
-    if (!timeString) return "—";
-    return timeString.substring(0, 5); // Retorna HH:mm
-}
-
-/** Genera un <span> con ícono SVG para usar dentro de tarjetas */
-function icon(name) {
-    return `<span class="card-icon icon-${name}" aria-hidden="true"></span>`;
-}
+// citizen/dashboard.js usa la fecha larga ("7 de septiembre de 2026"); el
+// gestor usa la corta. Ver el comentario de formatDate en utils/format.js.
+const formatDateLarga = (iso) => formatDate(iso, { mesLargo: true });
 
 // ============================================================
 // SECCIÓN 1 — CREAR SOLICITUD
@@ -130,9 +86,9 @@ createForm.addEventListener("submit", async (e) => {
     submitBtn.textContent = "Enviando...";
     showMessage("form-message", "");
 
-    // Construir el DTO que espera el backend: CreateCollectionRequestDto
+    // Construir el DTO que espera el backend: CreateCollectionRequestDto.
+    // idUser no viaja aquí: sale del token en el propio backend.
     const dto = {
-        idUser: user.idUser,
         collectionDate: document.getElementById("collectionDate").value,
         collectionTime: document.getElementById("collectionTime").value,
         collectionAddress: document.getElementById("collectionAddress").value.trim(),
@@ -148,9 +104,7 @@ createForm.addEventListener("submit", async (e) => {
             body: JSON.stringify(dto)
         });
 
-        const text = await response.text();
-        let result;
-        try { result = JSON.parse(text); } catch { result = text; }
+        const result = await leerCuerpo(response);
 
         if (!response.ok) {
             throw new Error(mensajeDeError(result, "Error al crear la solicitud"));
@@ -203,13 +157,9 @@ async function loadMyRequests() {
         }
 
         listEl.innerHTML = activeRequests.map(req => renderRequestCard(req)).join("");
-        /////
-
 
         listEl.querySelectorAll(".edit-btn").forEach(btn => {
             btn.addEventListener("click", () => {
-                //const req = requests.find(r => r.idRequest === btn.dataset.id);
-                //if (req) openEditModal(req);
                 const req = activeRequests.find(r => r.idRequest === btn.dataset.id);
                 if (req) openEditModal(req);
             });
@@ -247,9 +197,7 @@ async function cancelRequest(idRequest, btn) {
 
         // CancelRequest devuelve texto plano en sus errores (403, 404, 409),
         // no JSON, así que se lee igual que en el resto de este archivo.
-        const text = await response.text();
-        let result;
-        try { result = JSON.parse(text); } catch { result = text; }
+        const result = await leerCuerpo(response);
 
         if (!response.ok) {
             throw new Error(mensajeDeError(result, "No se pudo cancelar la solicitud."));
@@ -294,11 +242,11 @@ function renderRequestCard(req) {
     return `
         <div class="request-card">
             <div class="card-header">
-                <span class="status-badge status-${escapeHtml(req.currentStatus.toLowerCase())}">${translateStatus(req.currentStatus)}</span>
-                <span class="card-date">Creada: ${formatDate(req.requestDate)}</span>
+                <span class="status-badge ${statusClass(req.currentStatus)}">${translateStatus(req.currentStatus)}</span>
+                <span class="card-date">Creada: ${formatDateLarga(req.requestDate)}</span>
             </div>
             <div class="card-body">
-                <p>${icon("calendario")}<strong>Fecha recolección:</strong> ${formatDate(req.collectionDate)}</p>
+                <p>${icon("calendario")}<strong>Fecha recolección:</strong> ${formatDateLarga(req.collectionDate)}</p>
                 <p>${icon("reloj")}<strong>Hora:</strong> ${formatTime(req.collectionTime)}</p>
                 <p>${icon("direccion")}<strong>Dirección:</strong> ${escapeHtml(req.collectionAddress)}</p>
                 <p>${icon("telefono")}<strong>Teléfono:</strong> ${escapeHtml(req.contactPhone)}</p>
@@ -389,9 +337,7 @@ document.getElementById("editRequestForm").addEventListener("submit", async (e) 
             body: JSON.stringify(dto)
         });
 
-        const text = await response.text();
-        let result;
-        try { result = JSON.parse(text); } catch { result = text; }
+        const result = await leerCuerpo(response);
 
         if (!response.ok) {
             throw new Error(mensajeDeError(result, "Error al actualizar la solicitud"));
@@ -461,11 +407,11 @@ function renderHistoryRow(h) {
 
     return `
         <div class="history-row">
-            <div class="history-date">${formatDate(h.changeDate)}</div>
+            <div class="history-date">${formatDateLarga(h.changeDate)}</div>
             <div class="history-change">
-                <span class="status-badge status-${(h.previousStatus || "none").toLowerCase()}">${prev}</span>
+                <span class="status-badge ${statusClass(h.previousStatus)}">${prev}</span>
                 <span class="history-arrow">→</span>
-                <span class="status-badge status-${escapeHtml(h.newStatus.toLowerCase())}">${next}</span>
+                <span class="status-badge ${statusClass(h.newStatus)}">${next}</span>
             </div>
             <div class="history-meta">
                 <span>Gestionado por: <strong>${escapeHtml(h.userName || "Sistema")}</strong></span>
@@ -546,7 +492,7 @@ function pintarEstadoPostulacion(app) {
         <div class="request-card">
             <div class="card-header">
                 <span class="status-badge ${estado.clase}">${estado.etiqueta}</span>
-                <span class="card-date">Enviada: ${formatDate(app.requestDate)}</span>
+                <span class="card-date">Enviada: ${formatDateLarga(app.requestDate)}</span>
             </div>
             <div class="card-body">
                 <p><strong>Tu motivación:</strong> ${escapeHtml(app.motivation)}</p>
@@ -583,9 +529,7 @@ applyForm.addEventListener("submit", async (e) => {
             body: JSON.stringify({ motivation })
         });
 
-        const text = await response.text();
-        let result;
-        try { result = JSON.parse(text); } catch { result = text; }
+        const result = await leerCuerpo(response);
 
         if (!response.ok) {
             throw new Error(mensajeDeError(result, "No se pudo enviar la postulación."));
