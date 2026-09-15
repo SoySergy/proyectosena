@@ -34,18 +34,24 @@ namespace proyectosena.Services
         private readonly IVerificationCodeService _codeService;
         private readonly IConfiguration _configuration;
 
+        // Para que recuperar la contraseña cierre de golpe cualquier sesión
+        // abierta de esa persona, igual que cambiarla desde Seguridad
+        private readonly IRevokedTokenService _revokedTokens;
+
         public AuthService(
             IUserLookupRepository userLookup,
             IUserWriteRepository userWrite,
             IEmailService emailService,
             IVerificationCodeService codeService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IRevokedTokenService revokedTokens)
         {
             _userLookup = userLookup;
             _userWrite = userWrite;
             _emailService = emailService;
             _codeService = codeService;
             _configuration = configuration;
+            _revokedTokens = revokedTokens;
         }
 
         public async Task<RegistrationPendingDto> Register(RegisterDto dto)
@@ -201,6 +207,11 @@ namespace proyectosena.Services
             user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
             user.IsEmailVerified = true;
             await _userWrite.UpdateUser(user);
+
+            // Quien recupera la contraseña muchas veces lo hace porque alguien más
+            // la conoce: cualquier sesión abierta con la vieja deja de valer. Antes
+            // solo pasaba al cambiarla desde Seguridad (UserService.UpdateUser).
+            await _revokedTokens.RevokeAllForUser(user.IdUser);
 
             // El código se quema para que no pueda reutilizarse
             await _codeService.InvalidateCode(email, CodePurpose.AccountAccess);
