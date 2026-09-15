@@ -65,10 +65,20 @@ function conectarDesplegable() {
         if (abierto) cerrarPanelDeAvisos();
     });
 
-    // Cerrar al hacer clic fuera
-    document.addEventListener("click", () => {
+    const cerrar = () => {
         dropdown.classList.remove("is-open");
         trigger.setAttribute("aria-expanded", "false");
+    };
+
+    // Cerrar al hacer clic fuera
+    document.addEventListener("click", cerrar);
+
+    // Escape también lo cierra y devuelve el foco al botón, para que quien
+    // navega con teclado siga desde donde estaba (M5)
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape" || !dropdown.classList.contains("is-open")) return;
+        cerrar();
+        trigger.focus();
     });
 
     // Evitar que los clics de dentro lo cierren
