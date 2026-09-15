@@ -61,10 +61,19 @@ function conectarPanel() {
         }
     });
 
-    // Cerrar al hacer clic fuera, igual que el menú de usuario
-    document.addEventListener("click", () => {
+    const cerrar = () => {
         panel.classList.remove("is-open");
         boton.setAttribute("aria-expanded", "false");
+    };
+
+    // Cerrar al hacer clic fuera, igual que el menú de usuario
+    document.addEventListener("click", cerrar);
+
+    // Escape también lo cierra y devuelve el foco a la campana (M5)
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape" || !panel.classList.contains("is-open")) return;
+        cerrar();
+        boton.focus();
     });
 
     // Los clics de dentro no lo cierran

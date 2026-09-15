@@ -251,12 +251,12 @@
         </section>
 
     </main>
-    <div id="editModal" class="modal" style="display:none">
+    <div id="editModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
         <div class="modal-content card">
 
             <div class="modal-header">
-                <h3 class="card__title">Editar Solicitud</h3>
-                <button id="closeModalBtn" class="btn-icon">
+                <h3 class="card__title" id="editModalTitle">Editar Solicitud</h3>
+                <button id="closeModalBtn" class="btn-icon" aria-label="Cerrar">
                     <span class="form-input-icon icon-salir" aria-hidden="true"></span>
                 </button>
             </div>

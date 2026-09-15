@@ -6,6 +6,7 @@ import { icon, formatDate, formatTime, translateStatus, statusClass } from "../.
 import { initNotificaciones } from "../../utils/notificaciones.js";
 import { initUserMenu } from "../../utils/userMenu.js";
 import { initTabs } from "../../utils/tabs.js";
+import { crearDialogo } from "../../utils/dialogo.js";
 // /js/pages/citizen/dashboard.js
 // ============================================================
 // INICIALIZACIÓN
@@ -269,6 +270,9 @@ function renderRequestCard(req) {
 const editModal = document.getElementById("editModal");
 const modalOverlay = document.getElementById("modalOverlay");
 
+// Foco dentro, Escape para cerrar y vuelta al botón que lo abrió (utils/dialogo.js)
+const dialogoEditar = crearDialogo(editModal, modalOverlay);
+
 /**
  * Abre el modal y pre-rellena los campos con los datos actuales de la solicitud
  */
@@ -288,13 +292,11 @@ function openEditModal(req) {
 
     showMessage("edit-message", "");
 
-    editModal.style.display = "flex";
-    modalOverlay.style.display = "block";
+    dialogoEditar.abrir(document.getElementById("editCollectionDate"));
 }
 
 function closeEditModal() {
-    editModal.style.display = "none";
-    modalOverlay.style.display = "none";
+    dialogoEditar.cerrar();
 }
 
 document.getElementById("closeModalBtn").addEventListener("click", closeEditModal);

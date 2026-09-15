@@ -137,11 +137,11 @@
     </main>
 
     <!-- MODAL CAMBIAR ESTADO -->
-    <div id="statusModal" class="modal" style="display:none">
+    <div id="statusModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
         <div class="modal-content card">
             <div class="modal-header">
-                <h3 class="card__title">Actualizar Estado</h3>
-                <button id="closeStatusModalBtn" class="btn-icon" title="Cerrar">✕</button>
+                <h3 class="card__title" id="statusModalTitle">Actualizar Estado</h3>
+                <button id="closeStatusModalBtn" class="btn-icon" title="Cerrar" aria-label="Cerrar">✕</button>
             </div>
             <div id="status-modal-message" class="form-hint" role="alert"></div>
             <input type="hidden" id="modalRequestId" />
