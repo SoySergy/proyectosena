@@ -153,7 +153,7 @@ async function acceptRequest(idRequest, btn) {
 
     try {
         const res = await fetchConSesion(
-            `${API_BASE}/collectionrequest/AcceptRequest?idRequest=${idRequest}&idManager=${user.idUser}`,
+            `${API_BASE}/collectionrequest/AcceptRequest?idRequest=${idRequest}`,
             { method: "POST", headers: authHeaders() }
         );
 
@@ -185,7 +185,7 @@ async function loadMyAssignments() {
     showMessage("assigned-message", "");
 
     try {
-        const all = await fetchAllItems(`${API_BASE}/collectionrequest/GetMyAssignments?idManager=${user.idUser}`, {
+        const all = await fetchAllItems(`${API_BASE}/collectionrequest/GetMyAssignments`, {
             headers: authHeaders()
         }, "Error al obtener asignaciones");
 

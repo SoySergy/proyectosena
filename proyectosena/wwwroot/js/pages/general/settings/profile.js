@@ -46,7 +46,7 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
 
     try {
         const res = await fetchConSesion(
-            `${API_BASE}/user/UpdateUser?idUser=${user.idUser}`,
+            `${API_BASE}/user/UpdateUser`,
             {
                 method: "PUT",
                 headers: authHeaders(),

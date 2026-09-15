@@ -60,18 +60,6 @@ function authHeaders() {
  * @param {string} text - texto del mensaje
  * @param {"success"|"error"} type - tipo de mensaje
  */
-//function showMessage(elementId, text, type = "error") {
-//    const el = document.getElementById(elementId);
-//    el.textContent = text;
-//    el.className = `msg ${type}`;
-
-//    // Limpiar automáticamente después de 4 segundos
-//    setTimeout(() => {
-//        el.textContent = "";
-//        el.className = "";
-//    }, 4000);
-//}
-
 function showMessage(elementId, text, type = "error") {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -196,7 +184,7 @@ async function loadMyRequests() {
 
     try {
         const requests = await fetchAllItems(
-            `${API_BASE}/collectionrequest/GetRequestsByUser?idUser=${user.idUser}`,
+            `${API_BASE}/collectionrequest/GetRequestsByUser`,
             { headers: authHeaders() },
             "Error al obtener solicitudes"
         );
@@ -277,108 +265,9 @@ async function cancelRequest(idRequest, btn) {
     }
 }
 
-//async function loadMyRequests() {
-//    const listEl = document.getElementById("requests-list");
-//    const loadingEl = document.getElementById("requests-loading");
-
-//    listEl.innerHTML = "";
-//    loadingEl.style.display = "block";
-//    showMessage("requests-message", "");
-
-//    try {
-//        // El backend filtra por el idUser del token — traemos todas y filtramos en frontend
-//        // ya que el endpoint GetCollectionRequests es solo para Admin/Manager.
-//        // Usamos GetCollectionRequestById iterando los que conocemos, 
-//        // pero la mejor práctica aquí es filtrar por usuario desde el historial.
-//        // Dado que no hay endpoint GetByUser en CollectionRequest, obtenemos por historial
-//        // y luego cargamos el detalle de cada solicitud única.
-//        const historyResponse = await fetch(
-//            `${API_BASE}/history/GetByUser?idUser=${user.idUser}`,
-//            { headers: authHeaders() }
-//        );
-
-//        let requestIds = [];
-
-//        if (historyResponse.ok) {
-//            const histories = await historyResponse.json();
-//            // Extraer IDs únicos de solicitudes del historial del usuario
-//            const unique = [...new Set(histories.map(h => h.idRequest))];
-//            requestIds = unique;
-//        }
-
-//        // Si no hay historial, mostrar mensaje vacío
-//        if (requestIds.length === 0) {
-//            loadingEl.style.display = "none";
-//            listEl.innerHTML = "<p class='empty-msg'>No tienes solicitudes registradas aún.</p>";
-//            return;
-//        }
-
-//        // Cargar detalle de cada solicitud
-//        const detailPromises = requestIds.map(id =>
-//            fetch(`${API_BASE}/collectionrequest/GetCollectionRequestById?idRequest=${id}`, {
-//                headers: authHeaders()
-//            }).then(r => r.ok ? r.json() : null)
-//        );
-
-//        const requests = (await Promise.all(detailPromises)).filter(Boolean);
-
-//        loadingEl.style.display = "none";
-
-//        if (requests.length === 0) {
-//            listEl.innerHTML = "<p class='empty-msg'>No se encontraron solicitudes.</p>";
-//            return;
-//        }
-
-//        // Ordenar por fecha de solicitud más reciente primero
-//        requests.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate));
-
-//        listEl.innerHTML = requests.map(req => renderRequestCard(req)).join("");
-
-//        // Adjuntar eventos de edición a los botones renderizados
-//        listEl.querySelectorAll(".edit-btn").forEach(btn => {
-//            btn.addEventListener("click", () => {
-//                const idRequest = btn.dataset.id;
-//                const req = requests.find(r => r.idRequest === idRequest);
-//                if (req) openEditModal(req);
-//            });
-//        });
-
-//    } catch (error) {
-//        loadingEl.style.display = "none";
-//        showMessage("requests-message", "Error al cargar tus solicitudes. Verifica tu conexión.", "error");
-//    }
-//}
-
 /**
  * Genera el HTML de una tarjeta de solicitud
  */
-//function renderRequestCard(req) {
-//    const isPending = req.currentStatus === "Pending";
-//    const editBtn = isPending
-//        ? `<button class="edit-btn" data-id="${escapeHtml(req.idRequest)}">✏️ Editar</button>`
-//        : `<button class="edit-btn" disabled title="Solo se pueden editar solicitudes pendientes">✏️ Editar</button>`;
-
-//    return `
-//        <div class="request-card">
-//            <div class="card-header">
-//                <span class="status-badge status-${escapeHtml(req.currentStatus.toLowerCase())}">${translateStatus(req.currentStatus)}</span>
-//                <span class="card-date">Creada: ${formatDate(req.requestDate)}</span>
-//            </div>
-//            <div class="card-body">
-//                <p><strong>📅 Fecha recolección:</strong> ${formatDate(req.collectionDate)}</p>
-//                <p><strong>🕐 Hora:</strong> ${formatTime(req.collectionTime)}</p>
-//                <p><strong>📍 Dirección:</strong> ${escapeHtml(req.collectionAddress)}</p>
-//                <p><strong>📞 Teléfono:</strong> ${escapeHtml(req.contactPhone)}</p>
-//                <p><strong>♻️ Residuos:</strong> ${escapeHtml(req.wasteTypes)}</p>
-//                ${req.citizenObservations ? `<p><strong>📝 Observaciones:</strong> ${escapeHtml(req.citizenObservations)}</p>` : ""}
-//            </div>
-//            <div class="card-actions">
-//                ${editBtn}
-//            </div>
-//        </div>
-//    `;
-//}
-
 function renderRequestCard(req) {
     const isPending = req.currentStatus === "Pending";
     const editBtn = isPending
@@ -540,7 +429,7 @@ async function loadHistory() {
 
     try {
         const histories = await fetchAllItems(
-            `${API_BASE}/history/GetMyHistory?idUser=${user.idUser}`,
+            `${API_BASE}/history/GetMyHistory`,
             { headers: authHeaders() },
             "Error al obtener el historial"
         );
