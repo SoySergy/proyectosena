@@ -1,0 +1,36 @@
+# Corre las pruebas automáticas (proyectosena.Tests) en cada cambio que va a
+# Dev o a main, antes de que llegue a producción.
+#
+# Las pruebas levantan su propia PostgreSQL desechable con Testcontainers. Los
+# runners ubuntu de GitHub ya traen Docker, así que aquí no hace falta ningún
+# servicio de base de datos ni ningún secreto: la clave JWT y la cadena de
+# conexión de las pruebas las pone el propio proyecto de pruebas.
+name: Tests
+
+on:
+  pull_request:
+    branches: [Dev, main]
+  # También al llegar a la rama: un push directo a Dev no pasa por un PR
+  push:
+    branches: [Dev, main]
+
+# Solo lee el código: el token de la ejecución no necesita escribir nada
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    # Si algo se cuelga (una imagen que no baja, un contenedor que no arranca),
+    # que corte en vez de gastar la hora entera
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run tests
+        run: dotnet test proyectosena.Tests/proyectosena.Tests.csproj

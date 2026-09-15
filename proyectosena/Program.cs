@@ -334,3 +334,8 @@ app.MapControllers();
 // ante cualquier endpoint de la API.
 app.MapCleanPageRoutes();
 app.Run();
+
+// Las pruebas (proyectosena.Tests) arrancan la aplicación con
+// WebApplicationFactory<Program>, que necesita ver esta clase. Con top-level
+// statements el compilador la genera internal; esto solo la hace pública.
+public partial class Program { }
