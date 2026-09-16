@@ -24,6 +24,16 @@ builder.Logging.AddDebug();
 // ── 2. DATABASE + REPOSITORIES ────────────────────────
 builder.Services.AddProjectDependencies(builder.Configuration);
 
+// ── 2b. PUERTO AL QUE REDIRIGE EL HTTPS ───────────────
+// El middleware de redirección necesita saber a qué puerto mandar. Dentro del
+// contenedor no hay ningún listener HTTPS —el TLS lo termina el proxy del
+// proveedor—, así que no lo puede deducir solo: se limita a dejar pasar la
+// petición y a escribir "Failed to determine the https port for redirect" en el
+// log. Comprobado: con el conmutador encendido y sin este puerto, una petición
+// HTTP recibía 200 igual. El conmutador parecía encendido sin estarlo.
+builder.Services.AddHttpsRedirection(options =>
+    options.HttpsPort = builder.Configuration.GetValue("Https:Port", 443));
+
 // ── 3. JWT AUTHENTICATION ─────────────────────────────
 //
 // La clave de firma ya no tiene valor por defecto: appsettings.json se versiona
@@ -304,7 +314,8 @@ if (app.Configuration.GetValue("ForwardedHeaders:Enabled", false))
     app.UseForwardedHeaders(forwardedHeadersOptions);
 }
 
-// Swagger disponible en /swagger en cualquier entorno (incluido Docker/Production)
+// Swagger solo en desarrollo: en producción publica el mapa entero de la API,
+// con los nombres y el cuerpo que espera cada endpoint.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -315,8 +326,28 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Solo redirige a HTTPS si NO estamos en Producción (Docker corre solo HTTP)
-if (app.Environment.IsDevelopment())
+// ── HTTPS ─────────────────────────────────────────────
+// Va justo después de UseForwardedHeaders y no antes: detrás de un proxy el
+// esquema de verdad viaja en X-Forwarded-Proto, y sin haberlo leído esta
+// redirección vería "http" en TODAS las peticiones —incluidas las que ya
+// llegaron cifradas— y mandaría al navegador a un bucle de redirecciones.
+//
+// Apagado por defecto porque el docker-compose corre HTTP puro en el 8080:
+// encenderlo ahí dejaría la API inalcanzable en local. Se enciende donde hay
+// TLS delante (Https__Enforce=true en Render), y ahí importa aunque el proxy
+// ya sirva HTTPS: sin esto, una petición que llegue por HTTP se atiende igual,
+// con su token viajando en claro.
+var forzarHttps = app.Configuration.GetValue("Https:Enforce", false);
+
+// HSTS solo con el conmutador encendido, nunca por estar en desarrollo: el
+// navegador se queda recordando la orden por meses y la aplica a TODO lo que
+// se sirva en localhost, incluidos otros proyectos del mismo equipo.
+if (forzarHttps)
+{
+    app.UseHsts();
+}
+
+if (forzarHttps || app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }

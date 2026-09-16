@@ -23,8 +23,17 @@ services:
       POSTGRES_DB: "${POSTGRES_DB}"
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
-    ports:
-      - "5432:5432"
+    # Sin "ports": la API le habla por la red interna de Compose y no necesita
+    # que el puerto salga al host. Publicarlo en un servidor abre la base al
+    # mundo (I-3). Para conectarse con un cliente desde el propio equipo, un
+    # docker-compose.override.yml local —que no se versiona— puede publicarlo:
+    #
+    #   services:
+    #     postgres:
+    #       ports: !override ["5433:5432"]
+    #
+    # También sirve "docker compose exec postgres psql -U ... -d ...", que no
+    # necesita ningún puerto publicado.
     # Desde la 18, la imagen oficial espera el volumen en /var/lib/postgresql
     # a secas (sin /data): así reconoce que es una instalación nueva y no una
     # carpeta de una versión anterior mal montada. Con /data se negaba a
@@ -82,6 +91,11 @@ services:
       # puerto 8080, y creerle dejaba saltarse el limite de intentos del login.
       # En Render va en "true" (panel Environment): alli la cabecera la pone su proxy.
       ForwardedHeaders__Enabled: "false"
+      # false: en local la API habla HTTP puro en el 8080 y forzar HTTPS la
+      # dejaria inalcanzable. En Render va en "true" (panel Environment): alli
+      # hay TLS delante y esto redirige lo que llegue por HTTP, ademas de pedirle
+      # al navegador que no vuelva a intentarlo en claro (HSTS).
+      Https__Enforce: "${HTTPS_ENFORCE:-false}"
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:8080"
     depends_on:
