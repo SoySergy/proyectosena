@@ -25,6 +25,25 @@ builder.Logging.AddDebug();
 builder.Services.AddProjectDependencies(builder.Configuration);
 
 // ── 3. JWT AUTHENTICATION ─────────────────────────────
+//
+// La clave de firma ya no tiene valor por defecto: appsettings.json se versiona
+// y lo que se escriba ahí queda publicado (B-1c). Si no llega por el entorno, la
+// API no arranca. Arrancar sin ella era peor que no arrancar: firmaría con una
+// clave que cualquiera puede leer en el repositorio, y con esa clave se fabrica
+// un token de administrador sin tocar la base.
+//
+// El mínimo de 32 bytes no es un gusto: HS256 usa SHA-256 y la propia librería
+// rechaza claves más cortas al firmar. Fallar aquí lo dice en el arranque, en
+// vez de en el primer inicio de sesión.
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Falta la clave de firma 'Jwt:Key', o tiene menos de 32 bytes. Defínela como " +
+        "variable de entorno Jwt__Key: en local, en el .env que lee docker-compose.yml; " +
+        "al desplegar, en el panel del proveedor. Los nombres están en .env.example.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -36,9 +55,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                                           Encoding.UTF8.GetBytes(
-                                               builder.Configuration["Jwt:Key"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
         };
 
