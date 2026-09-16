@@ -25,7 +25,7 @@ namespace proyectosena.Services
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(
                 settings["SenderName"],
-                settings["SenderEmail"]
+                Remitente
             ));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = "Código de recuperación – RecyRoute";
@@ -61,7 +61,7 @@ namespace proyectosena.Services
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(
                 settings["SenderName"],
-                settings["SenderEmail"]
+                Remitente
             ));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = "Bienvenido a RecyRoute – Activa tu cuenta de gestor";
@@ -97,7 +97,7 @@ namespace proyectosena.Services
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(
                 settings["SenderName"],
-                settings["SenderEmail"]
+                Remitente
             ));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = "Confirma tu correo – RecyRoute";
@@ -130,7 +130,7 @@ namespace proyectosena.Services
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(
                 settings["SenderName"],
-                settings["SenderEmail"]
+                Remitente
             ));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = "Ya tienes una cuenta en RecyRoute";
@@ -155,6 +155,53 @@ namespace proyectosena.Services
             };
 
             await SendAsync(message);
+        }
+
+        // Dirección desde la que sale todo. Nunca devuelve null, y ese es el punto:
+        // MailboxAddress rechaza null y esa excepción se escapa ANTES de llegar a
+        // SendAsync, donde sí se trata. Comprobado arrancando la imagen sin ninguna
+        // variable de correo —lo que pasa si el panel del proveedor no las define—:
+        // forgot-password devolvía 500 con ArgumentNullException en vez de responder
+        // como siempre y anotar el envío fallido.
+        //
+        // Con la cadena vacía el mensaje se arma, el servidor de correo lo rechaza y
+        // el fallo cae donde ya estaba previsto. El log dice qué falta.
+        private string Remitente
+        {
+            get
+            {
+                var remitente = _config["EmailSettings:SenderEmail"];
+
+                if (!string.IsNullOrWhiteSpace(remitente))
+                    return remitente;
+
+                _logger.LogError(
+                    "Falta EmailSettings:SenderEmail. Ningún correo va a salir: defínela " +
+                    "como EmailSettings__SenderEmail (en local, EMAIL_SENDER en el .env).");
+
+                return string.Empty;
+            }
+        }
+
+        // Lo mismo con la contraseña: sin ella, AuthenticateAsync lanza
+        // ArgumentNullException y el log acaba enseñando una traza en vez de decir qué
+        // falta. Cae dentro del try de SendAsync, así que no tumbaba la petición, pero
+        // el motivo quedaba escondido. De paso quita el aviso CS8604 del compilador.
+        private string Contrasena
+        {
+            get
+            {
+                var contrasena = _config["EmailSettings:Password"];
+
+                if (!string.IsNullOrWhiteSpace(contrasena))
+                    return contrasena;
+
+                _logger.LogError(
+                    "Falta EmailSettings:Password. Ningún correo va a salir: defínela " +
+                    "como EmailSettings__Password (en local, EMAIL_PASSWORD en el .env).");
+
+                return string.Empty;
+            }
         }
 
         // Entrega compartida para todos los mensajes de este servicio.
@@ -230,7 +277,7 @@ namespace proyectosena.Services
                 int.Parse(settings["Port"]!),
                 SecureSocketOptions.StartTls
             );
-            await client.AuthenticateAsync(settings["SenderEmail"], settings["Password"]);
+            await client.AuthenticateAsync(Remitente, Contrasena);
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
         }
