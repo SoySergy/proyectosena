@@ -128,11 +128,19 @@ builder.Services.AddAuthorization(options =>
 // dos orígenes distintos. Antes esto aceptaba cualquier origen
 // (I-1 · WA-02): cualquier sitio web podía llamar a la API desde el
 // navegador de quien tuviera un token.
+//
+// El origen sale de la configuración y ya no del código (N-4): el día que el
+// frontend viva en su propio dominio, dejarlo entrar es una variable de entorno
+// y no una recompilación. Varios se separan con comas. El valor por defecto es
+// el del Docker local, que es el único montaje donde hoy hace falta.
+var origenesPermitidos = (builder.Configuration["Cors:Origins"] ?? "http://localhost:8081")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("RecyRoutePolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:8081")
+        policy.WithOrigins(origenesPermitidos)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });

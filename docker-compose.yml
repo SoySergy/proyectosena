@@ -96,6 +96,11 @@ services:
       # hay TLS delante y esto redirige lo que llegue por HTTP, ademas de pedirle
       # al navegador que no vuelva a intentarlo en claro (HSTS).
       Https__Enforce: "${HTTPS_ENFORCE:-false}"
+      # Desde que origen puede el navegador llamar a esta API. Aqui es Nginx en
+      # el 8081; al desplegar, la propia API sirve las paginas y es el mismo
+      # origen, asi que no hace falta tocarlo salvo que el frontend se separe.
+      # Varios se separan con comas.
+      Cors__Origins: "${CORS_ORIGINS:-http://localhost:8081}"
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:8080"
     depends_on:
