@@ -4,8 +4,14 @@
     {
         public Task SendPasswordResetCodeAsync(string toEmail, string code);
 
-        // Invites a newly created manager to set their own password
-        public Task SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes);
+        // Invita al gestor recién creado a poner su propia contraseña.
+        //
+        // Es el único envío que devuelve si salió o no. El resto se llama desde
+        // flujos anónimos, donde decir «ese correo no existe» delataría quién
+        // tiene cuenta; este lo pide un administrador autenticado sobre una
+        // cuenta que él mismo acaba de crear, así que saberlo no revela nada y
+        // le evita quedarse esperando a alguien que nunca recibió su código.
+        public Task<bool> SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes);
 
         // Le manda al recién registrado el código para confirmar que el correo
         // existe y es suyo
