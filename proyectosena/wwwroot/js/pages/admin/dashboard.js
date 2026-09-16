@@ -432,10 +432,15 @@ async function crearGestor(evento) {
         // Hay un gestor activo más, así que los números del resumen cambian.
         cargarResumen();
 
+        // La cuenta existe en los dos casos, pero si el correo no salió esto no
+        // es una buena noticia: se muestra en rojo para que no pase por un
+        // «listo» más y el administrador sepa que tiene que avisar al gestor.
+        const correoSalio = respuesta?.invitationSent !== false;
+
         mostrarMensaje(
             "create-message",
             respuesta?.message ?? "Gestor creado. Se le envió un código a su correo.",
-            "success"
+            correoSalio ? "success" : "error"
         );
     } finally {
         boton.disabled = false;

@@ -25,7 +25,7 @@ namespace proyectosena.Services
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(
                 settings["SenderName"],
-                settings["SenderEmail"]
+                Remitente
             ));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = "Código de recuperación – RecyRoute";
@@ -54,14 +54,14 @@ namespace proyectosena.Services
 
         // Invites a newly created manager to set their own password.
         // The account already exists; the code is what proves they own the mailbox.
-        public async Task SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes)
+        public async Task<bool> SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes)
         {
             var settings = _config.GetSection("EmailSettings");
 
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(
                 settings["SenderName"],
-                settings["SenderEmail"]
+                Remitente
             ));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = "Bienvenido a RecyRoute – Activa tu cuenta de gestor";
@@ -86,7 +86,7 @@ namespace proyectosena.Services
                     </div>"
             };
 
-            await SendAsync(message);
+            return await SendAsync(message);
         }
 
         public async Task SendEmailVerificationCodeAsync(
@@ -97,7 +97,7 @@ namespace proyectosena.Services
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(
                 settings["SenderName"],
-                settings["SenderEmail"]
+                Remitente
             ));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = "Confirma tu correo – RecyRoute";
@@ -130,7 +130,7 @@ namespace proyectosena.Services
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(
                 settings["SenderName"],
-                settings["SenderEmail"]
+                Remitente
             ));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = "Ya tienes una cuenta en RecyRoute";
@@ -157,20 +157,71 @@ namespace proyectosena.Services
             await SendAsync(message);
         }
 
+        // Dirección desde la que sale todo. Nunca devuelve null, y ese es el punto:
+        // MailboxAddress rechaza null y esa excepción se escapa ANTES de llegar a
+        // SendAsync, donde sí se trata. Comprobado arrancando la imagen sin ninguna
+        // variable de correo —lo que pasa si el panel del proveedor no las define—:
+        // forgot-password devolvía 500 con ArgumentNullException en vez de responder
+        // como siempre y anotar el envío fallido.
+        //
+        // Con la cadena vacía el mensaje se arma, el servidor de correo lo rechaza y
+        // el fallo cae donde ya estaba previsto. El log dice qué falta.
+        private string Remitente
+        {
+            get
+            {
+                var remitente = _config["EmailSettings:SenderEmail"];
+
+                if (!string.IsNullOrWhiteSpace(remitente))
+                    return remitente;
+
+                _logger.LogError(
+                    "Falta EmailSettings:SenderEmail. Ningún correo va a salir: defínela " +
+                    "como EmailSettings__SenderEmail (en local, EMAIL_SENDER en el .env).");
+
+                return string.Empty;
+            }
+        }
+
+        // Lo mismo con la contraseña: sin ella, AuthenticateAsync lanza
+        // ArgumentNullException y el log acaba enseñando una traza en vez de decir qué
+        // falta. Cae dentro del try de SendAsync, así que no tumbaba la petición, pero
+        // el motivo quedaba escondido. De paso quita el aviso CS8604 del compilador.
+        private string Contrasena
+        {
+            get
+            {
+                var contrasena = _config["EmailSettings:Password"];
+
+                if (!string.IsNullOrWhiteSpace(contrasena))
+                    return contrasena;
+
+                _logger.LogError(
+                    "Falta EmailSettings:Password. Ningún correo va a salir: defínela " +
+                    "como EmailSettings__Password (en local, EMAIL_PASSWORD en el .env).");
+
+                return string.Empty;
+            }
+        }
+
         // Entrega compartida para todos los mensajes de este servicio.
         //
         // No relanza la excepción a propósito. Un fallo de envío no puede tumbar la
         // petición: `forgot-password` debe responder igual exista o no el correo, y
         // como el envío solo se intenta cuando la persona SÍ está registrada, un 500
         // aquí delataría quién tiene cuenta. Queda anotado en el log.
-        private async Task SendAsync(MimeMessage message)
+        //
+        // Devuelve si entregó. Los flujos anónimos lo ignoran, por lo mismo de
+        // arriba; la invitación al gestor sí lo mira, porque quien la pide es un
+        // administrador y el aviso le ahorra esperar un correo que no salió.
+        private async Task<bool> SendAsync(MimeMessage message)
         {
             var destinatario = message.To.ToString();
 
             try
             {
                 await EntregarAsync(message);
-                return;
+                return true;
             }
             catch (Exception ex)
             {
@@ -182,7 +233,7 @@ namespace proyectosena.Services
                         "No se pudo enviar el correo a {Destinatario}: el fallo no es " +
                         "pasajero y no se reintenta. Revisa la configuración de correo.",
                         destinatario);
-                    return;
+                    return false;
                 }
 
                 // El apretón de manos TLS con Gmail falla de vez en cuando desde el
@@ -196,6 +247,7 @@ namespace proyectosena.Services
             try
             {
                 await EntregarAsync(message);
+                return true;
             }
             catch (Exception ex)
             {
@@ -203,6 +255,7 @@ namespace proyectosena.Services
                     "No se pudo enviar el correo a {Destinatario} tras reintentar. " +
                     "La persona no recibirá su código y tendrá que pedir otro.",
                     destinatario);
+                return false;
             }
         }
 
@@ -224,7 +277,7 @@ namespace proyectosena.Services
                 int.Parse(settings["Port"]!),
                 SecureSocketOptions.StartTls
             );
-            await client.AuthenticateAsync(settings["SenderEmail"], settings["Password"]);
+            await client.AuthenticateAsync(Remitente, Contrasena);
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
         }
