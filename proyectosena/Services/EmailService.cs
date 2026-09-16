@@ -54,7 +54,7 @@ namespace proyectosena.Services
 
         // Invites a newly created manager to set their own password.
         // The account already exists; the code is what proves they own the mailbox.
-        public async Task SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes)
+        public async Task<bool> SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes)
         {
             var settings = _config.GetSection("EmailSettings");
 
@@ -86,7 +86,7 @@ namespace proyectosena.Services
                     </div>"
             };
 
-            await SendAsync(message);
+            return await SendAsync(message);
         }
 
         public async Task SendEmailVerificationCodeAsync(
@@ -163,14 +163,18 @@ namespace proyectosena.Services
         // petición: `forgot-password` debe responder igual exista o no el correo, y
         // como el envío solo se intenta cuando la persona SÍ está registrada, un 500
         // aquí delataría quién tiene cuenta. Queda anotado en el log.
-        private async Task SendAsync(MimeMessage message)
+        //
+        // Devuelve si entregó. Los flujos anónimos lo ignoran, por lo mismo de
+        // arriba; la invitación al gestor sí lo mira, porque quien la pide es un
+        // administrador y el aviso le ahorra esperar un correo que no salió.
+        private async Task<bool> SendAsync(MimeMessage message)
         {
             var destinatario = message.To.ToString();
 
             try
             {
                 await EntregarAsync(message);
-                return;
+                return true;
             }
             catch (Exception ex)
             {
@@ -182,7 +186,7 @@ namespace proyectosena.Services
                         "No se pudo enviar el correo a {Destinatario}: el fallo no es " +
                         "pasajero y no se reintenta. Revisa la configuración de correo.",
                         destinatario);
-                    return;
+                    return false;
                 }
 
                 // El apretón de manos TLS con Gmail falla de vez en cuando desde el
@@ -196,6 +200,7 @@ namespace proyectosena.Services
             try
             {
                 await EntregarAsync(message);
+                return true;
             }
             catch (Exception ex)
             {
@@ -203,6 +208,7 @@ namespace proyectosena.Services
                     "No se pudo enviar el correo a {Destinatario} tras reintentar. " +
                     "La persona no recibirá su código y tendrá que pedir otro.",
                     destinatario);
+                return false;
             }
         }
 

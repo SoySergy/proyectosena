@@ -24,8 +24,12 @@ namespace proyectosena.Tests.Infrastructure
         public Task SendPasswordResetCodeAsync(string toEmail, string code)
             => Record(EmailKind.PasswordReset, toEmail, code);
 
-        public Task SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes)
-            => Record(EmailKind.ManagerInvitation, toEmail, code);
+        // Siempre entrega: lo que se prueba aquí es el recorrido, no el SMTP.
+        public async Task<bool> SendManagerInvitationAsync(string toEmail, string name, string code, int expiryMinutes)
+        {
+            await Record(EmailKind.ManagerInvitation, toEmail, code);
+            return true;
+        }
 
         public Task SendEmailVerificationCodeAsync(string toEmail, string name, string code, int expiryMinutes)
             => Record(EmailKind.EmailConfirmation, toEmail, code);

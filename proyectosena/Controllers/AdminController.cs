@@ -34,7 +34,7 @@ namespace proyectosena.Controllers
             if (dto == null)
                 return BadRequest("Manager data cannot be null.");
 
-            var (result, idUser, email, expiresInMinutes) = await _adminService.CreateManager(dto);
+            var (result, idUser, email, expiresInMinutes, invitationSent) = await _adminService.CreateManager(dto);
 
             if (result == CreateManagerResult.EmailAlreadyUsed)
                 return BadRequest("Ya existe un usuario con este correo.");
@@ -45,12 +45,21 @@ namespace proyectosena.Controllers
             if (result == CreateManagerResult.DuplicateOnSave)
                 return BadRequest("El correo o el documento ya se encuentran registrados.");
 
+            // La cuenta queda creada salga o no el correo, así que la respuesta es
+            // 200 en los dos casos; lo que cambia es lo que se le dice a quien la
+            // creó. Sin esto, un correo que no sale deja al administrador esperando
+            // a alguien que nunca recibió nada (N-1).
             return Ok(new
             {
-                Message = "Gestor creado. Se envió un código de activación a su correo.",
+                Message = invitationSent
+                    ? "Gestor creado. Se envió un código de activación a su correo."
+                    : "Gestor creado, pero el correo con el código NO salió. Revisa la "
+                      + "configuración de correo; mientras tanto, el gestor puede entrar "
+                      + "con «olvidé mi contraseña», que le manda un código del mismo tipo.",
                 IdUser = idUser,
                 Email = email,
-                ExpiresInMinutes = expiresInMinutes
+                ExpiresInMinutes = expiresInMinutes,
+                InvitationSent = invitationSent
             });
         }
 
