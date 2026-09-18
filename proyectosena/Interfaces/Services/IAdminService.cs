@@ -12,7 +12,7 @@ namespace proyectosena.Interfaces.Services
         // Crea la cuenta del gestor y le envía el código para que ponga su
         // propia contraseña. Los datos del gestor creado vienen en null salvo
         // que el resultado sea Success.
-        Task<(CreateManagerResult Result, Guid IdUser, string Email, int ExpiresInMinutes)> CreateManager(CreateManagerDto dto);
+        Task<(CreateManagerResult Result, Guid IdUser, string Email, int ExpiresInMinutes, bool InvitationSent)> CreateManager(CreateManagerDto dto);
 
         // Números agregados para el panel del administrador
         Task<DashboardStatsDto> GetDashboardStats();

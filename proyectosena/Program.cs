@@ -24,7 +24,36 @@ builder.Logging.AddDebug();
 // ── 2. DATABASE + REPOSITORIES ────────────────────────
 builder.Services.AddProjectDependencies(builder.Configuration);
 
+// ── 2b. PUERTO AL QUE REDIRIGE EL HTTPS ───────────────
+// El middleware de redirección necesita saber a qué puerto mandar. Dentro del
+// contenedor no hay ningún listener HTTPS —el TLS lo termina el proxy del
+// proveedor—, así que no lo puede deducir solo: se limita a dejar pasar la
+// petición y a escribir "Failed to determine the https port for redirect" en el
+// log. Comprobado: con el conmutador encendido y sin este puerto, una petición
+// HTTP recibía 200 igual. El conmutador parecía encendido sin estarlo.
+builder.Services.AddHttpsRedirection(options =>
+    options.HttpsPort = builder.Configuration.GetValue("Https:Port", 443));
+
 // ── 3. JWT AUTHENTICATION ─────────────────────────────
+//
+// La clave de firma ya no tiene valor por defecto: appsettings.json se versiona
+// y lo que se escriba ahí queda publicado (B-1c). Si no llega por el entorno, la
+// API no arranca. Arrancar sin ella era peor que no arrancar: firmaría con una
+// clave que cualquiera puede leer en el repositorio, y con esa clave se fabrica
+// un token de administrador sin tocar la base.
+//
+// El mínimo de 32 bytes no es un gusto: HS256 usa SHA-256 y la propia librería
+// rechaza claves más cortas al firmar. Fallar aquí lo dice en el arranque, en
+// vez de en el primer inicio de sesión.
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Falta la clave de firma 'Jwt:Key', o tiene menos de 32 bytes. Defínela como " +
+        "variable de entorno Jwt__Key: en local, en el .env que lee docker-compose.yml; " +
+        "al desplegar, en el panel del proveedor. Los nombres están en .env.example.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -36,9 +65,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                                           Encoding.UTF8.GetBytes(
-                                               builder.Configuration["Jwt:Key"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
         };
 
@@ -101,11 +128,19 @@ builder.Services.AddAuthorization(options =>
 // dos orígenes distintos. Antes esto aceptaba cualquier origen
 // (I-1 · WA-02): cualquier sitio web podía llamar a la API desde el
 // navegador de quien tuviera un token.
+//
+// El origen sale de la configuración y ya no del código (N-4): el día que el
+// frontend viva en su propio dominio, dejarlo entrar es una variable de entorno
+// y no una recompilación. Varios se separan con comas. El valor por defecto es
+// el del Docker local, que es el único montaje donde hoy hace falta.
+var origenesPermitidos = (builder.Configuration["Cors:Origins"] ?? "http://localhost:8081")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("RecyRoutePolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:8081")
+        policy.WithOrigins(origenesPermitidos)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -287,7 +322,8 @@ if (app.Configuration.GetValue("ForwardedHeaders:Enabled", false))
     app.UseForwardedHeaders(forwardedHeadersOptions);
 }
 
-// Swagger disponible en /swagger en cualquier entorno (incluido Docker/Production)
+// Swagger solo en desarrollo: en producción publica el mapa entero de la API,
+// con los nombres y el cuerpo que espera cada endpoint.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -298,8 +334,28 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Solo redirige a HTTPS si NO estamos en Producción (Docker corre solo HTTP)
-if (app.Environment.IsDevelopment())
+// ── HTTPS ─────────────────────────────────────────────
+// Va justo después de UseForwardedHeaders y no antes: detrás de un proxy el
+// esquema de verdad viaja en X-Forwarded-Proto, y sin haberlo leído esta
+// redirección vería "http" en TODAS las peticiones —incluidas las que ya
+// llegaron cifradas— y mandaría al navegador a un bucle de redirecciones.
+//
+// Apagado por defecto porque el docker-compose corre HTTP puro en el 8080:
+// encenderlo ahí dejaría la API inalcanzable en local. Se enciende donde hay
+// TLS delante (Https__Enforce=true en Render), y ahí importa aunque el proxy
+// ya sirva HTTPS: sin esto, una petición que llegue por HTTP se atiende igual,
+// con su token viajando en claro.
+var forzarHttps = app.Configuration.GetValue("Https:Enforce", false);
+
+// HSTS solo con el conmutador encendido, nunca por estar en desarrollo: el
+// navegador se queda recordando la orden por meses y la aplica a TODO lo que
+// se sirva en localhost, incluidos otros proyectos del mismo equipo.
+if (forzarHttps)
+{
+    app.UseHsts();
+}
+
+if (forzarHttps || app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }

@@ -43,7 +43,7 @@ namespace proyectosena.Services
             _codeService = codeService;
         }
 
-        public async Task<(CreateManagerResult Result, Guid IdUser, string Email, int ExpiresInMinutes)>
+        public async Task<(CreateManagerResult Result, Guid IdUser, string Email, int ExpiresInMinutes, bool InvitationSent)>
             CreateManager(CreateManagerDto dto)
         {
             var email = dto.Email.Trim().ToLowerInvariant();
@@ -52,11 +52,11 @@ namespace proyectosena.Services
             // al índice único no le importa si una cuenta está activa.
             var existingEmail = await _userLookup.GetUserByEmail(email);
             if (existingEmail != null)
-                return (CreateManagerResult.EmailAlreadyUsed, Guid.Empty, string.Empty, 0);
+                return (CreateManagerResult.EmailAlreadyUsed, Guid.Empty, string.Empty, 0, false);
 
             var existingDoc = await _userLookup.GetUserByDocument(dto.DocumentNumber, dto.IdDocumentType);
             if (existingDoc != null)
-                return (CreateManagerResult.DocumentAlreadyUsed, Guid.Empty, string.Empty, 0);
+                return (CreateManagerResult.DocumentAlreadyUsed, Guid.Empty, string.Empty, 0, false);
 
             // Contraseña aleatoria que nadie conoce: la cuenta no sirve hasta
             // que el gestor ponga la suya con el código del correo.
@@ -85,14 +85,21 @@ namespace proyectosena.Services
             }
             catch (DbUpdateException ex) when (ex.IsDuplicateKey())
             {
-                return (CreateManagerResult.DuplicateOnSave, Guid.Empty, string.Empty, 0);
+                return (CreateManagerResult.DuplicateOnSave, Guid.Empty, string.Empty, 0, false);
             }
 
             // Mismo mecanismo de código que el flujo de recuperación, con más vida
             var code = await _codeService.GenerateAndStoreCode(email, CodePurpose.AccountAccess, InvitationExpiryMinutes);
-            await _emailService.SendManagerInvitationAsync(email, dto.Name, code, InvitationExpiryMinutes);
 
-            return (CreateManagerResult.Success, created.IdUser, created.Email, InvitationExpiryMinutes);
+            // Si el envío falla, la cuenta ya está creada y no se deshace: el gestor
+            // puede entrar igual por «olvidé mi contraseña», que genera un código del
+            // mismo tipo. Lo que no puede pasar es que el administrador se quede
+            // creyendo que el correo salió (N-1). El código queda guardado y sigue
+            // siendo válido durante su vida, así que el aviso es lo único que falta.
+            var invitationSent = await _emailService.SendManagerInvitationAsync(
+                email, dto.Name, code, InvitationExpiryMinutes);
+
+            return (CreateManagerResult.Success, created.IdUser, created.Email, InvitationExpiryMinutes, invitationSent);
         }
 
         public async Task<DashboardStatsDto> GetDashboardStats()
