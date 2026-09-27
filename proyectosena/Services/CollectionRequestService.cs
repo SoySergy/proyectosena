@@ -1,5 +1,6 @@
 using proyectosena.DTOs.Common;
 using proyectosena.DTOs.Requests;
+using proyectosena.Extensions;
 using proyectosena.Interfaces.Repositories;
 using proyectosena.Interfaces.Services;
 using proyectosena.Models;
@@ -34,10 +35,10 @@ namespace proyectosena.Services
 
         // ── Consultas ───────────────────────────────────────────────────
 
-        public async Task<PagedResult<CollectionRequestResponseDto>> GetAll(int page, int pageSize)
+        public async Task<PagedResult<CollectionRequestResponseDto>> GetAll(CollectionRequestFilterDto filter)
         {
-            (page, pageSize) = PagedResult<CollectionRequestResponseDto>.Normalize(page, pageSize);
-            var (items, total) = await _requestRepository.GetCollectionRequests(page, pageSize);
+            var (page, pageSize) = PagedResult<CollectionRequestResponseDto>.Normalize(filter.Page, filter.PageSize);
+            var (items, total) = await _requestRepository.GetCollectionRequests(ToQuery(filter), page, pageSize);
             return Paged(items, page, pageSize, total);
         }
 
@@ -64,7 +65,7 @@ namespace proyectosena.Services
 
         public async Task<CollectionRequestResponseDto?> GetById(Guid idRequest)
         {
-            var request = await _requestRepository.GetCollectionRequest(idRequest);
+            var request = await _requestRepository.GetCollectionRequestDetail(idRequest);
             return request == null ? null : MapToDto(request);
         }
 
@@ -185,21 +186,50 @@ namespace proyectosena.Services
             => PagedResult<CollectionRequestResponseDto>.Create(
                 items.Select(MapToDto).ToList(), page, pageSize, total);
 
-        // Aplana el ciudadano: el cliente recibe su nombre, nunca la entidad User
-        private static CollectionRequestResponseDto MapToDto(CollectionRequest r) => new()
+        // Traduce lo que pidió el cliente a rangos que la base entiende. Los días
+        // de creación son días de Colombia y RequestDate está en UTC; la fecha de
+        // recolección no tiene zona y se compara tal cual. El día final entra
+        // entero: el rango termina al empezar el día siguiente.
+        private static CollectionRequestQuery ToQuery(CollectionRequestFilterDto filter) => new(
+            filter.Statuses(),
+            filter.CreatedFrom?.StartOfColombianDayUtc(),
+            filter.CreatedTo?.AddDays(1).StartOfColombianDayUtc(),
+            filter.CollectionFrom?.ToDateTime(TimeOnly.MinValue),
+            filter.CollectionTo?.AddDays(1).ToDateTime(TimeOnly.MinValue),
+            filter.IdManager,
+            filter.IdCitizen,
+            string.IsNullOrWhiteSpace(filter.Search) ? null : filter.Search.Trim(),
+            filter.OrdersByCollectionDate,
+            filter.Ascending);
+
+        // Aplana el ciudadano y el gestor: el cliente recibe sus nombres, nunca
+        // la entidad User
+        private static CollectionRequestResponseDto MapToDto(CollectionRequest r)
         {
-            IdRequest = r.IdRequest,
-            IdUser = r.IdUser,
-            CitizenName = r.User?.Name ?? string.Empty,
-            CitizenLastName = r.User?.LastName ?? string.Empty,
-            CollectionDate = r.CollectionDate,
-            CollectionTime = r.CollectionTime,
-            CollectionAddress = r.CollectionAddress,
-            ContactPhone = r.ContactPhone,
-            CurrentStatus = r.CurrentStatus,
-            RequestDate = r.RequestDate,
-            WasteTypes = r.WasteTypes,
-            CitizenObservations = r.CitizenObservations
-        };
+            // La gestión vigente, si alguien la tomó
+            var management = r.CollectionManagement?
+                .OrderByDescending(m => m.StatusChangeDate)
+                .FirstOrDefault();
+
+            return new()
+            {
+                IdRequest = r.IdRequest,
+                IdUser = r.IdUser,
+                CitizenName = r.User?.Name ?? string.Empty,
+                CitizenLastName = r.User?.LastName ?? string.Empty,
+                CollectionDate = r.CollectionDate,
+                CollectionTime = r.CollectionTime,
+                CollectionAddress = r.CollectionAddress,
+                ContactPhone = r.ContactPhone,
+                CurrentStatus = r.CurrentStatus,
+                RequestDate = r.RequestDate,
+                WasteTypes = r.WasteTypes,
+                CitizenObservations = r.CitizenObservations,
+                IdManager = management?.IdManager,
+                ManagerName = management?.Manager == null
+                    ? null
+                    : $"{management.Manager.Name} {management.Manager.LastName}"
+            };
+        }
     }
 }

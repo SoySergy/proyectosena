@@ -7,11 +7,15 @@ namespace proyectosena.Interfaces.Repositories
         // Página de solicitudes en estado Pending, disponibles para que un gestor las tome
         Task<(List<CollectionRequest> Items, int Total)> GetPendingRequests(int page, int pageSize);
 
-        // Página de todas las solicitudes de recolección
-        Task<(List<CollectionRequest> Items, int Total)> GetCollectionRequests(int page, int pageSize);
+        // Página de solicitudes con los filtros del panel; sin ninguno, todas
+        Task<(List<CollectionRequest> Items, int Total)> GetCollectionRequests(
+            CollectionRequestQuery filter, int page, int pageSize);
 
-        // Obtiene una solicitud de recolección por su ID
+        // Una solicitud por su ID, con seguimiento, para modificarla
         Task<CollectionRequest> GetCollectionRequest(Guid idRequest);
+
+        // Una solicitud por su ID para mostrarla, con su ciudadano y su gestor
+        Task<CollectionRequest?> GetCollectionRequestDetail(Guid idRequest);
 
         // Solicitudes que un gestor específico tomó
         Task<(List<CollectionRequest> Items, int Total)> GetRequestsByManager(Guid idManager, int page, int pageSize);

@@ -19,14 +19,48 @@ namespace proyectosena.Repositories
         }
 
         // Obtiene todos los usuarios incluyendo su rol y tipo de documento
-        public async Task<(List<User> Items, int Total)> GetUsers(int page, int pageSize)
+        // Página de usuarios con los filtros del panel. Cada uno se suma solo si
+        // viene; sin ninguno, son los activos ordenados por nombre, como siempre.
+        //
+        // Solo para leer, y por eso sin seguimiento: nada de lo que devuelve
+        // puede terminar guardado por accidente junto con otra entidad.
+        public async Task<(List<User> Items, int Total)> GetUsers(UserQuery filter, int page, int pageSize)
         {
-            return await _context.Users
-                                 .Include(u => u.Role)
-                                 .Include(u => u.DocumentType)
-                                 .Where(u => u.IsActive)
-                                 .OrderBy(u => u.Name)
-                                 .ToPagedAsync(page, pageSize);
+            var query = _context.Users
+                                .AsNoTracking()
+                                .Include(u => u.Role)
+                                .Include(u => u.DocumentType)
+                                .AsQueryable();
+
+            if (filter.RoleName != null)
+                query = query.Where(u => u.Role!.RoleName == filter.RoleName);
+
+            if (filter.IsActive.HasValue)
+                query = query.Where(u => u.IsActive == filter.IsActive.Value);
+
+            if (filter.EmailVerified.HasValue)
+                query = query.Where(u => u.IsEmailVerified == filter.EmailVerified.Value);
+
+            if (filter.Search != null)
+            {
+                var pattern = "%" + filter.Search.EscapeForLike() + "%";
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.Name + " " + u.LastName, pattern, SearchTextExtensions.LikeEscape) ||
+                    EF.Functions.ILike(u.Email, pattern, SearchTextExtensions.LikeEscape) ||
+                    EF.Functions.ILike(u.DocumentNumber, pattern, SearchTextExtensions.LikeEscape));
+            }
+
+            var ordered = (filter.OrderByRegistrationDate, filter.Ascending) switch
+            {
+                (true, true) => query.OrderBy(u => u.RegistrationDate),
+                (true, false) => query.OrderByDescending(u => u.RegistrationDate),
+                (false, true) => query.OrderBy(u => u.Name),
+                (false, false) => query.OrderByDescending(u => u.Name)
+            };
+
+            // El id desempata: dos personas del mismo nombre podrían salir en dos
+            // páginas seguidas y otra en ninguna.
+            return await ordered.ThenBy(u => u.IdUser).ToPagedAsync(page, pageSize);
         }
 
         // Obtiene un usuario específico por ID incluyendo su rol y tipo de documento

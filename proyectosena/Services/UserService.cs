@@ -30,15 +30,26 @@ namespace proyectosena.Services
             _revokedTokens = revokedTokens;
         }
 
-        public async Task<PagedResult<UserInfoDto>> GetUsers(int page, int pageSize)
+        public async Task<PagedResult<UserInfoDto>> GetUsers(UserFilterDto filter)
         {
-            (page, pageSize) = PagedResult<UserInfoDto>.Normalize(page, pageSize);
+            var (page, pageSize) = PagedResult<UserInfoDto>.Normalize(filter.Page, filter.PageSize);
 
-            var (items, total) = await _userDirectory.GetUsers(page, pageSize);
+            var (items, total) = await _userDirectory.GetUsers(ToQuery(filter), page, pageSize);
 
             return PagedResult<UserInfoDto>.Create(
                 items.Select(u => u.ToInfoDto()).ToList(), page, pageSize, total);
         }
+
+        // Traduce lo que pidió el cliente a lo que entiende la base. El rol se
+        // guarda con la primera letra en mayúscula, así que se normaliza aquí y
+        // no en cada consulta.
+        private static UserQuery ToQuery(UserFilterDto filter) => new(
+            RoleNames.All.FirstOrDefault(r => string.Equals(r, filter.Role, StringComparison.OrdinalIgnoreCase)),
+            filter.IsActive,
+            filter.EmailVerified,
+            string.IsNullOrWhiteSpace(filter.Search) ? null : filter.Search.Trim(),
+            filter.OrdersByRegistrationDate,
+            filter.Ascending);
 
         public async Task<UserInfoDto?> GetById(Guid idUser)
         {

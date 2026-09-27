@@ -13,7 +13,8 @@ namespace proyectosena.Interfaces.Services
     public interface ICollectionRequestService
     {
         // ── Consultas paginadas ─────────────────────────────────────────
-        Task<PagedResult<CollectionRequestResponseDto>> GetAll(int page, int pageSize);
+        // Todas las solicitudes, con los filtros opcionales del panel
+        Task<PagedResult<CollectionRequestResponseDto>> GetAll(CollectionRequestFilterDto filter);
         Task<PagedResult<CollectionRequestResponseDto>> GetPending(int page, int pageSize);
         Task<PagedResult<CollectionRequestResponseDto>> GetByManager(Guid idManager, int page, int pageSize);
         Task<PagedResult<CollectionRequestResponseDto>> GetByUser(Guid idUser, int page, int pageSize);

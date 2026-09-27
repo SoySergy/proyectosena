@@ -31,8 +31,17 @@ builder.Services.AddProjectDependencies(builder.Configuration);
 // petición y a escribir "Failed to determine the https port for redirect" en el
 // log. Comprobado: con el conmutador encendido y sin este puerto, una petición
 // HTTP recibía 200 igual. El conmutador parecía encendido sin estarlo.
+//
+// El 443 va solo con el conmutador encendido. En desarrollo el puerto se deduce
+// del perfil (el 7145 del perfil https), y fijarlo en 443 mandaba cada petición
+// HTTP a un puerto donde no escucha nada. Con el perfil solo HTTP no hay a dónde
+// redirigir: sin puerto fijo el middleware deja pasar la petición, como antes.
+// Si alguien define Https__Port, manda en los dos casos.
+var forzarHttps = builder.Configuration.GetValue("Https:Enforce", false);
+
 builder.Services.AddHttpsRedirection(options =>
-    options.HttpsPort = builder.Configuration.GetValue("Https:Port", 443));
+    options.HttpsPort = builder.Configuration.GetValue<int?>("Https:Port")
+        ?? (forzarHttps ? 443 : null));
 
 // ── 3. JWT AUTHENTICATION ─────────────────────────────
 //
@@ -344,8 +353,8 @@ if (app.Environment.IsDevelopment())
 // encenderlo ahí dejaría la API inalcanzable en local. Se enciende donde hay
 // TLS delante (Https__Enforce=true en Render), y ahí importa aunque el proxy
 // ya sirva HTTPS: sin esto, una petición que llegue por HTTP se atiende igual,
-// con su token viajando en claro.
-var forzarHttps = app.Configuration.GetValue("Https:Enforce", false);
+// con su token viajando en claro. El conmutador (forzarHttps) se lee en 2b
+// porque también decide a qué puerto redirigir.
 
 // HSTS solo con el conmutador encendido, nunca por estar en desarrollo: el
 // navegador se queda recordando la orden por meses y la aplica a TODO lo que

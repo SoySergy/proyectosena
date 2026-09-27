@@ -27,7 +27,9 @@ namespace proyectosena.Mappers
             Email = user.Email,
             PhoneNumber = user.PhoneNumber,
             Address = user.Address,
-            RegistrationDate = user.RegistrationDate
+            RegistrationDate = user.RegistrationDate,
+            IsActive = user.IsActive,
+            IsEmailVerified = user.IsEmailVerified
 
             // Password no aparece aquí, y ese es justamente el punto:
             // el hash nunca sale de la capa de datos.

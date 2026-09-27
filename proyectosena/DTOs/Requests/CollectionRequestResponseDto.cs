@@ -19,5 +19,9 @@ namespace proyectosena.DTOs.Requests
         public DateTime RequestDate { get; set; }
         public string WasteTypes { get; set; } = string.Empty;
         public string? CitizenObservations { get; set; }
+
+        // El gestor que la tiene ahora. Vacíos mientras nadie la haya tomado.
+        public Guid? IdManager { get; set; }
+        public string? ManagerName { get; set; }
     }
 }

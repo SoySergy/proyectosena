@@ -12,7 +12,7 @@ namespace proyectosena.Interfaces.Services
     public interface IUserService
     {
         // Página de usuarios activos
-        Task<PagedResult<UserInfoDto>> GetUsers(int page, int pageSize);
+        Task<PagedResult<UserInfoDto>> GetUsers(UserFilterDto filter);
 
         // Búsquedas puntuales. Devuelven null si no hay coincidencia.
         Task<UserInfoDto?> GetById(Guid idUser);

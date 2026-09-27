@@ -21,13 +21,15 @@ namespace proyectosena.Controllers
         }
 
         // -------------------- GET: api/collectionrequest/GetCollectionRequests --------------------
-        // Todas las solicitudes — Admin y Manager pueden verlas
+        // Todas las solicitudes — Admin y Manager pueden verlas. Los filtros son
+        // opcionales y se combinan; uno mal formado responde 400 con el motivo.
         [HttpGet("GetCollectionRequests")]
         [Authorize(Policy = "AdminOrManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetCollectionRequests(int page = 1, int pageSize = 20)
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetCollectionRequests([FromQuery] CollectionRequestFilterDto filter)
         {
-            return Ok(await _requestService.GetAll(page, pageSize));
+            return Ok(await _requestService.GetAll(filter));
         }
 
         // -------------------- GET: api/collectionrequest/GetCollectionRequestById --------------------

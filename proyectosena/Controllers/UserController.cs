@@ -25,9 +25,10 @@ namespace proyectosena.Controllers
         [HttpGet("GetUsers")]
         [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetUsers(int page = 1, int pageSize = 20)
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetUsers([FromQuery] UserFilterDto filter)
         {
-            return Ok(await _userService.GetUsers(page, pageSize));
+            return Ok(await _userService.GetUsers(filter));
         }
 
         // -------------------- GET: api/user/GetUserById --------------------

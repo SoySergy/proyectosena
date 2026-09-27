@@ -14,5 +14,10 @@
         public string PhoneNumber { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public DateTime RegistrationDate { get; set; }
+
+        // Si la cuenta sigue activa y si su correo está confirmado: sin esto el
+        // panel no puede mostrar a quién reactivar ni quién nunca confirmó.
+        public bool IsActive { get; set; }
+        public bool IsEmailVerified { get; set; }
     }
 }

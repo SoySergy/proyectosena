@@ -21,5 +21,8 @@
         public const string Administrator = "Administrator";
         public const string Manager = "Manager";
         public const string Citizen = "Citizen";
+
+        // Los tres, para validar lo que llega de fuera
+        public static readonly string[] All = { Administrator, Manager, Citizen };
     }
 }

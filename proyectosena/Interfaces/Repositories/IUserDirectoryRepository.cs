@@ -14,8 +14,9 @@ namespace proyectosena.Interfaces.Repositories
     /// </remarks>
     public interface IUserDirectoryRepository
     {
-        // Página de usuarios activos, ordenados por nombre
-        Task<(List<User> Items, int Total)> GetUsers(int page, int pageSize);
+        // Página de usuarios con los filtros del panel; sin ninguno, los activos
+        // ordenados por nombre
+        Task<(List<User> Items, int Total)> GetUsers(UserQuery filter, int page, int pageSize);
 
         // Todos los usuarios activos de un rol. Sirve para avisar a los gestores.
         Task<List<User>> GetByRoleNameAsync(string roleName);
